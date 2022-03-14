@@ -1,0 +1,384 @@
+{
+  "info": {
+    "_postman_id": "ce30624e-e22f-4301-b462-5084af0c4314",
+    "name": "prod-manager-soft-checks",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00. Check app online",
+      "item": [
+        {
+          "name": "Get git hash",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Git hash : 7 alphanumerical characters\", () => {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const responseStr = pm.response.stream.toString('utf8');",
+                  "    pm.expect(responseStr).to.match(/^[0-9a-z]{7}$/)",
+                  "",
+                  "    pm.collectionVariables.set('gitHash', responseStr)",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/hash",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "hash"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get all Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Database accessible\", () => {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const responseJson = pm.response.json()",
+                  "    // responseJson.map(coll => console.log(coll))",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/{{users}}",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "{{users}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('adminusername', pm.environment.get(\"adminusername\"))\r",
+                  "pm.collectionVariables.set('adminpassword', pm.environment.get(\"adminpassword\"))"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"username\": \"{{adminusername}}\",\r\n    \"password\": \"{{adminpassword}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/{{login}}",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "{{login}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01. Clean",
+      "item": [
+        {
+          "name": "Delete previous test users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const stamp = pm.collectionVariables.get('stamp')",
+                  "pm.test(`Delete user with '${stamp}' username`, () => {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/{{users}}/{{stamp}}",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "{{users}}", "{{stamp}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02. Init lists",
+      "item": []
+    },
+    {
+      "name": "03. Add/get user",
+      "item": [
+        {
+          "name": "Add user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"user 1 created\", () => {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    const user1 = pm.variables.get('softUser1username');",
+                  "    pm.expect(responseJson.username).to.eq(user1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('softUser1username', pm.collectionVariables.get('stamp'))",
+                  "pm.collectionVariables.set('softUser1email', utils.getUserEmail(pm.collectionVariables.get('softUser1username')))",
+                  "pm.collectionVariables.set('softUser1password', 'test')",
+                  ""
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"username\": \"{{softUser1username}}\",\n    \"email\": \"{{softUser1email}}\",\n    \"password\": \"{{softUser1password}}\",\n    \"confirmPassword\": \"{{softUser1password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/{{register}}",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "{{register}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get all users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"1 user created\", () => {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const userList = pm.response.json();",
+                  "    pm.expect(userList.length).to.gte(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/{{users}}",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "{{users}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get user 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"user 1 correctly saved\", () => {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    const username = pm.variables.get('softUser1username');",
+                  "    pm.expect(responseJson.username).to.eq(username);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/{{users}}/{{softUser1username}}",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "{{users}}", "{{softUser1username}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07. Clean",
+      "item": [
+        {
+          "name": "Delete user 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"user 1 deleted\", () => {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [""],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{prodmanagerUrl}}/{{v1Url}}/{{users}}/{{softUser1username}}",
+              "host": ["{{prodmanagerUrl}}"],
+              "path": ["{{v1Url}}", "{{users}}", "{{softUser1username}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.globals.set(\"now\", new Date().toISOString());",
+          "pm.globals.set(\"timezone\", new Date().getTimezoneOffset());",
+          "",
+          "",
+          "utils = {",
+          "    getUserEmail: function (userName) {",
+          "        return `${userName",
+          "            .toLowerCase()",
+          "            .replace(/\\s+|\\.\\./g, '.')",
+          "            .replace(/^\\.+|\\.+$|\\'+/g, '')",
+          "            }@irisa.fr`;",
+          "    },",
+          "",
+          "    randomPickInList: function (list) {",
+          "        const randomNumber = _.random(0, list.length-1);",
+          "        return list[randomNumber];",
+          "    },",
+          "    ",
+          "    randomPick: function (listName) {",
+          "        return this.randomPickInList(pm.collectionVariables.get(listName));",
+          "    },",
+          "};",
+          "",
+          "rand = {",
+          "    get: function (randName) {",
+          "        return pm.variables.replaceIn(randName);",
+          "    }",
+          "};"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "stamp",
+      "value": "prod-manager-soft-checks"
+    },
+    {
+      "key": "gitHash",
+      "value": ""
+    },
+    {
+      "key": "softUser1username",
+      "value": ""
+    },
+    {
+      "key": "softUser1password",
+      "value": ""
+    },
+    {
+      "key": "softUser1email",
+      "value": ""
+    },
+    {
+      "key": "adminusername",
+      "value": ""
+    },
+    {
+      "key": "adminpassword",
+      "value": ""
+    }
+  ]
+}

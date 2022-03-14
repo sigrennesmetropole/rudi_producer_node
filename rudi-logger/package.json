@@ -1,0 +1,38 @@
+{
+    "name": "@aqmo.org/rudi_logger",
+    "version": "1.1.2",
+    "description": "Global Logger for the RUDI producer framework",
+    "keywords": [
+        "RUDI",
+        "aqmo.org",
+        "univ-rennes1",
+        "syslog"
+    ],
+    "homepage": "https://gitlab.aqmo.org/rudidev/rudilogger",
+    "private": false,
+    "main": "dist/rudilogger.js",
+    "files": [
+        "dist/rudilogger.js",
+        "dist/interfaces.js",
+        "dist/local.js",
+        "lib/syslog.js"
+    ],
+    "dependencies": {
+        "colors": "^1.4.0",
+        "ini": "^2.0.0",
+        "uuid": "^8.3.2"
+    },
+    "devDependencies": {
+        "@types/ini": "^1.3.31",
+        "@types/node": "^16.11.7",
+        "@types/uuid": "^8.3.1",
+        "typescript": "^4.4.4"
+    },
+    "scripts": {
+        "build": "node tools/cleanup && ./node_modules/typescript/bin/tsc",
+        "install-dgram": "npm install unix-dgram@^2.0.4",
+        "package": "npm run build && npm pack"
+    },
+    "author": "Laurent Morin",
+    "license": "EUPL-1.2"
+}

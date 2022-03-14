@@ -1,0 +1,27 @@
+#result_pre {
+    border: 1px solid black;
+    background-color: white;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+.form_container h1 {
+    font-family: sans-serif;
+    font-weight: normal;
+    padding: 0.5em;
+    font-size: 2em;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+textarea#dev_paste {
+    border: none;
+    outline: none;
+    resize: none;
+    caret-color: transparent;
+    box-sizing: border-box;
+}
+
+textarea#dev_paste:not(:focus) {
+    opacity: 0;
+}

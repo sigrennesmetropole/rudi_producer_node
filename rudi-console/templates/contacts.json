@@ -1,0 +1,43 @@
+{
+    "htmlJsonTemplate": [
+        { "tag": "form-header", "children": [
+            { "id": "title",          "tag": "h1" },
+            { "id": "@header_actions", "tag": "div" }
+        ]},
+        { "tag": "hr" },
+        { "tag": "form-body", "children": [
+            { "tag":"form-section", "class":["row"], "children": [
+                { "id": "global",                "tag": "h1"           },
+                { "id": "@contact_id",           "tag": "text-input",  "class": ["col","s4","m4","l6"],  "attr": { "required": true, "disabled": true } },
+                { "id": "@contact_name",         "tag": "text-input",  "class": ["col","s4","m4","l6"],  "attr": { "required": true } },
+                { "id": "@email",                "tag": "text-input",  "class": ["col","s4","m4","l6"],  "attr": { "required": true } },
+                { "id": "@organization_name",    "tag": "text-input",  "class": ["col","s4","m4","l6"]   },
+                { "id": "@role",                 "tag": "text-input",  "class": ["col","s4","m4","l6"]   }
+            ]}
+        ]},
+        { "tag": "form-footer", "children": [
+            { "id": "@submit_btn", "tag": "button" }
+        ]}
+    ],
+    "sumbitTemplate": {
+        "contact_id": "contact_id",
+        "organization_name": "organization_name",
+        "contact_name": "contact_name",
+        "role": "role",
+        "email": "email"
+    },
+    "fragmentSet": {
+        "fr": {
+            "title":                    { "textContent": "Contact" },
+            "default":                  { "textContent": "Général"       },
+            "submit_btn":               { "textContent": "Valider"       },
+            "server":                   { "attr": { "label": "server"    }},
+            "contact_id":               { "attr": { "label": "Identifiant de l'organisation",  "helper": "Identifiant de la première personne référente pour la donnée"    }},
+            "organization_name":        { "attr": { "label": "Nom de l'organisation",          "helper": "Organisation de la première personne référente pour la donnée"   }},
+            "contact_name":             { "attr": { "label": "Contact",                        "helper": "Nom de la première personne référente pour la donnée"            }},
+            "role":                     { "attr": { "label": "Rôle",                           "helper": "Statut de la première personne référente pour la donnée"         }},
+            "email":                    { "attr": { "label": "E-Mail",                         "helper": "Adresse e-mail de la première personne référente pour la donnée" }}
+
+        }
+    }
+}

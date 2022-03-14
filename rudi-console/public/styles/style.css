@@ -1,0 +1,100 @@
+/*
+ * CSS for all pages
+ * @author Florian Desmortreux 
+*/
+
+:root {
+    --primary-color: #007cba;
+    --primary-dark: #006ba1;
+    --primary-darker: #005a87;
+    --accent-color: #0098e4;
+    --secondary-accent-color: #ff8d6d;
+}
+
+html {
+    font-family: sans-serif;
+}
+
+/* --- Custom tooltip ---- */
+.top-tooltip { position: relative; }
+
+.top-tooltip::before {
+    content: attr(data-tooltip);
+    z-index: -1;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: max-content;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: all 0.3s;
+    background: black;
+    border-radius: 5px;
+    padding: 0 1em;
+    font-weight: bold;
+    color: white;
+    font-size: 1em;
+}
+
+.top-tooltip:hover::before {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 1em));
+}
+
+.right-tooltip { position: relative; }
+
+.right-tooltip::before {
+    content: attr(data-tooltip);
+    z-index: -1;
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: max-content;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: all 0.3s;
+    background: black;
+    border-radius: 5px;
+    padding: 0 1em;
+    font-weight: bold;
+    color: white;
+    font-size: 1em;
+}
+
+.right-tooltip:hover::before {
+    opacity: 1;
+    left: calc(100% + 1em);
+}
+
+/* Dev paste */
+
+textarea#dev_paste {
+    box-sizing: border-box;
+    align-self: stretch;
+    border: none;
+    outline: none;
+    resize: none;
+    caret-color: transparent;
+}
+
+/* ---- other ---- */
+
+/* Customize form */
+
+form-header > h1 {
+    color: var(--secondary-accent-color);
+}
+
+custom-form:not(:empty) + .empty_display {
+    display: none;
+}
+
+#result_pre {
+    min-height: 50vh;
+}
+
+div#overlay_manager div#filename_input_overlay {
+    min-height: 0;
+    max-width: 50vw;
+    padding: 1em;
+}

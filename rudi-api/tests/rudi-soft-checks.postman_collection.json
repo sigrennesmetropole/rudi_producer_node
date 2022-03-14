@@ -1,0 +1,5064 @@
+{
+	"info": {
+		"_postman_id": "eeb8c2b3-7c12-4a10-9504-706ec732fa5b",
+		"name": "rudi-soft-checks",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "00. Tokens",
+			"item": [
+				{
+					"name": "Check JWT",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('dateUpdate',time.now())",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{cryptoJwtUrl}}/check",
+							"host": [
+								"{{cryptoJwtUrl}}"
+							],
+							"path": [
+								"check"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "00. Check app online",
+			"item": [
+				{
+					"name": "Get app env",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(`Env: ${pm.variables.get('env')}`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const env = pm.variables.get('env')",
+									"    const responseStr = pm.response.stream.toString('utf8');",
+									"    pm.expect(responseStr).to.eq(env)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/env",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"env"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get git hash",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Git hash : 7 alphanumerical characters\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseStr = pm.response.stream.toString('utf8');",
+									"    pm.expect(responseStr).to.match(/^[0-9a-z]{7}|[0-9a-z]{40}$/)",
+									"",
+									"    pm.collectionVariables.set('gitHash', responseStr)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/hash",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"hash"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get app hash",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const gitHash = pm.collectionVariables.get('gitHash');",
+									"",
+									"pm.test(\"Current app hash = git hash\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseStr = pm.response.stream.toString('utf8');",
+									"    pm.expect(responseStr).to.match(/^[0-9a-z]{7}|[0-9a-z]{40}$/)",
+									"    pm.expect(responseStr).to.eq(gitHash)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/apphash",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"apphash"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get API version",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"API version\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const apiVersion = pm.response.stream.toString('utf8');",
+									"    pm.expect(apiVersion).to.match(/^([0-9]+\\.){2}[0-9]+[a-z]*$/)",
+									"    pm.collectionVariables.set('apiVersion',apiVersion)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/version",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"version"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Node.js version",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Node.js version > 14, npm version > 6\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const nodeVersion = responseJson.node",
+									"    const nodeVersionMajor = parseInt(nodeVersion.split(/[v\\.]/)[1])",
+									"    pm.expect(nodeVersionMajor).to.be.gt(14)",
+									"    //console.log(nodeVersion.split(/[v\\.]/).slice(1,4))",
+									"",
+									"    const npmVersion = responseJson.npm",
+									"    const npmVersionMajor = parseInt(npmVersion.split('.')[0])",
+									"    pm.expect(npmVersionMajor).to.be.gt(6)",
+									"    //pm.expect(pm.response.stream.toString('utf8')).to.match(/^[0-9a-z]{7}$/)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/nv",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"nv"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Request new UUID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get new UUID\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseStr = pm.response.stream.toString('utf8');",
+									"    pm.expect(responseStr).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/id_generation",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"id_generation"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all collections",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Database accessible\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json()",
+									"    // responseJson.map(coll => console.log(coll))",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/db/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"db",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "01. Clean",
+			"item": [
+				{
+					"name": "Delete previous test metadata",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete metadata with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete previous test contacts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete contacts with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete previous test orgs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete orgs with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete previous test media",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete media with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{media}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{media}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete previous test reports",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete reports with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{reports}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{reports}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02. Init lists",
+			"item": [
+				{
+					"name": "Get keywords",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Keywords received\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.length).to.gt(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/enum/Keywords",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"enum",
+								"Keywords"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get enum labels",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Enum labels received\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(Object.keys(responseJson).length).to.gt(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/enum?lang=fr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"enum"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "fr"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get themes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Themes received\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.length).to.gt(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/enum/Themes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"enum",
+								"Themes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get theme labels",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Theme labels received\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(Object.keys(responseJson).length).to.gt(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/enum/Themes/fr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"enum",
+								"Themes",
+								"fr"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get languages",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Languages received\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.length).to.gt(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/enum/Languages",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"enum",
+								"Languages"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all licenses",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"All licence concepts retrieved\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.length).to.gt(0)",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/licences",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"licences"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all licenses codes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"All licence codes retrieved\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.indexOf('mit')).to.gte(0)",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/licence_codes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"licence_codes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get thesaurus fr labels",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Thesaurus fr labels received\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const listEnums = Object.keys(responseJson);",
+									"    pm.expect(listEnums.length).to.eq(11);",
+									"",
+									"    pm.expect(Object.keys(responseJson.fileextensions).length).to.gt(0)",
+									"    pm.expect(responseJson.fileextensions.aac).to.eq(\"audio/aac\")",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/enum?lang=fr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"enum"
+							],
+							"query": [
+								{
+									"key": "lang",
+									"value": "fr"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get every thesaurus values",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Every thesaurus values received\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const listEnums = Object.keys(responseJson);",
+									"    pm.expect(listEnums.length).to.eq(11);",
+									"",
+									"    pm.collectionVariables.set('keywords', responseJson['keywords']);",
+									"    pm.collectionVariables.set('themes', responseJson['themes']);",
+									"    pm.collectionVariables.set('sanityLicence', responseJson['licences'][1])",
+									"    pm.collectionVariables.set('licences', responseJson['licences'])",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/enum",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"enum"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get searchable properties",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(`Searchable properties`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const res = pm.response.json()",
+									"    pm.expect(res.resources.length).to.gte(3)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/search",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"search"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03. Add/edit/get organizations",
+			"item": [
+				{
+					"name": "Add org 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Producer 1 created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const orgId = pm.variables.get('softOrg1Id');",
+									"    pm.expect(responseJson.organization_id).to.eq(orgId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('softOrg1Id', rand.get('{{$randomUUID}}'))",
+									"pm.collectionVariables.set('softOrg1Name', rand.get('{{$randomCompanyName}}'))",
+									"const orgAddress = `${rand.get('{{$randomStreetAddress}}')}, ${rand.get('{{$randomCity}}')}`",
+									"pm.collectionVariables.set('softOrg1Address', orgAddress)",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"organization_id\": \"{{softOrg1Id}}\",\n    \"organization_name\": \"{{softOrg1Name}}\",\n    \"organization_address\": \"{{softOrg1Address}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add org 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Producer 2 created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const orgId = pm.variables.get('softOrg2Id');",
+									"    pm.expect(responseJson.organization_id).to.eq(orgId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('softOrg2Id', rand.get('{{$randomUUID}}'))",
+									"pm.collectionVariables.set('softOrg2Name', rand.get('{{$randomCompanyName}}'))",
+									"const orgAddress = `${rand.get('{{$randomStreetAddress}}')}, ${rand.get('{{$randomCity}}')}`",
+									"pm.collectionVariables.set('softOrg2Address', orgAddress)",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"organization_id\": \"{{softOrg2Id}}\",\n    \"organization_name\": \"{{softOrg2Name}}\",\n    \"organization_address\": \"{{softOrg2Address}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all organizations",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"2 producers created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const orgList = pm.response.json();",
+									"    pm.expect(orgList.length).to.gte(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search organization",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"1 organization found\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.total).to.eq(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}/search?{{softOrg2Name}}&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}",
+								"search"
+							],
+							"query": [
+								{
+									"key": "{{softOrg2Name}}",
+									"value": null
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit org 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Producer 2 edited\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const orgId = pm.variables.get('softOrg2Id');",
+									"    const orgName = pm.variables.get('softOrg2Name');",
+									"    const orgAddress = pm.variables.get('softOrg2Address');",
+									"    ",
+									"    pm.expect(responseJson.organization_name).to.eq(orgName);",
+									"    pm.expect(responseJson.organization_address).to.eq(orgAddress);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('softOrg2Name', rand.get('{{$randomCompanyName}}'))",
+									"const orgAddress = `${rand.get('{{$randomStreetAddress}}')}, ${rand.get('{{$randomCity}}')}`",
+									"pm.collectionVariables.set('softOrg2Address', orgAddress)",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"organization_id\": \"{{softOrg2Id}}\",\n    \"organization_name\": \"{{softOrg2Name}}\",\n    \"organization_address\": \"{{softOrg2Address}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get org 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Producer 2 edition correctly saved\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const orgId = pm.variables.get('softOrg2Id');",
+									"    pm.expect(responseJson.organization_id).to.eq(orgId);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}/{{softOrg2Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}",
+								"{{softOrg2Id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04. Add/edit/get contacts",
+			"item": [
+				{
+					"name": "Add contact 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Contact 1 created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const contact1 = pm.variables.get('softContact1Id');",
+									"    pm.expect(responseJson.contact_id).to.eq(contact1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const contactName = rand.get('{{$randomFullName}}');",
+									"",
+									"pm.collectionVariables.set('softContact1Id', rand.get('{{$randomUUID}}'))",
+									"pm.collectionVariables.set('softContact1Name', contactName)",
+									"pm.collectionVariables.set('softContact1Email', rand.getContactEmail(contactName))",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"contact_id\": \"{{softContact1Id}}\",\n    \"contact_name\": \"{{softContact1Name}}\",\n    \"email\": \"{{softContact1Email}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add contact 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Contact 2 created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const contId = pm.variables.get('softContact2Id');",
+									"    pm.expect(responseJson.contact_id).to.eq(contId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const contactName = rand.get('{{$randomFullName}}');",
+									"",
+									"pm.collectionVariables.set('softContact2Id', rand.get('{{$randomUUID}}'))",
+									"pm.collectionVariables.set('softContact2Name', contactName)",
+									"pm.collectionVariables.set('softContact2Email', rand.getContactEmail(contactName))",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"contact_id\": \"{{softContact2Id}}\",\n    \"contact_name\": \"{{softContact2Name}}\",\n    \"email\": \"{{softContact2Email}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add contact 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Contact 3 created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const contId = pm.variables.get('softContact3Id');",
+									"    pm.expect(responseJson.contact_id).to.eq(contId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const contactName = rand.get('{{$randomFullName}}');",
+									"",
+									"pm.collectionVariables.set('softContact3Id', rand.get('{{$randomUUID}}'))",
+									"pm.collectionVariables.set('softContact3Name', contactName)",
+									"pm.collectionVariables.set('softContact3Email', rand.getContactEmail(contactName))",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"contact_id\": \"{{softContact3Id}}\",\n    \"contact_name\": \"{{softContact3Name}}\",\n    \"email\": \"{{softContact3Email}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all contacts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"3 contacts created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const contactList = pm.response.json();",
+									"    // console.log(contactList.length)",
+									"    //const contactList = _.map(responseJson, 'name');",
+									"    pm.expect(contactList.length).to.gte(3);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search contact",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"1 contact found\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.total).to.eq(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}/search?{{softContact1Name}}&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}",
+								"search"
+							],
+							"query": [
+								{
+									"key": "{{softContact1Name}}",
+									"value": null
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit contact 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Contact 1 edited\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    //console.log(responseJson);",
+									"    const contactName = pm.collectionVariables.get('softContact3Name')",
+									"    const contactMail = pm.collectionVariables.get('softContact3Email')",
+									"  ",
+									"    pm.expect(responseJson.contact_name).to.eq(contactName);",
+									"    pm.expect(responseJson.email).to.eq(contactMail);",
+									"",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const contactName = pm.variables.replaceIn('{{$randomFullName}}');",
+									"",
+									"pm.collectionVariables.set('softContact3Name', contactName)",
+									"pm.collectionVariables.set('softContact3Email', rand.getContactEmail(contactName))",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"contact_id\": \"{{softContact1Id}}\",\n    \"contact_name\": \"{{softContact3Name}}\",\n    \"email\": \"{{softContact3Email}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get contact 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Contact 1 edition correctly saved\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const contId = pm.variables.get('softContact1Id');",
+									"    pm.expect(responseJson.contact_id).to.eq(contId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}/{{softContact1Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}",
+								"{{softContact1Id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05. Add/edit/get metadata",
+			"item": [
+				{
+					"name": "Add meta 1",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"log.d('pre-req scripts')",
+									"pm.collectionVariables.set('now', time.now())",
+									"",
+									"//————— Id",
+									"log.d('Ids')",
+									"pm.collectionVariables.set('softMeta1Id', rand.get('{{$randomUUID}}'));",
+									"pm.collectionVariables.set('softMedia1Id', rand.get('{{$randomUUID}}'));",
+									"",
+									"",
+									"//————— Thesauri",
+									"log.d('Thesaurus: themes')",
+									"pm.collectionVariables.set('randomTheme', rand.pick('themes'));",
+									"log.d('Thesaurus: keywords')",
+									"pm.collectionVariables.set('randomKeyword1', rand.pick('keywords'));",
+									"pm.collectionVariables.set('randomKeyword2', rand.pick('keywords'));",
+									"log.d('Thesaurus: licences')",
+									"pm.collectionVariables.set('softLicence', rand.pick('licences'));",
+									"log.d('Thesaurus: ok')",
+									"",
+									"//————— Producer",
+									"log.d('Producer')",
+									"const orgs = [",
+									"    pm.collectionVariables.get('softOrg1Id'), ",
+									"    pm.collectionVariables.get('softOrg2Id')]",
+									"const randomOrgId = rand.pickInList(orgs)",
+									"//console.log(`randomOrgId: ${randomOrgId}`)",
+									"pm.collectionVariables.set('randomOrgId', randomOrgId);",
+									"",
+									"//————— Contact 1",
+									"log.d('Contact 1')",
+									"const contacts = [ ",
+									"    pm.collectionVariables.get('softContact1Id'), ",
+									"    pm.collectionVariables.get('softContact2Id'), ",
+									"    pm.collectionVariables.get('softContact3Id')];",
+									"//console.log(`contacts: ${contacts}`)",
+									"",
+									"",
+									"const randomContId1 = rand.pickInList(contacts)",
+									"//console.log(`randomContId1: ${randomContId1}`)",
+									"",
+									"pm.collectionVariables.set('randomContact1', randomContId1);",
+									"",
+									"//————— Contact 2",
+									"log.d('Contact 2')",
+									"const contactsLeft = contacts",
+									"    .filter(function(value, index, arr){ return value != randomContId1 });",
+									"",
+									"const randomContId2 = rand.pickInList(contactsLeft)",
+									"//console.log(`randomContId2: ${randomContId2}`)",
+									"",
+									"pm.collectionVariables.set('randomContact2', randomContId2);",
+									"",
+									"//————— Description",
+									"log.d('Description')",
+									"pm.collectionVariables.set('randomTitle', rand.get('{{$randomCatchPhrase}}'));",
+									"pm.collectionVariables.set('randomSynopsis', `${rand.get('{{$randomProductAdjective}}')} ${rand.get('{{$randomBs}}')}`);",
+									"pm.collectionVariables.set('randomSummary', `${rand.get('{{$randomPhrase}}')} ${rand.get('{{$randomPhrase}}')} ${rand.get('{{$randomLoremParagraph}}')}`);",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 1 created\", () => {",
+									"    try {",
+									"        pm.expect(pm.response.code).to.eql(200);",
+									"    } catch(err) {",
+									"        // console.log(pm.response)",
+									"        throw err",
+									"    }",
+									"    const responseJson = pm.response.json();",
+									"    const metaId = pm.collectionVariables.get('softMeta1Id');",
+									"    const orgId = pm.collectionVariables.get('softOrg1Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"    pm.expect(responseJson.producer.organization_id).to.eq(orgId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta1Id}}\",\n    \"local_id\": \"testingID {{softMeta1Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-444/{{softMeta1Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta1Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 4444\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 4\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"{{randomTheme}}\",\n    \"keywords\": [\n        \"{{randomKeyword1}}\",\n        \"{{randomKeyword2}}\"\n    ],\n    \"geography\": {\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"{{softOrg1Name}}\",\n        \"organization_address\": \"{{softOrg1Address}}\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"M. Fazo\",\n            \"email\": \"gpizj@pzorjeg.gt\",\n            \"collection_tag\": \"{{stamp}}\"\n        },\n        {\n            \"contact_id\": \"{{softContact2Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\",\n        \"metadata_provider\": {\n            \"organization_id\": \"{{softOrg1Id}}\",\n            \"collection_tag\": \"{{stamp}}\"\n        },\n        \"metadata_contacts\": [\n            {\n                \"contact_id\": \"{{softContact2Id}}\",\n                \"collection_tag\": \"{{stamp}}\"\n            }\n        ]\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"licence_label\": \"{{softLicence}}\"\n        }\n    },\n    \"available_formats\": [\n        {\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{softMedia1Id}}\",\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.1.0\"\n            },\n            \"file_type\": \"application/json\",\n            \"file_size\": 59016,\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"4c9ee0f14e835927a1bbafde0eb89fb3\"\n            },\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'bounding_box\"",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missing property 'geography.bounding_box'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const responseJson = pm.response.json();",
+									"    ////console.log(responseJson.message);",
+									"",
+									"    const msg = \"La propriété 'geography.bounding_box' est requise lorsque la propriété parente 'geography' est renseignée\"",
+									"    pm.expect(responseJson.message.substring(0, msg.length)).to.eql(msg);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('softMeta2Id', rand.get('{{$randomUUID}}'));",
+									"pm.collectionVariables.set('mediaId2', rand.get('{{$randomUUID}}'));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\"\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"licence_label\": \"licence_public-domain-cc0\"\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'start_date'",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missingy property 'temporal_spread.start_date'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const responseJson = pm.response.json();",
+									"    ////console.log(responseJson.message);",
+									"    const msg = \"La propriété 'temporal_spread.start_date' est requise lorsque la propriété parente 'temporal_spread' est renseignée\"",
+									"    pm.expect(responseJson.message.substring(0, msg.length)).to.eql(msg);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"licence_label\": \"licence_public-domain-cc0\"\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'access_condition'",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missingy property 'access_condition'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const responseJson = pm.response.json();",
+									"    //console.log(responseJson.message);",
+									"    const msg = \"Metadata validation failed: access_condition: Path `access_condition` is required.\"",
+									"    pm.expect(responseJson.message.substring(0, msg.length)).to.eql(msg);",
+									"",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'licence'",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missingy property 'access_conditionlicence'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const responseJson = pm.response.json();",
+									"    ////console.log(responseJson.message);",
+									"    //const msg = \"La propriété 'access_condition.licence' est requise lorsque la propriété parente 'access_condition' est renseignée\"",
+									"    const msg = \"Metadata validation failed: access_condition.licence: Path `licence` is required.\"",
+									"    pm.expect(responseJson.message.substring(0, msg.length)).to.eql(msg);",
+									"",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"confidentiality\": {\n            \"gdpr_sensitive\": false\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'licence_label' value",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: 'licence_label' not recognized\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const requestBody = JSON.parse(pm.request.body);",
+									"    const licenceLabel = requestBody.access_condition.licence.licence_label;",
+									"    const expectedResponse = `Licence label '${licenceLabel}' was not found in licence list `",
+									"",
+									"    const responseJson = pm.response.json();",
+									"    ////console.log(responseJson.message);",
+									"    pm.expect(responseJson.message.substring(0,expectedResponse.length)).eql(expectedResponse);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"licence_label\": \"licence_other\"\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'licence_type' missing",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missing 'licence_type'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const requestBody = JSON.parse(pm.request.body);",
+									"    // const licenceLabel = requestBody.access_condition.licence.licence_label;",
+									"    const expectedResponse = \"Metadata validation failed: access_condition.licence.licence_type: Path `licence_type` is required.\"",
+									"",
+									"    const responseJson = pm.response.json();",
+									"    //console.log(responseJson.message);",
+									"    pm.expect(responseJson.message.substring(0,expectedResponse.length)).eql(expectedResponse);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_label\": \"CUSTOM\"\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'custom_licence_uri' missing Copy",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missing 'licence_label'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const requestBody = JSON.parse(pm.request.body);",
+									"    // const licenceLabel = requestBody.access_condition.licence.licence_label;",
+									"    const expectedResponse = `La propriété 'licence.licence_label' est requise lorsque la propriété 'licence.licence_type' vaut 'STANDARD'`",
+									"",
+									"    const responseJson = pm.response.json();",
+									"    //console.log(responseJson.message);",
+									"    pm.expect(responseJson.message.substring(0,expectedResponse.length)).eql(expectedResponse);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"custom_licence_label\": {\n                \"lang\": \"fr\",\n                \"text\": \"CC BY-NC-SA 4.0\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'custom_licence_label' missing",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missing 'custom_licence_label'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const requestBody = JSON.parse(pm.request.body);",
+									"    // const licenceLabel = requestBody.access_condition.licence.licence_label;",
+									"    const expectedResponse = `La propriété 'licence.custom_licence_label' est requise lorsque la propriété 'licence.licence_type' vaut 'CUSTOM'`",
+									"",
+									"    const responseJson = pm.response.json();",
+									"    //console.log(responseJson.message);",
+									"    pm.expect(responseJson.message.substring(0,expectedResponse.length)).eql(expectedResponse);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"CUSTOM\",\n            \"licence_label\": \"CC BY-NC-SA 4.0\"\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2 fails 'custom_licence_uri' missing",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 creation: missing 'custom_licence_uri'\", () => {",
+									"    pm.expect(pm.response.code).to.gte(400);",
+									"    const requestBody = JSON.parse(pm.request.body);",
+									"    // const licenceLabel = requestBody.access_condition.licence.licence_label;",
+									"    const expectedResponse = `La propriété 'licence.custom_licence_uri' est requise lorsque la propriété 'licence.licence_type' vaut 'CUSTOM'`",
+									"",
+									"    const responseJson = pm.response.json();",
+									"    //console.log(responseJson.message);",
+									"    pm.expect(responseJson.message.substring(0,expectedResponse.length)).eql(expectedResponse);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"testingID {{softMeta2Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta2Id}}\",\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\"\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{mediaId2}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"CUSTOM\",\n            \"custom_licence_label\": {\n                \"lang\": \"fr\",\n                \"text\": \"CC BY-NC-SA 4.0\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta2Id');",
+									"    const orgId = pm.variables.get('softOrg1Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"    pm.expect(responseJson.contacts.length).to.eq(1);",
+									"    pm.expect(responseJson.producer.organization_id).to.eq(orgId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('softMeta2Id', rand.get('{{$randomUUID}}'));",
+									"pm.collectionVariables.set('softMedia2Id', rand.get('{{$randomUUID}}'));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta2Id}}\",\n    \"local_id\": \"{{$randomUUID}}\",\n    \"doi\": \"10.1007/s00223-003-0070-333/{{softMeta2Id}}\",\n    \"resource_title\": \"Test de RUDI en local - {{softMeta2Id}}\",\n    \"collection_tag\": \"{{stamp}}\",\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 33\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 3\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"plu\",\n        \"municipality\"\n    ],\n    \"geography\": {\n        \"spatial_representation\": \"test\",\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\",\n        \"end_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"IRISA\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\",\n        \"metadata_provider\": {\n            \"organization_id\": \"{{softOrg1Id}}\"\n        },\n        \"metadata_contacts\": [\n            {\n                \"contact_id\": \"{{softContact1Id}}\"\n            }\n        ]\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"available_formats\": [\n        {\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"df4f0fceee7b4ee614295b95531ba1d5\"\n            },\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.2.0\"\n            },\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{softMedia2Id}}\",\n            \"file_type\": \"application/json\",\n            \"file_size\": 59033,\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"CUSTOM\",\n            \"custom_licence_label\": {\n                \"lang\": \"fr\",\n                \"text\": \"CC BY-NC-SA 4.0\"\n            },\n            \"custom_licence_uri\": \"https://creativecommons.org/licenses/by-nc-sa/4.0/\"\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Get all metadata",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"2 metadata created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    const publicMetadataList = pm.response.json();",
+									"    pm.expect(publicMetadataList.total).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}?sort_by=-createdAt&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "sort_by",
+									"value": "-createdAt"
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Get all metadata with trailing slashes",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Testing URL with slashes\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    // console.log(metadataList.length)",
+									"    const publicMetadataList = pm.response.json();",
+									"    pm.expect(publicMetadataList.total).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}/?sort_by=-createdAt&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}",
+								""
+							],
+							"query": [
+								{
+									"key": "sort_by",
+									"value": "-createdAt"
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Sort metadata",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"2 metadata created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"",
+									"    const publicMetadataList = pm.response.json();",
+									"    pm.expect(publicMetadataList.total).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}?limit=50&sort_by=-createdAt&fields=resource_title,global_id,createdAt,collection_tag&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "sort_by",
+									"value": "-createdAt"
+								},
+								{
+									"key": "fields",
+									"value": "resource_title,global_id,createdAt,collection_tag"
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search metadata",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Search metadata\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.total).to.eq(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}/search?\"local 33\"&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}",
+								"search"
+							],
+							"query": [
+								{
+									"key": "\"local 33\"",
+									"value": null
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Search metadata",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Search metadata (public)\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const res = pm.response.json();",
+									"    pm.expect(res.total).to.eq(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}/search?\"local 33\"&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}",
+								"search"
+							],
+							"query": [
+								{
+									"key": "\"local 33\"",
+									"value": null
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all metadata filtered",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"2 metadata created\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.eq(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?limit=10&keywords=plu&perlin=2346&resource_languages=fr&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "keywords",
+									"value": "plu"
+								},
+								{
+									"key": "perlin",
+									"value": "2346"
+								},
+								{
+									"key": "resource_languages",
+									"value": "fr"
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Count metadata (api_version)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Count by API version\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.gte(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?count_by=metadata_info.api_version",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "count_by",
+									"value": "metadata_info.api_version"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Group metadata (api_version)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Group by API version\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.gte(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?group_by=metadata_info.api_version&limit=3",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "group_by",
+									"value": "metadata_info.api_version"
+								},
+								{
+									"key": "limit",
+									"value": "3"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Count metadata (metadata_provider)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Count by producer\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?count_by=metadata_info.metadata_provider",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "count_by",
+									"value": "metadata_info.metadata_provider"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Count metadata (metadata_contacts)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Count by producer\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?count_by=metadata_info.metadata_contacts",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "count_by",
+									"value": "metadata_info.metadata_contacts"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Count metadata (producer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Count by producer\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json()",
+									"",
+									"    const orgId = pm.collectionVariables.get('softOrg1Id')",
+									"    // console.log(`orgId: ${orgId}`)",
+									"    responseJson.map((res) => {",
+									"        // console.log(`res.producer.organization_id: ${res.producer.organization_id}`)",
+									"        if(res.producer.organization_id == orgId) {",
+									"            // console.log(res.count)",
+									"            pm.collectionVariables.set('countWithOrg1', res.count)",
+									"        }",
+									"    })",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?count_by=producer",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "count_by",
+									"value": "producer"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Filter metadata (producer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Filter by producer\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    ",
+									"    const countWithOrg1 = pm.collectionVariables.get('countWithOrg1')",
+									"",
+									"    const publicMetadataList = pm.response.json();",
+									"    pm.expect(publicMetadataList.total).to.eq(countWithOrg1);",
+									"    pm.expect(publicMetadataList.items.length).to.eq(countWithOrg1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}?producer.organization_id=\"{{softOrg1Id}}\"&fields=global_id,resource_title&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "producer.organization_id",
+									"value": "\"{{softOrg1Id}}\""
+								},
+								{
+									"key": "fields",
+									"value": "global_id,resource_title"
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Group metadata (producer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Group by producer\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"",
+									"    const responseJson = pm.response.json()",
+									"",
+									"    const orgId = pm.collectionVariables.get('softOrg1Id')",
+									"    const countWithOrg1 = pm.collectionVariables.get('countWithOrg1')",
+									"    // console.log(`orgId: ${orgId}`)",
+									"",
+									"    let tested = false",
+									"    responseJson.map((res) => {",
+									"        // console.log(`res.producer.organization_id: ${res.producer.organization_id}`)",
+									"        if(!tested && res.producer.organization_id == orgId) {",
+									"            // console.log(res.count)",
+									"            pm.expect(res.count).to.eq(countWithOrg1)",
+									"            tested = true",
+									"        }",
+									"    })",
+									"    pm.expect(tested).to.eq(true)",
+									"",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?group_by=producer&collection_tag={{stamp}}&limit=3&group_limit=4",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "group_by",
+									"value": "producer"
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								},
+								{
+									"key": "limit",
+									"value": "3"
+								},
+								{
+									"key": "group_limit",
+									"value": "4"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit meta 1",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 1 edited\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta1Id');",
+									"    const orgId1 = pm.variables.get('softOrg1Id');",
+									"    const orgId2 = pm.variables.get('softOrg2Id');",
+									"    const contId1 = pm.variables.get('softContact1Id');",
+									"    const contId2 = pm.variables.get('softContact2Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"    pm.expect(responseJson.producer.organization_id).to.eq(orgId1);",
+									"    pm.expect(responseJson.contacts.length).to.eq(1);",
+									"    pm.expect(responseJson.contacts[0].contact_id).to.eq(contId1);",
+									"    pm.expect(responseJson.metadata_info.metadata_provider.organization_id).to.eq(orgId2);",
+									"    pm.expect(responseJson.metadata_info.metadata_contacts[0].contact_id).to.eq(contId2);",
+									"    pm.expect(responseJson.available_formats[0].checksum.hash).to.eq(\"4b9ce0f14e835927a1bbafde0eb89fb3\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta1Id}}\",\n    \"local_id\": \"testingID {{softMeta1Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-444/{{softMeta1Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta1Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 4444\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 4\"\n        }\n    ],\n    \"collection_tag\": \"{{stamp}}\",\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"energy_consommation\",\n        \"electricity\"\n    ],\n    \"geography\": {\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\",\n        \"metadata_provider\": {\n            \"organization_id\": \"{{softOrg2Id}}\",\n            \"collection_tag\": \"{{stamp}}\"\n        },\n        \"metadata_contacts\": [\n            {\n                \"contact_id\": \"{{softContact2Id}}\",\n                \"collection_tag\": \"{{stamp}}\"\n            }\n        ]\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"licence_label\": \"{{softLicence}}\"\n        }\n    },\n    \"available_formats\": [\n        {\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{softMedia1Id}}\",\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.1.0\"\n            },\n            \"file_type\": \"application/json\",\n            \"file_size\": 59016,\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"4b9ce0f14e835927a1bbafde0eb89fb3\"\n            },\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "global_id",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Get meta 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 1 edition successfully saved\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta1Id');",
+									"    const orgId1 = pm.variables.get('softOrg1Id');",
+									"    const orgId2 = pm.variables.get('softOrg2Id');",
+									"    const contId1 = pm.variables.get('softContact1Id');",
+									"    const contId2 = pm.variables.get('softContact2Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"    pm.expect(responseJson.producer.organization_id).to.eq(orgId1);",
+									"    pm.expect(responseJson.metadata_info.metadata_provider.organization_id).to.eq(orgId2);",
+									"    pm.expect(responseJson.contacts.length).to.eq(1);",
+									"    pm.expect(responseJson.contacts[0].contact_id).to.eq(contId1);",
+									"    pm.expect(responseJson.metadata_info.metadata_contacts[0].contact_id).to.eq(contId2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}/{{softMeta1Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}",
+								"{{softMeta1Id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Get missing meta",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"GET missing metadata\", () => {",
+									"    pm.expect(pm.response.code).to.eql(404);",
+									"    const responseJson = pm.response.json();",
+									"    //console.log(responseJson.statusCode)",
+									"    pm.expect(responseJson.statusCode).to.eq(404)",
+									"    pm.expect(responseJson.error).to.eq('Not Found')",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}/test",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}",
+								"test"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get meta 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 2 successfully added\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta2Id');",
+									"    const orgId1 = pm.variables.get('softOrg1Id');",
+									"    const contId1 = pm.variables.get('softContact1Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"    pm.expect(responseJson.producer.organization_id).to.eq(orgId1);",
+									"    pm.expect(responseJson.contacts.length).to.eq(1);",
+									"    pm.expect(responseJson.contacts[0].contact_id).to.eq(contId1);",
+									"});",
+									"",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}/{{softMeta2Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}",
+								"{{softMeta2Id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send metadata list to portal",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Send metadata list to portal\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const res = codec.streamToString(pm.response)",
+									"    pm.expect(res).to.eq(\"Sending metadata to portal\")",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\"{{metaId2}}\"]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/portal/{{data}}/send",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"portal",
+								"{{data}}",
+								"send"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send all metadata to portal",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Send all metadata to portal\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const res = codec.streamToString(pm.response)",
+									"    pm.expect(res).to.eq(\"Sending metadata to portal\")",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\"{{metaId2}}\"]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/portal/{{data}}/send",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"portal",
+								"{{data}}",
+								"send"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "06. Add/edit/get reports",
+			"item": [
+				{
+					"name": "[PUB] Add report 1 (meta 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Create Integration report 1 for metadata 1\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta1Id');",
+									"    const reportId = pm.variables.get('softReport1Id');",
+									"    pm.expect(responseJson.report_id).to.eq(reportId);",
+									"    pm.expect(responseJson.resource_id).to.eq(metaId);",
+									"    pm.expect(responseJson.integration_status).to.eq(\"KO\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('softReport1Id', rand.get('{{$randomUUID}}'));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"report_id\": \"{{softReport1Id}}\",\n    \"resource_id\": \"{{softMeta1Id}}\",\n    \"integration_status\": \"KO\",\n    \"version\": \"{{apiVersion}}\",\n    \"comment\": \"soft test report 1\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{data}}/{{softMeta1Id}}/{{report}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{data}}",
+								"{{softMeta1Id}}",
+								"{{report}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Add report 2 (meta 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Create Integration report 2 for metadata 1\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta1Id');",
+									"    const reportId = pm.variables.get('softReport2Id');",
+									"    pm.expect(responseJson.report_id).to.eq(reportId);",
+									"    pm.expect(responseJson.resource_id).to.eq(metaId);",
+									"    pm.expect(responseJson.integration_status).to.eq(\"OK\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('softReport2Id', rand.get('{{$randomUUID}}'));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"report_id\": \"{{softReport2Id}}\",\n    \"resource_id\": \"{{softMeta1Id}}\",\n    \"integration_status\": \"OK\",\n    \"version\": \"{{apiVersion}}\",\n    \"comment\": \"soft test report 2\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{data}}/{{softMeta1Id}}/{{report}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{data}}",
+								"{{softMeta1Id}}",
+								"{{report}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Add report unkown meta",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Create Integration report for unkown metadata\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('unkownMetaId');",
+									"    const reportId = pm.variables.get('softReport3Id');",
+									"    pm.expect(responseJson.report_id).to.eq(reportId);",
+									"    pm.expect(responseJson.resource_id).to.eq(metaId);",
+									"    pm.expect(responseJson.integration_status).to.eq(\"KO\");",
+									"    pm.expect(responseJson.report_treatment_error.error_type).to.eq(\"Object not found\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.collectionVariables.set('unkownMetaId', rand.get('{{$randomUUID}}'));",
+									"pm.collectionVariables.set('softReport3Id', rand.get('{{$randomUUID}}'));",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"report_id\": \"{{softReport3Id}}\",\n    \"resource_id\": \"{{unkownMetaId}}\",\n    \"integration_status\": \"KO\",\n    \"version\": \"{{apiVersion}}\",\n    \"comment\": \"test report for unkown metadata\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{data}}/{{unkownMetaId}}/{{report}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{data}}",
+								"{{unkownMetaId}}",
+								"{{report}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Get all reports (meta 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"2 integration reports created for metadata 1\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const reportList = pm.response.json();",
+									"    pm.expect(reportList.length).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}/{{softMeta1Id}}/{{report}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}",
+								"{{softMeta1Id}}",
+								"{{report}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Edit report 2 (meta 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Edit integration report 2 for metadata 1\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.collectionVariables.get('softMeta1Id');",
+									"    const reportId = pm.collectionVariables.get('softReport2Id');",
+									"    const apiVersion = pm.variables.get('apiVersion');",
+									"    pm.expect(responseJson.report_id).to.eq(reportId);",
+									"    pm.expect(responseJson.resource_id).to.eq(metaId);",
+									"    pm.expect(responseJson.integration_status).to.eq(\"OK\");",
+									"    pm.expect(responseJson.version).to.eq(apiVersion);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"report_id\": \"{{softReport2Id}}\",\n    \"resource_id\": \"{{softMeta1Id}}\",\n    \"comment\": \"edit\",\n    \"method\": \"POST\",\n    \"resource_title\": \"Test de RUDI en local 44\",\n    \"treatment_date\": \"{{now}}\",\n    \"integration_status\": \"OK\",\n    \"version\": \"{{apiVersion}}\",\n    \"collection_tag\": \"{{stamp}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}/{{softMeta1Id}}/{{reports}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}",
+								"{{softMeta1Id}}",
+								"{{reports}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] Get report 2 (meta 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Edition of integration report 2 saved (access from metadata 1)\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta1Id');",
+									"    const reportId = pm.variables.get('softReport2Id');",
+									"    const apiVersion = pm.variables.get('apiVersion');",
+									"    pm.expect(responseJson.report_id).to.eq(reportId);",
+									"    pm.expect(responseJson.resource_id).to.eq(metaId);",
+									"    pm.expect(responseJson.integration_status).to.eq(\"OK\");",
+									"    pm.expect(responseJson.version).to.eq(apiVersion);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}/{{softMeta1Id}}/{{report}}/{{softReport2Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}",
+								"{{softMeta1Id}}",
+								"{{report}}",
+								"{{softReport2Id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get report 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Edition of integration report 2 saved (direct access)\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.variables.get('softMeta1Id');",
+									"    const reportId = pm.variables.get('softReport2Id');",
+									"    const apiVersion = pm.variables.get('apiVersion');",
+									"    pm.expect(responseJson.report_id).to.eq(reportId);",
+									"    pm.expect(responseJson.resource_id).to.eq(metaId);",
+									"    pm.expect(responseJson.integration_status).to.eq(\"OK\");",
+									"    pm.expect(responseJson.version).to.eq(apiVersion);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{reports}}/{{softReport2Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{reports}}",
+								"{{softReport2Id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all test reports",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"2 integration reports created in total\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const reportList = pm.response.json();",
+									"    pm.expect(reportList.length).to.gte(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{reports}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{reports}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get all reports",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"2 integration reports created in total\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const reportList = pm.response.json();",
+									"    pm.expect(reportList.length).to.gte(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{reports}}?sort_by=-updatedAt",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{reports}}"
+							],
+							"query": [
+								{
+									"key": "sort_by",
+									"value": "-updatedAt"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "07. Clean",
+			"item": [
+				{
+					"name": "Delete org 1 prevented",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Organization 1 referenced\", () => {",
+									"    pm.expect(pm.response.code).to.eql(403);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}/{{softOrg1Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}",
+								"{{softOrg1Id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete contact 1 prevented",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Contact 1 deleted\", () => {",
+									"    pm.expect(pm.response.code).to.eql(403);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}/{{softContact1Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}",
+								"{{softContact1Id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete reports 1, 2 & 3 (meta 1)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Delete report 1 & 2\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(3);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(3);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softReport1Id}}\",\n    \"{{softReport2Id}}\",\n    \"{{softReport3Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{reports}}/{{deletion}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{reports}}",
+								"{{deletion}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete meta 1 & 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Delete metadata 1 & 2\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(2);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}/{{deletion}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}",
+								"{{deletion}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "[PUB] No metadata left",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`No metadata left with '${stamp}' stamp'`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const publicMetadataList = pm.response.json();",
+									"    pm.expect(publicMetadataList.total).to.eq(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{{{portalTokenName}}}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{apiUrl}}/{{data}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{apiUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 1 created\", () => {",
+									"    try {",
+									"        pm.expect(pm.response.code).to.eql(200);",
+									"    } catch(err) {",
+									"        // console.log(pm.response)",
+									"    }",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.collectionVariables.get('softMeta1Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta1Id}}\",\n    \"local_id\": \"testingID {{softMeta1Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-444/{{softMeta1Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta1Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 4444\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 4\"\n        }\n    ],\n    \"collection_tag\": \"{{stamp}}\",\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"energy_consommation\",\n        \"electricity\"\n    ],\n    \"geography\": {\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"{{softOrg1Name}}\",\n        \"organization_address\": \"{{softOrg1Address}}\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"M. Fazo\",\n            \"email\": \"gpizj@pzorjeg.gt\",\n            \"collection_tag\": \"{{stamp}}\"\n        },\n        {\n            \"contact_id\": \"{{softContact2Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\",\n        \"metadata_provider\": {\n            \"organization_id\": \"{{softOrg1Id}}\",\n            \"collection_tag\": \"{{stamp}}\"\n        },\n        \"metadata_contacts\": [\n            {\n                \"contact_id\": \"{{softContact2Id}}\",\n                \"collection_tag\": \"{{stamp}}\"\n            }\n        ]\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"updated\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"licence_label\": \"{{softLicence}}\"\n        }\n    },\n    \"available_formats\": [\n        {\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{softMedia1Id}}\",\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.1.0\"\n            },\n            \"file_type\": \"application/json\",\n            \"file_size\": 59016,\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"4c9ee0f14e835927a1bbafde0eb89fb3\"\n            },\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete meta 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 1 deleted\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    const metaId = pm.variables.get('softMeta1Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}/{{softMeta1Id}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}",
+								"{{softMeta1Id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete media 1 & 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Delete metadata 1 & 2\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(2);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMedia1Id}}\",\n    \"{{softMedia2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{media}}/{{deletion}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{media}}",
+								"{{deletion}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete org 1 & 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Delete organizations 1 & 2\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(2);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softOrg1Id}}\",\n    \"{{softOrg2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}/{{deletion}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}",
+								"{{deletion}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete contact 1, 2 & 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Delete contacts 1, 2 & 3\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(3);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(3);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softContact1Id}}\",\n    \"{{softContact2Id}}\",\n    \"{{softContact3Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}/{{deletion}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}",
+								"{{deletion}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "No metadata left (count)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`No metadata left with '${stamp}' stamp'`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.eq(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?count_by=collection_tag&collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "count_by",
+									"value": "collection_tag"
+								},
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add meta 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Metadata 1 created\", () => {",
+									"    try {",
+									"        pm.expect(pm.response.code).to.eql(200);",
+									"    } catch(err) {",
+									"        // console.log(pm.response)",
+									"    }",
+									"    const responseJson = pm.response.json();",
+									"    // console.log(responseJson);",
+									"    const metaId = pm.collectionVariables.get('softMeta1Id');",
+									"    pm.expect(responseJson.global_id).to.eq(metaId);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"global_id\": \"{{softMeta1Id}}\",\n    \"local_id\": \"testingID {{softMeta1Id}}\",\n    \"doi\": \"10.1007/s00223-003-0070-444/{{softMeta1Id}}\",\n    \"resource_title\": \"Test de RUDI en local {{softMeta1Id}}\",\n    \"synopsis\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Courte description de RUDI en local 4444\"\n        }\n    ],\n    \"summary\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"Mon résumé chg 4\"\n        }\n    ],\n    \"collection_tag\": \"{{stamp}}\",\n    \"purpose\": [\n        {\n            \"lang\": \"fr\",\n            \"text\": \"{{stamp}}\"\n        }\n    ],\n    \"theme\": \"energyNetworks\",\n    \"keywords\": [\n        \"energy_consommation\",\n        \"electricity\"\n    ],\n    \"geography\": {\n        \"bounding_box\": {\n            \"west_longitude\": -1.677803,\n            \"east_longitude\": -1.677803,\n            \"north_latitude\": 48.112834,\n            \"south_latitude\": 48.112834\n        }\n    },\n    \"temporal_spread\": {\n        \"start_date\": \"2021-02-12T10:33:15Z\"\n    },\n    \"resource_languages\": [\n        \"fr\"\n    ],\n    \"producer\": {\n        \"organization_id\": \"{{softOrg1Id}}\",\n        \"organization_name\": \"{{softOrg1Name}}\",\n        \"organization_address\": \"{{softOrg1Address}}\",\n        \"collection_tag\": \"{{stamp}}\"\n    },\n    \"contacts\": [\n        {\n            \"contact_id\": \"{{softContact1Id}}\",\n            \"contact_name\": \"M. Fazo\",\n            \"email\": \"gpizj@pzorjeg.gt\",\n            \"collection_tag\": \"{{stamp}}\"\n        },\n        {\n            \"contact_id\": \"{{softContact2Id}}\",\n            \"contact_name\": \"Mme. Feya\",\n            \"email\": \"feya@irisa.fr\",\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ],\n    \"metadata_info\": {\n        \"api_version\": \"{{apiVersion}}\",\n        \"metadata_provider\": {\n            \"organization_id\": \"{{softOrg1Id}}\",\n            \"collection_tag\": \"{{stamp}}\"\n        },\n        \"metadata_contacts\": [\n            {\n                \"contact_id\": \"{{softContact2Id}}\",\n                \"collection_tag\": \"{{stamp}}\"\n            }\n        ]\n    },\n    \"dataset_dates\": {\n        \"created\": \"{{now}}\",\n        \"updated\": \"{{now}}\",\n        \"published\": \"{{now}}\"\n    },\n    \"storage_status\": \"online\",\n    \"access_condition\": {\n        \"licence\": {\n            \"licence_type\": \"STANDARD\",\n            \"licence_label\": \"{{softLicence}}\"\n        }\n    },\n    \"available_formats\": [\n        {\n            \"media_type\": \"FILE\",\n            \"media_id\": \"{{softMedia1Id}}\",\n            \"connector\": {\n                \"url\": \"https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.1.0\"\n            },\n            \"file_type\": \"application/json\",\n            \"file_size\": 59016,\n            \"checksum\": {\n                \"algo\": \"MD5\",\n                \"hash\": \"4c9ee0f14e835927a1bbafde0eb89fb3\"\n            },\n            \"collection_tag\": \"{{stamp}}\"\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Meta 1 added",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Meta 1 added with '${stamp}' stamp'`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.eq(1)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete meta with stamp",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete metadata with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(1);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete orgs with stamp",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete metadata with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(1);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(1);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete contacts with stamp",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`Delete metadata with '${stamp}' stamp`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const responseJson = pm.response.json();",
+									"    // pm.expect(responseJson.n).to.eq(2);",
+									"    // pm.expect(responseJson.ok).to.eq(1);",
+									"    pm.expect(responseJson.deletedCount).to.eq(2);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    \"{{softMeta1Id}}\",\n    \"{{softMeta2Id}}\"\n]",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "No metadata left",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`No metadata left with '${stamp}' stamp'`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.eq(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{data}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{data}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "No contact left",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`No contact left with '${stamp}' stamp'`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.eq(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{cont}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{cont}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "No org left",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`No organization left with '${stamp}' stamp'`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.eq(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{org}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{org}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "No report left",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const stamp = pm.collectionVariables.get('stamp')",
+									"pm.test(`No report left with '${stamp}' stamp'`, () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const metadataList = pm.response.json();",
+									"    pm.expect(metadataList.length).to.eq(0)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{reports}}?collection_tag={{stamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{reports}}"
+							],
+							"query": [
+								{
+									"key": "collection_tag",
+									"value": "{{stamp}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "getLogs",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Accessing logs\", () => {",
+									"    pm.expect(pm.response.code).to.eql(200);",
+									"    const response = pm.response.json()",
+									"    //const pm.response.header",
+									"    pm.expect(response.length).to.eq(20)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/{{adminUrl}}/{{logs}}?limit=20&sort_by=-updatedAt&updatedAfter={{dateUpdate}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"{{adminUrl}}",
+								"{{logs}}"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "sort_by",
+									"value": "-updatedAt"
+								},
+								{
+									"key": "updatedAfter",
+									"value": "{{dateUpdate}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{{{apiTokenName}}}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"const TRACE = false",
+					"const DEBUG = false",
+					"",
+					"const TOKEN_DURATION_S = 1200",
+					"const API_TOKEN_NAME = pm.variables.get('apiTokenName')",
+					"const PORTAL_TOKEN_NAME = pm.variables.get('portalTokenName')",
+					"const AUTH = 'Authorization'",
+					"",
+					"log = {",
+					"    d: (msg) => { if (DEBUG || TRACE) console.log(msg) },",
+					"    t: (msg) => { if (TRACE) console.log(msg) }",
+					"}",
+					"",
+					"time = {",
+					"    now: () => new Date().toISOString(),",
+					"    nowEpochS: () => _.floor(new Date().getTime() / 1000),",
+					"    timezone: () => new Date().getTimezoneOffset(),",
+					"}",
+					"codec = {",
+					"    streamToString: (data) => data.stream.toString('utf8'),",
+					"",
+					"    fromBase64: (data) => Buffer.from(data, 'base64').toString('utf-8'),",
+					"",
+					"    fromBase64Url: (base64UrlStr) => {",
+					"        log.t('-- base64UrlStr --')",
+					"        if (!base64UrlStr) return ''",
+					"        //        log.d('base64UrlStr: ' + base64UrlStr)",
+					"        //        log.d('base64UrlStr.length: ' + base64UrlStr.length)",
+					"        const paddedStr = (base64UrlStr.length % 4 == 0)",
+					"            ? base64UrlStr",
+					"            : base64UrlStr + \"====\".substring(base64UrlStr.length % 4);",
+					"        // log.d('paddedStr: ' + paddedStr)",
+					"        const base64Str = paddedStr",
+					"            .replace(\"_\", \"/\")",
+					"            .replace(\"-\", \"+\");",
+					"        // log.d('base64Str: ' + base64Str)",
+					"        return codec.fromBase64(base64Str);",
+					"    },",
+					"",
+					"    streamToUtf8: (data) => data.stream.toString('utf8')",
+					"",
+					"};",
+					"",
+					"rand = {",
+					"    get: (randName) => pm.collectionVariables.replaceIn(randName),",
+					"",
+					"    pickInList: (list) => list[_.random(0, list.length - 1)],",
+					"",
+					"    pick: (listName) => rand.pickInList(pm.collectionVariables.get(listName)),",
+					"",
+					"    initVal: (field) => {",
+					"        const val = pm.collectionVariables.get(field);",
+					"        if (val) return val;",
+					"        const randVal = rand.get('{{$randomUUID}}');",
+					"        pm.collectionVariables.set(field, randVal);",
+					"        return randVal;",
+					"    },",
+					"",
+					"    getContactEmail: (contactName) => `${contactName",
+					"        .replace(/(Miss|(Ms|Mrs|Mr|Dr)\\.)\\s|'Jr\\.'/gi, '')",
+					"        .toLowerCase()",
+					"        .replace(/\\s+|\\.\\./g, '.')",
+					"        .replace(/^\\.+|\\.+$|\\'+/g, '')",
+					"        }@irisa.fr`,",
+					"};",
+					"",
+					"secu = {",
+					"",
+					"    isTokenValid: (tokenName) => {",
+					"        log.t('-- is ' + tokenName + ' Valid --')",
+					"        const token = pm.collectionVariables.get(tokenName)",
+					"        // console.log('typeof token: ' + typeof token)",
+					"        if (!token || typeof token !== 'string') {",
+					"            log.d('Token ' + tokenName + ' is invalid: ' + JSON.stringify(token))",
+					"            return false",
+					"        }",
+					"        // log.d('splitting token: ' + token)",
+					"        const jwtBodyEncoded = token.split('.')[1]",
+					"        // log.d('split token: ' + jwtBodyEncoded)",
+					"",
+					"        const jwtBody = JSON.parse(codec.fromBase64Url(jwtBodyEncoded))",
+					"        // log.d('decoded body: ' + jwtBody)",
+					"        if (!jwtBody.exp) {",
+					"            log.d('No expiration time was found')",
+					"            return false",
+					"        }",
+					"        // log.d('is token valid?')",
+					"        const isValid = jwtBody.exp > time.nowEpochS()",
+					"        // log.d(tokenName + ' is ' + (isValid ? '' : 'not ') + 'valid')",
+					"        return isValid",
+					"    },",
+					"",
+					"    renewApiToken: async (tokenName, next) => {",
+					"        log.t('-- renewApiToken --')",
+					"        const reqUrl = pm.variables.get('cryptoJwtUrl') + '/forge'",
+					"        // log.d('reqUrl: ' + reqUrl)",
+					"        const reqNewToken = {",
+					"            url: reqUrl,",
+					"            method: 'POST',",
+					"            header: { \"Content-Type\": \"application/json\" },",
+					"            body: {",
+					"                mode: 'raw',",
+					"                raw: JSON.stringify({",
+					"                    'exp': time.nowEpochS() + TOKEN_DURATION_S,",
+					"                    'jti': rand.get('{{$randomUUID}}'),",
+					"                    'sub': pm.variables.get('pm_client_name'),",
+					"                    'client_id': pm.variables.get('pm_client_id'),",
+					"                    'req_mtd': 'all',",
+					"                    'req_url': 'all'",
+					"                })",
+					"            }",
+					"        }",
+					"        pm.sendRequest(reqNewToken, (err, res) => {",
+					"            const token = codec.streamToUtf8(res)",
+					"            // log.d('rudiProdToken : ' + token)",
+					"            try {",
+					"                pm.expect(res).to.have.property('code', 200);",
+					"            } catch (err) {",
+					"                console.error('[renewPortalToken]: ' + err)",
+					"            }",
+					"            pm.expect(token).to.match(/^\\w+\\.\\w+\\.[\\w\\-=]+$/)",
+					"            pm.collectionVariables.set(tokenName, token)",
+					"            log.d('API token stored')",
+					"",
+					"            next(token)",
+					"            //return token",
+					"        })",
+					"    },",
+					"",
+					"    renewPortalToken: async (tokenName, rudiProdToken) => {",
+					"        log.t('-- renewPortalToken --')",
+					"        const reqUrl = pm.variables.get('baseUrl') + '/' + pm.variables.get('adminUrl') + '/portal/token'",
+					"        // log.d('reqUrl: ' + reqUrl)",
+					"        const rpToken = rudiProdToken",
+					"        const reqNewToken = {",
+					"            url: reqUrl,",
+					"            method: 'GET',",
+					"            header: {",
+					"                \"Content-Type\": \"application/json\",",
+					"                [AUTH]: 'Bearer ' + rpToken",
+					"            },",
+					"        }",
+					"        pm.sendRequest(reqNewToken, (err, res) => {",
+					"            try {",
+					"                pm.expect(res).to.have.property('code', 200);",
+					"            } catch (err) {",
+					"                console.error('[renewPortalToken]: ' + err)",
+					"            }",
+					"            //log.d('renewPortalToken res: ' + JSON.stringify(res))",
+					"            const token = JSON.parse(codec.streamToUtf8(res)).access_token",
+					"            //const token = res.json()",
+					"            log.d('Portal token: ' + token)",
+					"",
+					"            pm.expect(token).to.match(/^\\w+\\.\\w+\\.[\\w\\-=]+$/)",
+					"            pm.collectionVariables.set(tokenName, token)",
+					"            log.d('Portal token stored')",
+					"",
+					"        })",
+					"    },",
+					"",
+					"    getRudiProdToken: async (next) => {",
+					"        log.t('-- getRudiProdToken --')",
+					"        const tokenName = API_TOKEN_NAME",
+					"        if (!secu.isTokenValid(tokenName)) await secu.renewApiToken(tokenName, next)",
+					"        else next(pm.variables.get(tokenName))",
+					"        return pm.variables.get(tokenName)",
+					"    },",
+					"",
+					"    getPortalToken: async (apiToken) => {",
+					"        log.t('-- getPortalToken --')",
+					"        const tokenName = PORTAL_TOKEN_NAME",
+					"        if (!secu.isTokenValid(tokenName)) await secu.renewPortalToken(tokenName, apiToken)",
+					"        return pm.variables.get(tokenName)",
+					"    }",
+					"",
+					"}",
+					"",
+					"secu.getRudiProdToken(secu.getPortalToken)",
+					"log.t('Init OK')",
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "stamp",
+			"value": "softChecks"
+		},
+		{
+			"key": "apiJwt",
+			"value": ""
+		},
+		{
+			"key": "portalJwt",
+			"value": ""
+		},
+		{
+			"key": "gitHash",
+			"value": ""
+		},
+		{
+			"key": "apiVersion",
+			"value": ""
+		},
+		{
+			"key": "keywords",
+			"value": ""
+		},
+		{
+			"key": "themes",
+			"value": ""
+		},
+		{
+			"key": "sanityLicence",
+			"value": ""
+		},
+		{
+			"key": "licences",
+			"value": ""
+		},
+		{
+			"key": "softOrg1Id",
+			"value": ""
+		},
+		{
+			"key": "softOrg1Name",
+			"value": ""
+		},
+		{
+			"key": "softOrg1Address",
+			"value": ""
+		},
+		{
+			"key": "softOrg2Id",
+			"value": ""
+		},
+		{
+			"key": "softOrg2Name",
+			"value": ""
+		},
+		{
+			"key": "softOrg2Address",
+			"value": ""
+		},
+		{
+			"key": "softContact1Id",
+			"value": ""
+		},
+		{
+			"key": "softContact1Name",
+			"value": ""
+		},
+		{
+			"key": "softContact1Email",
+			"value": ""
+		},
+		{
+			"key": "softContact2Id",
+			"value": ""
+		},
+		{
+			"key": "softContact2Name",
+			"value": ""
+		},
+		{
+			"key": "softContact2Email",
+			"value": ""
+		},
+		{
+			"key": "softContact3Id",
+			"value": ""
+		},
+		{
+			"key": "softContact3Name",
+			"value": ""
+		},
+		{
+			"key": "softContact3Email",
+			"value": ""
+		},
+		{
+			"key": "now",
+			"value": ""
+		},
+		{
+			"key": "softMeta1Id",
+			"value": ""
+		},
+		{
+			"key": "softMedia1Id",
+			"value": ""
+		},
+		{
+			"key": "randomTheme",
+			"value": ""
+		},
+		{
+			"key": "randomKeyword1",
+			"value": ""
+		},
+		{
+			"key": "randomKeyword2",
+			"value": ""
+		},
+		{
+			"key": "softLicence",
+			"value": ""
+		},
+		{
+			"key": "randomOrgId",
+			"value": ""
+		},
+		{
+			"key": "randomContact1",
+			"value": ""
+		},
+		{
+			"key": "randomContact2",
+			"value": ""
+		},
+		{
+			"key": "randomTitle",
+			"value": ""
+		},
+		{
+			"key": "randomSynopsis",
+			"value": ""
+		},
+		{
+			"key": "randomSummary",
+			"value": ""
+		},
+		{
+			"key": "softMeta2Id",
+			"value": ""
+		},
+		{
+			"key": "mediaId2",
+			"value": ""
+		},
+		{
+			"key": "softMedia2Id",
+			"value": ""
+		},
+		{
+			"key": "countWithOrg1",
+			"value": ""
+		},
+		{
+			"key": "softReport1Id",
+			"value": ""
+		},
+		{
+			"key": "softReport2Id",
+			"value": ""
+		},
+		{
+			"key": "unkownMetaId",
+			"value": ""
+		},
+		{
+			"key": "softReport3Id",
+			"value": ""
+		},
+		{
+			"key": "dateUpdate",
+			"value": ""
+		}
+	]
+}

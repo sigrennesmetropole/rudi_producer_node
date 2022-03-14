@@ -1,0 +1,27 @@
+# Config
+**/custom.ini
+**/*custom.ini
+
+# Libs
+**/node_modules
+
+# Logs
+**/logs
+
+# Tests
+**/actions
+
+# Zip
+**/*.zip
+**/*.gz
+
+# XLSX
+**/*.xls*
+
+# Keys
+**/*.pub
+**/*.prv
+
+# Idz
+features
+notes

@@ -1,0 +1,22 @@
+# Config
+**/custom.ini
+**/*custom.ini
+
+# Libs
+**/node_modules
+
+# Logs
+**/logs
+*.log
+
+# Zip
+**/*.zip
+**/*.gz
+
+# XLSX
+**/*.xls*
+
+# Keys
+**/0-ssh/*
+**/*.pub
+**/*.prv

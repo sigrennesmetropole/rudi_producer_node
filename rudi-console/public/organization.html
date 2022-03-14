@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="./images/logo.png"/>
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/rudi.css">
+    <link rel="stylesheet" href="styles/form.css">
+    <link rel="stylesheet" href="styles/material_layout.css">
+    <link rel="stylesheet" href="styles/material_icons.css">
+    <title>Rudi Producer</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
+</head>
+<body>
+    <nav hidden>
+        <img src="./images/logo_blanc_orange.svg" alt="logo">
+        <span class="brand-logo center">Formulaire</span>
+        <select id="lang_select" class="browser-default">
+            <option value="fr">Français</option>
+        </select>
+    </nav>
+
+    <div class="section">
+        <div class="wide-container">
+            <div class="row">
+                <div class="col s2 m2 l2" hidden>
+                    <button class="icon-flat" disabled>Go back<i class="material-icons left">navigate_before</i></button>
+                </div>
+                <textarea id="dev_paste" class="col s2 m6 l10"></textarea>
+            </div>
+        </div>
+        <div class="container">
+            <custom-form id="custom_form"></custom-form>
+            <div class="empty_display">
+                <h1>Loading...</h1>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./js/organization.js"></script>
+</body>
+</html>

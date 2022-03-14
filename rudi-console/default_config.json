@@ -1,0 +1,10 @@
+{
+	"port": 3038,
+	"host": "localhost",
+	"LOCAL": ".",
+	"API":  "https://admin-rudi.aqmo.org/prodmanager-shared/api/admin",
+	"MEDIA": {
+		"POST": "https://data-rudi.aqmo.org/media/post",
+		"connector": "https://data-rudi.aqmo.org/media/download"
+	  }
+}

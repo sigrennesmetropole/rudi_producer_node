@@ -1,0 +1,89 @@
+/*
+ * CSS for auto generated form
+ * @author Florian Desmortreux 
+*/
+
+/* ---- Titles ---- */
+
+form-header h1 {
+    margin: 0;
+    font-weight: 400;
+}
+
+form-body h1,
+form-body h2 {
+    color: gray;
+    margin-top : 1em;
+    margin-bottom : 0;
+    width: 100%;
+}
+
+form-body h1 {
+    font-size: 1.3em;
+    font-weight: lighter;
+}
+
+form-body h2 {
+    font-style: italic;
+    font-weight: normal;
+    font-size: 1em;
+}
+
+/* ---- Header ---- */
+
+form-header {
+    display: flex;
+    margin: 0;
+    align-items: center;
+    justify-content: space-between;
+}
+
+form-header > h1 {
+    margin:  0.7rem 0;
+    font-size: 3.5em;
+    font-family: sans-serif;
+} 
+
+form-header div {
+    display: flex;
+    align-self: flex-end;
+}
+
+/* ---- Form Body ---- */
+
+form-body {
+    margin-bottom: 1em;
+}
+
+/* ---- Footer ---- */
+
+form-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin: 1em;
+}
+
+form-footer > button {
+    font-size: 1.5em;
+    padding: 0.5em 1em;
+}
+
+form-footer > button[readonly] {
+    display: none;
+    pointer-events: none;
+}
+
+/* ---- Required Only ---- */
+
+custom-form[reduced] form-body *:not(h1):not(h2):not([required]),
+custom-form[reduced]:not([showdisabled]) form-section:not([required]),
+custom-form[reduced][showdisabled] form-section:not([required]):not([disabled]) {
+    display: none;
+}
+
+/* --- Display only ---- */
+
+custom-form:not([showdisabled]) form-body *[disabled],
+custom-form:not([showdisabled]) form-section[disabled] {
+    display: none;
+}

@@ -1,0 +1,87 @@
+[
+  {
+    "contact_id": "74b973fa-59c1-4f40-9dbe-0e2ca1e66af7",
+    "contact_name": "Ville de Rennes",
+    "email": "ville_de_rennes@rennes.fr"
+  },
+  {
+    "contact_id": "70560202-3b77-4831-a2b2-a97e596ce35c",
+    "contact_name": "Ville de Thorigné-Fouillard",
+    "email": "ville_de_thorigne-fouillard@rennes.fr"
+  },
+  {
+    "contact_id": "a5daf153-f63e-4953-a601-4d8fc07d9510",
+    "contact_name": "Rennes Métropole",
+    "email": "rennes_metropole@rennes.fr"
+  },
+  {
+    "contact_id": "1fb539c0-e07b-46ab-a880-e3d5e9785bc0",
+    "contact_name": "Keolis Rennes",
+    "email": "keolis_rennes@rennes.fr"
+  },
+  {
+    "contact_id": "dbf8af38-082c-4f87-b514-ed1c9c1109e4",
+    "contact_name": "Ville de Noyal-Châtillon-sur-Seiche",
+    "email": "ville_de_noyal-chatillon-sur-seiche@rennes.fr"
+  },
+  {
+    "contact_id": "45398e1f-04d4-4fc1-a8b6-8fb2391644a5",
+    "contact_name": "GRTgaz, RTE, Teréga",
+    "email": "grtgaz_rte_terega@rennes.fr"
+  },
+  {
+    "contact_id": "fdf23fe5-ece0-4420-b3c4-5570a50ee188",
+    "contact_name": "STAR",
+    "email": "star@rennes.fr"
+  },
+  {
+    "contact_id": "7f98e1f3-d370-45d5-89f0-7132f9d15e62",
+    "contact_name": "Enedis",
+    "email": "enedis@rennes.fr"
+  },
+  {
+    "contact_id": "07c257ed-47d0-49a5-899f-77618bd05b52",
+    "contact_name": "Citédia",
+    "email": "citedia@rennes.fr"
+  },
+  {
+    "contact_id": "e8199451-c1a4-4144-b8d0-fc26ba14dfce",
+    "contact_name": "Ministère de la Culture",
+    "email": "ministere_de_la_culture@rennes.fr"
+  },
+  {
+    "contact_id": "b4713c71-e704-4fb1-8eb5-c85e7ea0d91f",
+    "contact_name": "INSEE",
+    "email": "insee@rennes.fr"
+  },
+  {
+    "contact_id": "8a6c1499-e5c1-4581-815a-bbd4d97c33d9",
+    "contact_name": "Aucun contact",
+    "email": "aucun_contact@rennes.fr"
+  },
+  {
+    "contact_id": "d116c7ec-d07c-4100-b64e-4ee1edd2df14",
+    "contact_name": "Ville de Saint-Jacques de la Lande",
+    "email": "ville_de_saint-jacques_de_la_lande@rennes.fr"
+  },
+  {
+    "contact_id": "4f851f2d-00e9-4baa-a3de-a68884f6f2f7",
+    "contact_name": "Les Champs Libres",
+    "email": "les_champs_libres@rennes.fr"
+  },
+  {
+    "contact_id": "23ff31ad-3c8a-443e-a40c-474d9d5961e1",
+    "contact_name": "Ville de Cesson-Sévigné",
+    "email": "ville_de_cesson-sevigne@rennes.fr"
+  },
+  {
+    "contact_id": "d0150453-9c89-4558-bb7b-826f32ec4c6a",
+    "contact_name": "Département d'Ille et Vilaine",
+    "email": "departement_d_ille_et_vilaine@rennes.fr"
+  },
+  {
+    "contact_id": "b4c34848-8d9c-4474-9d2d-aa637e10f905",
+    "contact_name": "ARCEP",
+    "email": "arcep@rennes.fr"
+  }
+]

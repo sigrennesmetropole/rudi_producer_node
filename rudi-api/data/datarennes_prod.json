@@ -1,0 +1,66 @@
+[
+  {
+      "organization_id": "349b050c-cd74-447c-b82e-b7e7b2553c1d",
+      "organization_name": "Ville de Rennes"
+  },
+  {
+      "organization_id": "7448dbe3-ac18-4e99-a2e5-8a8dd1833927",
+      "organization_name": "Rennes Métropole"
+  },
+  {
+      "organization_id": "6588624a-92c7-43e6-ad9b-cb4faaf57791",
+      "organization_name": "STAR"
+  },
+  {
+      "organization_id": "378a442c-2e7d-4512-9ba5-c3b98eef07b0",
+      "organization_name": "Les Champs Libres"
+  },
+  {
+      "organization_id": "d5932bcc-2d11-4c5b-8299-0300195a7af3",
+      "organization_name": "Ville de Saint-Jacques de la Lande"
+  },
+  {
+      "organization_id": "28a59055-e382-45f6-83cb-279b704427c7",
+      "organization_name": "Ville de Cesson-Sévigné"
+  },
+  {
+      "organization_id": "6e0e995b-1101-40cd-956a-c305ba547d5e",
+      "organization_name": "Ville de Thorigné-Fouillard"
+  },
+  {
+      "organization_id": "857fec5b-a87f-4321-ac5a-3f2bded1095d",
+      "organization_name": "Keolis Rennes"
+  },
+  {
+      "organization_id": "d2885c7e-b3f3-4aed-82b3-46816880e6de",
+      "organization_name": "Ville de Noyal-Châtillon-sur-Seiche"
+  },
+  {
+      "organization_id": "a19bc539-62fe-4211-a042-e8c76a1559ae",
+      "organization_name": "GRTgaz, RTE, Teréga"
+  },
+  {
+      "organization_id": "87ebb21b-f336-4c34-89e0-db27319bf6af",
+      "organization_name": "Enedis"
+  },
+  {
+      "organization_id": "b1a705ed-b496-4159-92b5-489ae7f97f05",
+      "organization_name": "Citédia"
+  },
+  {
+      "organization_id": "a58ea331-36e8-4ced-b07e-f642721dbdd3",
+      "organization_name": "Ministère de la Culture"
+  },
+  {
+      "organization_id": "270b88a0-74d0-4305-b36f-0eca25cd992b",
+      "organization_name": "INSEE"
+  },
+  {
+      "organization_id": "085da795-5551-4c1d-a924-51a56afc0ec4",
+      "organization_name": "Aucun contact"
+  },
+  {
+      "organization_id": "a8318dca-e6a8-4def-9543-874df5c15552",
+      "organization_name": "Département d'Ille et Vilaine"
+  }
+]

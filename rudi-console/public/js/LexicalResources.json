@@ -1,0 +1,20 @@
+{   
+    "en": {
+        "fetching_data_error":"A problem occur when fetching data for this page",
+        "ask_cancel_update": "Would you like to cancel the updating of this data ?",
+        "cancel_update": "You have canceled the editing of the data. You may close this tab now.",
+        "error_send": "Error when sending data.",
+        "end_update": "You have successfully updated this data. You may close this tab now.",
+        "end_create": "You have successfully created a new data. You may close this tab now.",
+        "setDefault": "Set Default"
+    },
+    "fr": {
+        "fetching_data_error":"Il y a eu un problème lors du chargement des données de cette page",
+        "ask_cancel_update": "Voulez-vous annuler l'édition de la donnée ?",
+        "cancel_update": "Vous avez annulé l'édition de la donnée. Vous pouvez fermer cet onglet.",
+        "error_send": "Erreur lors de l'envoi de la donnée.",
+        "end_update": "Vous avez mis à jour la donnée. Vous pouvez fermer cet onglet.",
+        "end_create": "Vous avez bien créé une nouvelle donnée. Vous pouvez fermer cet onglet.",
+        "setDefault": "Définir comme valeur par défaut"
+    }
+}

@@ -1,0 +1,95 @@
+{
+    "temporal_spread": {
+        "start_date": "2021-02-12T10:33:15.000Z"
+    },
+    "geography": {
+        "bounding_box": {
+            "west_longitude": -1.677803,
+            "east_longitude": -1.677803,
+            "north_latitude": 48.112834,
+            "south_latitude": 48.112834
+        }
+    },
+    "medatata_info": {
+        "metadata_contacts": [
+            {
+                "contact_id": "50e2c58a-3b50-4fc0-bd27-82e88cb3e878",
+                "contact_name": "Mme. Feya",
+                "email": "feya@irisa.fr"
+            }
+        ],
+        "api_version": "1.2.0",
+        "metadata_provider": {
+            "organization_id": "25a8ea2b-13c5-4140-bc09-a60ba255fda7",
+            "organization_name": "UR1",
+            "organization_address": "2 rue du Thabor - CS 46510, 35065 Rennes CEDEX"
+        },
+        "metadata_dates": {
+            "created": "2021-04-01T15:44:50.989Z",
+            "updated": "2021-04-01T15:44:50.989Z"
+        }
+    },
+    "keywords": [
+        "energy_consommation",
+        "electricity"
+    ],
+    "contacts": [
+        {
+            "contact_id": "a5e8ea3f-a587-4140-bc09-a60ba255f18a",
+            "contact_name": "M. Fazo Gres",
+            "email": "fazo@univ-rennes1.fr"
+        }
+    ],
+    "available_formats": [
+        {
+            "checksum": {
+                "algo": "MD5",
+                "hash": "4c9ee0f14e835927a1bbafde0eb89fb3"
+            },
+            "connector": {
+                "url": "https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/1.1.0"
+            },
+            "media_type": "FILE",
+            "media_id": "b1f1a3b6-87c1-43f9-bacd-a19065c14949",
+            "file_type": "application/json",
+            "file_size": 59016
+        }
+    ],
+    "resource_languages": [
+        "fr"
+    ],
+    "global_id": "62763948-0087-403a-a083-64dce70c6044",
+    "local_id": "testingID 4 lg",
+    "doi": "10.1007/s00223-003-0070-444",
+    "resource_title": "Test de RUDI en local 44",
+    "synopsis": [
+        {
+            "lang": "fr",
+            "text": "Courte description de RUDI en local 4444"
+        }
+    ],
+    "summary": [
+        {
+            "lang": "fr-FR",
+            "text": "Mon résumé chg 444"
+        }
+    ],
+    "theme": "oceans",
+    "producer": {
+        "organization_id": "96763948-0a33-403a-a083-64dce70c7898",
+        "organization_name": "IRISA",
+        "organization_address": "Campus de Beaulieu, 263 avenue du Général Leclerc, Bâtiment 12 F, allée Jean Perrin, 35042 RENNES Cedex"
+    },
+    "dataset_dates": {
+        "created": "2021-04-01T14:24:32.373Z",
+        "published": "2021-04-01T14:24:32.373Z"
+    },
+    "storage_status": "online",
+    "access_condition": {
+        "licence": {
+            "licence_type": "CUSTOM",
+            "custom_licence_label": "CC BY-NC-SA 4.0",
+            "custom_licence_uri": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+        }
+    }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "rudi-api-client",
+  "version": "1.0.0",
+  "description": "JWT creation and files encryption",
+  "main": "./_main.js",
+  "scripts": {
+    "prestart": "npm install",
+    "start": "node ./_main.js",
+    "extstart": "nodemon -e js,ini --exec \"npm run rudiapp\"",
+    "rudiapp": "npm install && node ./_main.js",
+    "devstart": "./node_modules/nodemon/bin/nodemon.js ./_main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "rudi",
+    "encryption",
+    "jwt"
+  ],
+  "author": "olivier.martineau@gmail.com",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.21.1",
+    "date-and-time": "^2.0.0",
+    "fastify": "^3.20.2",
+    "ini": "^2.0.0",
+    "lodash": "^4.17.21",
+    "nodemon": "^2.0.12",
+    "sshpk": "^1.16.1",
+    "uuid": "^8.3.2",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.5"
+  }
+}

@@ -1,0 +1,40 @@
+{
+    "name": "rudi_media_drv",
+    "version": "1.2.0",
+    "description": "",
+    "main": "index.js",
+    "files": [
+        "access.js",
+        "basicdb.js",
+        "basicfile.js",
+        "configuration.js",
+        "db.js",
+        "index.js",
+        "schema.js",
+        "weblogger.js"
+    ],
+    "dependencies": {
+        "@aqmo.org/rudi_logger": "^1.1.2",
+        "express": "^4.16.4",
+        "ini": "^1.3.7",
+        "magic-bytes.js": "^1.0.3",
+        "md5": "^2.3.0",
+        "minimist": "^1.2.5",
+        "mongodb": "^3.6.6",
+        "uuid": "^8.3.2"
+    },
+    "devDependencies": {
+        "eslint": "^7.22.0",
+        "nodemon": "^2.0.1"
+    },
+    "scripts": {
+        "start": "nodejs index.js",
+        "debug": "nodemon index.js -p 3201 -l './mylog'",
+        "debug_ini": "nodemon index.js --ini local.ini",
+        "docker": "./node_modules/.bin/nodemon index.js -p ${L_PORT} -l ${L_LOGNAME}",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "lint": "eslint --quiet \"**/*.js\""
+    },
+    "author": "Laurent Morin",
+    "license": "EUPL-1.2"
+}
