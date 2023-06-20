@@ -86,6 +86,7 @@ function Client(target, options) {
     this.facility = typeof options.facility == "number" ? options.facility : Facility.Local0;
     this.severity = typeof options.severity == "number" ? options.severity : Severity.Informational;
     this.rfc3164  = typeof options.rfc3164 === 'boolean' ? options.rfc3164 : true;
+    this.level    = typeof options.level === 'number' ? options.level : Severity.Debug;
     this.structured_data  = this.parseSdata(options.data);
     this.appName  = options.appName;
     this.appModule  = process.title.substring(process.title.lastIndexOf("/")+1, 48);
@@ -217,14 +218,22 @@ Client.prototype.buildFormattedMessage = function buildFormattedMessage(message,
 	 **/
 	if (day[0] === "0") day = " " + day.substr(1, 1);
 
+        let lhostname = "";
+        if( this.target.search(/^\/.*log$/) < 0) { // RFC 3164 on /dev/log skips the hostname.
+            lhostname = " " + options.syslogHostname;
+        }
+
 	timestamp = month + " " + day + " " + time;
 	formattedMessage = "<"
 	    + pri
 	    + ">"
 	    + timestamp
+            + lhostname
 	    + " "
-	    + options.syslogHostname
-	    + " "
+	    + appName
+	    + "["
+	    + process.pid
+	    + "]: "
 	    + this.messageValue(message)
 	    + newline;
     } else {
@@ -296,6 +305,7 @@ Client.prototype.log = function log() {
     if (typeof options.appName === "undefined")        options.appName = this.appName;
     if (typeof options.appModule === "undefined")      options.appModule = this.appModule;
     if (typeof options.syslogHostname === "undefined") options.syslogHostname = this.syslogHostname;
+    if (options.severity > this.level) return this;
 
     var fm = this.buildFormattedMessage(message, options);
     var me = this;

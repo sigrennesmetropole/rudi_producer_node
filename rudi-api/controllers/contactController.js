@@ -1,39 +1,40 @@
-'use strict'
-
 const mod = 'contCtrl'
 /*
  * In this file are made the different steps followed for each
  * action on the contacts (producer or publisher)
  */
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../utils/logging')
-const { beautify } = require('../utils/jsUtils')
-const { RudiError } = require('../utils/errors')
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { beautify } from '../utils/jsUtils.js'
+import { logD } from '../utils/logging.js'
+import { RudiError } from '../utils/errors.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Data models
-// ------------------------------------------------------------------------------------------------
-const { Contact } = require('../definitions/models/Contact')
+// -------------------------------------------------------------------------------------------------
+import { Contact } from '../definitions/models/Contact.js'
+import { getContactWithJson } from '../db/dbQueries.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Controller functions
-// ------------------------------------------------------------------------------------------------
-exports.newContact = async (contactJson) => {
+// -------------------------------------------------------------------------------------------------
+export const newContact = async (contactJson) => {
   const fun = 'newContact'
-  log.d(mod, fun, `${beautify(contactJson)}`)
-  let dbContact
+  logD(mod, fun, `${beautify(contactJson)}`)
   try {
-    dbContact = await new Contact(contactJson)
+    const cont = await getContactWithJson(contactJson)
+    if (!!cont) return cont
+
+    const dbContact = new Contact(contactJson)
     await dbContact.save()
+    return dbContact
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
-  return dbContact
 }

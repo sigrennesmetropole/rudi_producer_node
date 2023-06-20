@@ -1,30 +1,41 @@
-import React from 'react';
-import { Pencil, Trash, Check } from 'react-bootstrap-icons';
-import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react'
+import { Pencil, Trash, Check } from 'react-bootstrap-icons'
+import PropTypes from 'prop-types'
+
+LicenceCard.propTypes = {
+  obj: PropTypes.object,
+  editMode: PropTypes.bool,
+}
 
 /**
  * Composant : LicenceCard
  * @return {ReactNode}
  */
-export default function LicenceCard({ metadata, formUrl, display }) {
+export default function LicenceCard({ obj, editMode }) {
+  const [isEdit, setEdit] = useState(!!editMode)
+  useEffect(() => setEdit(editMode), [editMode])
+
   /**
    * affiche le text en fonction de la langue choisi
    * @param {*} langObjectArray Array d'objet au format {lang:'', text:''}
-   * @param {String} lang langue selectionnée
+   * @param {String} userLang langue selectionnée
    * @return {String} text dans la langue appropriée
    */
-  function getLangText(langObjectArray, lang) {
-    // TODO
-    return langObjectArray[0].text;
+  const getLangText = (langObjectArray, userLang) => {
+    langObjectArray.map((textObj) => {
+      const { lang, text } = textObj
+      if (lang === userLang) return text
+    })
+    return langObjectArray[0].text
   }
 
   return (
-    <div className="col-12" key={metadata.concept_id}>
-      <div className="card tempMargin">
+    <div className="col-12" key={obj.concept_id}>
+      <div className="card card-margin">
         <h5 className="card-header">
           <div className="d-flex justify-content-between align-items-center">
-            <a>{getLangText(metadata.pref_label)}</a>
-            {display && display.editJDD && (
+            <a>{getLangText(obj.pref_label)}</a>
+            {isEdit && (
               <div className="btn-group" role="group">
                 <button type="button" className="btn btn-success">
                   <Check />
@@ -41,27 +52,22 @@ export default function LicenceCard({ metadata, formUrl, display }) {
         </h5>
         <div className="card-body">
           <p className="card-text">
-            id : <small className="text-muted">{metadata.concept_id}</small>
+            id : <small className="text-muted">{obj.concept_id}</small>
           </p>
           <p className="card-text">
-            code : <small className="text-muted">{metadata.concept_code}</small>
+            code : <small className="text-muted">{obj.concept_code}</small>
           </p>
           <p className="card-text">
-            role : <small className="text-muted"> {metadata.concept_role}</small>
+            role : <small className="text-muted"> {obj.concept_role}</small>
           </p>
           <p className="card-text">
             uri :{' '}
             <small className="text-muted">
-              <a href={metadata.concept_uri}> {metadata.concept_uri}</a>
+              <a href={obj.concept_uri}> {obj.concept_uri}</a>
             </small>
           </p>
         </div>
       </div>
     </div>
-  );
+  )
 }
-LicenceCard.propTypes = {
-  metadata: PropTypes.object,
-  formUrl: PropTypes.string,
-  display: PropTypes.object,
-};

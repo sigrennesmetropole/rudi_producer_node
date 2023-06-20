@@ -1,42 +1,40 @@
-'use strict'
-
 const mod = 'custErr'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // External dependencies
-// ------------------------------------------------------------------------------------------------
-const { nanoid } = require('nanoid')
+// -------------------------------------------------------------------------------------------------
+import { nanoid } from 'nanoid'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const { beautify } = require('./jsUtils')
-const log = require('./logging')
-const { objectNotFound, parameterExpected } = require('./msg')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const { TRACE, STATUS_CODE, TRACE_MOD, TRACE_FUN, TRACE_ERR } = require('../config/confApi')
-
+// -------------------------------------------------------------------------------------------------
 const DEFAULT_MESSAGE = 'Rudi producer node - API Server Error'
 const IS_RUDI_ERROR = 'is_rudi_error'
 const ERR_ID = 'errId'
 
-// ------------------------------------------------------------------------------------------------
-// Helper functions
-// ------------------------------------------------------------------------------------------------
+import { TRACE, STATUS_CODE, TRACE_MOD, TRACE_FUN, TRACE_ERR, ERR_PATH } from '../config/confApi.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { beautify, isArray } from './jsUtils.js'
+import { logD, logT, logW } from './logging.js'
+import { objectNotFound, parameterExpected } from './msg.js'
+
+// -------------------------------------------------------------------------------------------------
+// Helper functions
+// -------------------------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------------------------
 // Custom http errors
-// ------------------------------------------------------------------------------------------------
-class RudiError extends Error {
-  constructor(message, code, name, description, errTrace, ctxMod, ctxFun) {
+// -------------------------------------------------------------------------------------------------
+export class RudiError extends Error {
+  constructor(message, code, name, description, errTrace, ctxMod, ctxFun, path) {
     // const fun = 'RudiError()'
-    // log.t(mod, fun, `${beautify(errTrace)}`)
+    // logT(mod, fun, `${beautify(errTrace)}`)
     // const lastTrace = getLast(errTrace)
-    // if (lastTrace) log.d(lastTrace.mod, lastTrace.fun, lastTrace.err)
-    // else log.t(mod, fun, ``)
+    // if (lastTrace) logD(lastTrace.mod, lastTrace.fun, lastTrace.err)
+    // else logT(mod, fun, ``)
     super(message || DEFAULT_MESSAGE)
     this[IS_RUDI_ERROR] = true
     this[STATUS_CODE] = code || 500
@@ -47,6 +45,7 @@ class RudiError extends Error {
     this.setId()
     this[TRACE_MOD] = ctxMod
     this[TRACE_FUN] = ctxFun
+    this[ERR_PATH] = path
   }
 
   toString() {
@@ -69,8 +68,11 @@ class RudiError extends Error {
   get id() {
     return this[ERR_ID]
   }
-
+  get code() {
+    return this[STATUS_CODE]
+  }
   addTrace(ctxMod, ctxFun, ctxErr) {
+    if (!this[TRACE]) this[TRACE] = []
     this[TRACE].push({ [TRACE_MOD]: ctxMod, [TRACE_FUN]: ctxFun, [TRACE_ERR]: ctxErr })
   }
   get primeError() {
@@ -81,11 +83,11 @@ class RudiError extends Error {
     try {
       const errContext = error[TRACE]
       if (!errContext) {
-        log.w(mod, fun, `property '${TRACE}' not found`)
+        logW(mod, fun, `property '${TRACE}' not found`)
         return
       }
       errContext.map((previousErr) => {
-        log.w(
+        logW(
           previousErr[TRACE_MOD],
           previousErr[TRACE_FUN],
           previousErr[TRACE_ERR].message || previousErr[TRACE_ERR]
@@ -99,7 +101,7 @@ class RudiError extends Error {
   static isRudiError = (error) => error[IS_RUDI_ERROR] === true
 
   static createNewRudiError(error, ctxMod, ctxFun) {
-    // log.d(ctxMod, ctxFun, beautify(ctxErr))
+    // logD(ctxMod, ctxFun, beautify(ctxErr))
     if (!error[TRACE]) error[TRACE] = []
     const errTrace = error[TRACE].concat({
       [TRACE_MOD]: ctxMod,
@@ -118,13 +120,13 @@ class RudiError extends Error {
     )
   }
 
-  static createRudiHttpError(code, message, ctxMod, ctxFun) {
+  static createRudiHttpError(code, message, ctxMod, ctxFun, path) {
     const fun = 'createRudiHttpError'
     try {
-      log.d(mod, fun, `Error ${code}: ${message}`)
-      switch (code) {
+      logD(mod, fun, `Error ${code}: ${message}`)
+      switch (parseInt(code)) {
         case 400:
-          return new BadRequestError(message, ctxMod, ctxFun)
+          return new BadRequestError(message, ctxMod, ctxFun, path)
         case 401:
           return new UnauthorizedError(message, ctxMod, ctxFun)
         case 403:
@@ -153,19 +155,19 @@ class RudiError extends Error {
    * @param {*} errLocation error location (mod: module/file, fun: function)
    * @returns
    */
-  static treatError(ctxMod, ctxFun, error) {
+  static treatError(ctxMod, ctxFun, error, path) {
     const fun = 'treatError'
     try {
-      if (!error) throw new ParameterExpectedError('error', mod, fun)
       if (!ctxMod) throw new ParameterExpectedError('ctxMod', mod, fun)
       if (!ctxFun) throw new ParameterExpectedError('ctxFun', mod, fun)
+      if (!error) throw new ParameterExpectedError('error', mod, fun)
       if (error.name === 'ValidationError') error[STATUS_CODE] = 400
 
-      // log.d(mod, fun, `A) ${error} -> ${beautify(error)}`)
+      // logD(mod, fun, `A) ${error} -> ${beautify(error)}`)
       if (!error[TRACE]) {
         error[TRACE] = []
       } else if (!Array.isArray(error[TRACE])) {
-        log.w(mod, fun, beautify(error[TRACE]))
+        logW(mod, fun, beautify(error[TRACE]))
         throw new InternalServerError('Misuse of error trace')
       }
       const errTrace = error[TRACE].concat({
@@ -176,89 +178,122 @@ class RudiError extends Error {
 
       const transmittedError = new RudiError(
         error.message || error,
-        error[STATUS_CODE],
+        error[STATUS_CODE] || error.code,
         error.name,
         error.error,
         errTrace,
         ctxMod,
-        ctxFun
+        ctxFun,
+        path || error.path
       )
-      // log.d(mod, fun, error.isRudiError())
-
-      // log.d(mod, fun, `B) ${error} -> ${beautify(transmittedError)}`)
+      // logD(mod, fun, error.isRudiError())
+      if (transmittedError[STATUS_CODE] > 600) transmittedError[STATUS_CODE] = 500
+      // logD(mod, fun, `B) ${error} -> ${beautify(transmittedError)}`)
       return transmittedError
     } catch (err) {
-      // log.w(mod, fun, err)
+      logW(mod, fun, err)
       throw err
     }
   }
 
   // eslint-disable-next-line complexity
-  static treatCommunicationError(ctxMod, ctxFun, portalError) {
+  static treatCommunicationError(ctxMod, ctxFun, comError, errPrefix) {
     const fun = 'treatCommunicationError'
-    log.t(mod, fun, ``)
-
-    let error
     try {
-      if (
-        portalError.response &&
-        portalError.response.data &&
-        portalError.response.data.label &&
-        portalError.response.data.code
-      ) {
-        log.d(mod, fun, `portal error code: ${beautify(portalError.response.data.code)}`)
-        log.d(mod, fun, `portal error msg: ${beautify(portalError.response.data.label)}`)
-        error = RudiError.createRudiHttpError(
-          portalError.response.data.code,
-          portalError.response.data.label
-        )
-      } else if (portalError.response && portalError.response.data) {
-        if (portalError.response.data.status === 401) {
-          log.d(mod, fun, `Portal error 401`)
-          error = new UnauthorizedError('Credentials used for Portal are incorrect')
+      logT(mod, fun, ``)
+
+      let error
+      const errFlag = `${errPrefix ? errPrefix + ' ' : ''}`
+      // logD(mod, fun, `message: ${comError.message}`)
+      // logD(mod, fun, `name: ${comError.name}`)
+      // // logD(mod, fun, `config: ${beautify(comError.config)}`)
+      // logD(mod, fun, `status: ${JSON.parse(JSON.stringify(comError)).status}`)
+      // logD(mod, fun, JSON.parse(JSON.stringify(comError)).status)
+      // logD(mod, fun, `data: ${beautify(comError.response?.data)}`)
+
+      // logW(mod, fun, beautify(comError.response))
+
+      // logD(mod, fun, `comError.status : ${comError.status}`)
+      // // logD(mod, fun, `comError.status : ${JSON.parse(beautify(comError)).status}`)
+      // logD(mod, fun, `comError.response.status : ${comError.response?.status}`)
+      // logD(mod, fun, `comError.response?.data?.code : ${comError.response?.data?.code}`)
+      // logD(mod, fun, `comError.code : ${comError.code}`)
+      // logD(mod, fun, `comError.response?.data?.status : ${comError.response?.data?.status}`)
+
+      const errCode =
+        parseInt(
+          comError.response?.data?.code ||
+            comError.status ||
+            comError.response?.status ||
+            comError.code ||
+            comError.statusCode ||
+            comError.response?.data?.status ||
+            JSON.parse(JSON.stringify(comError)).status
+        ) || (comError.code == 'ENOTFOUND' ? 404 : 0)
+
+      // logD(mod, fun, `${errFlag}error code: ${errCode}`)
+
+      // logD(mod, fun, `response?.data?.label : ${comError.response?.data?.label}`)
+      // logD(mod, fun, `message : ${comError.message}`)
+      // logD(mod, fun, `data?.message : ${comError.data?.message}`)
+
+      const errMessage = `${
+        comError.response?.data?.label || comError.message || comError.data?.message
+      }`
+
+      logW(mod, fun, beautify(errMessage))
+
+      if (errCode && errMessage) {
+        // logT(mod, fun, beautify(errMessage))
+        return RudiError.createRudiHttpError(errCode, errMessage)
+      } else if (comError.response?.data) {
+        const errData = comError.response.data
+        if (errCode === 401) {
+          logD(mod, fun, `${errFlag}error 401`)
+          error = new UnauthorizedError('Credentials are incorrect')
         } else {
-          log.t(mod, fun, `Portal error data: ${beautify(portalError)}`)
-          const errMsg =
-            (portalError.response.data.path
-              ? `Path '${portalError.response.data.path} `
-              : undefined) +
-            (portalError.response.data.error
-              ? `${portalError.response.data.error}`
-              : portalError.response.data)
-          log.t(mod, fun, `Portal error msg: ${errMsg}`)
-          error = RudiError.createRudiHttpError(
-            portalError.response.data.status ? portalError.response.data.status : 500,
-            errMsg
-          )
+          logT(mod, fun, `${errFlag}error data: ${beautify(comError)}`)
+          const errMsg = (errData.path ? `Path '${errData.path} ` : '') + (errData.error || errData)
+          logT(mod, fun, `${errFlag}error msg: ${errMsg}`)
+          error = RudiError.createRudiHttpError(errCode ? errCode : 500, errMsg)
         }
-      } else if (portalError.message) {
-        if (portalError.message === 'Request failed with status code 401') {
-          log.t(mod, fun, `Portal error message 401: ${beautify(portalError)}`)
-          error = new UnauthorizedError(portalError.message)
-        } else if (portalError.message === 'Request failed with status code 403') {
-          log.t(mod, fun, `Portal error message 403: ${beautify(portalError)}`)
-          error = new ForbiddenError(portalError.message)
+      } else if (comError.message) {
+        const errMsg = comError.message
+        if (errMsg === 'Request failed with status code 400') {
+          logT(mod, fun, `${errFlag}error message 400: ${beautify(comError)}`)
+          error = new BadRequestError(errMsg)
+        } else if (errMsg === 'Request failed with status code 401') {
+          logT(mod, fun, `${errFlag}error message 401: ${beautify(comError)}`)
+          error = new UnauthorizedError(errMsg)
+        } else if (errMsg === 'Request failed with status code 403') {
+          logT(mod, fun, `${errFlag}error message 403: ${beautify(comError)}`)
+          error = new ForbiddenError(errMsg)
+        } else if (errMsg === 'Request failed with status code 404') {
+          logT(mod, fun, `${errFlag}error message 404: ${beautify(comError)}`)
+          error = new NotFoundError(errMsg)
         } else {
-          log.t(mod, fun, `Portal error message: ${beautify(portalError)}`)
-          error = new RudiError(portalError.message)
+          logT(mod, fun, `${errFlag}error message: ${beautify(comError)}`)
+          error = new RudiError(errMsg)
         }
       } else {
-        if (portalError.response) {
-          log.t(mod, fun, `Portal error response: ${beautify(portalError)}`)
-          error = new RudiError(portalError.response)
+        if (comError.response) {
+          logT(mod, fun, `${errFlag}error response: ${beautify(comError)}`)
+          error = new RudiError(comError.response)
         } else {
-          log.t(mod, fun, `Portal error: ${beautify(portalError)}`)
-          if (portalError === 'Error 401: Request failed with status code 401') {
-            error = new UnauthorizedError(portalError)
-          } else if (portalError === 'Error 403: Request failed with status code 401') {
-            error = new ForbiddenError(portalError)
+          logT(mod, fun, `${errFlag}error: ${beautify(comError)}`)
+          if (comError === 'Error 400: Request failed with status code 400') {
+            error = new BadRequestError(comError)
+          } else if (comError === 'Error 401: Request failed with status code 401') {
+            error = new UnauthorizedError(comError)
+          } else if (comError === 'Error 403: Request failed with status code 401') {
+            error = new ForbiddenError(comError)
           } else {
-            error = new RudiError(portalError)
+            error = new RudiError(comError)
           }
         }
       }
-      log.d(mod, fun, beautify(error))
-      error.addTrace(ctxMod, ctxFun, portalError)
+      logD(mod, fun, beautify(error))
+      error.addTrace(ctxMod, ctxFun, comError)
       return error
     } catch (err) {
       throw RudiError.treatError(mod, fun, err)
@@ -266,13 +301,41 @@ class RudiError extends Error {
   }
 }
 
-class BadRequestError extends RudiError {
-  constructor(errMessage, ctxMod, ctxFun) {
-    super(errMessage, 400, 'Bad request', 'The JSON is not valid', undefined, ctxMod, ctxFun)
+export class BadRequestError extends RudiError {
+  constructor(errMessage, ctxMod, ctxFun, pathArray) {
+    super(
+      errMessage,
+      400,
+      'Bad request',
+      'The JSON (or the request) is not valid',
+      undefined,
+      ctxMod,
+      ctxFun,
+      pathArray
+    )
+    if (pathArray && !isArray(pathArray)) {
+      logW(ctxMod, ctxFun, `BadRequest constructor Error: 4th parameter should be an array`)
+      this.path = [pathArray]
+    }
+  }
+  toJSON() {
+    return {
+      [STATUS_CODE]: this[STATUS_CODE],
+      type: this.constructor.name,
+      name: this.name,
+      error: this.error,
+      message: this.message,
+      id: this.id,
+      path: this.path,
+    }
+  }
+
+  toString() {
+    return `Error ${this[STATUS_CODE]} (${this.name}): ${this.message} [${this.path}]`
   }
 }
 
-class UnauthorizedError extends RudiError {
+export class UnauthorizedError extends RudiError {
   constructor(errMessage, ctxMod, ctxFun) {
     super(
       errMessage,
@@ -286,25 +349,25 @@ class UnauthorizedError extends RudiError {
   }
 }
 
-class ForbiddenError extends RudiError {
+export class ForbiddenError extends RudiError {
   constructor(errMessage, ctxMod, ctxFun) {
     super(errMessage, 403, 'Forbidden', 'The access is not allowed', undefined, ctxMod, ctxFun)
   }
 }
 
-class NotFoundError extends RudiError {
+export class NotFoundError extends RudiError {
   constructor(errMessage, ctxMod, ctxFun) {
     super(errMessage, 404, 'Not Found', 'The resource was not found', undefined, ctxMod, ctxFun)
   }
 }
 
-class ObjectNotFoundError extends NotFoundError {
+export class ObjectNotFoundError extends NotFoundError {
   constructor(objectType, objectId, ctxMod, ctxFun) {
-    super(`${objectNotFound(objectType, objectId)}`, undefined, ctxMod, ctxFun)
+    super(`${objectNotFound(objectType, objectId)}`, ctxMod, ctxFun)
   }
 }
 
-class MethodNotAllowedError extends RudiError {
+export class MethodNotAllowedError extends RudiError {
   constructor(errMessage, ctxMod, ctxFun) {
     super(
       errMessage,
@@ -318,7 +381,7 @@ class MethodNotAllowedError extends RudiError {
   }
 }
 
-class NotAcceptableError extends RudiError {
+export class NotAcceptableError extends RudiError {
   constructor(errMessage, ctxMod, ctxFun) {
     super(
       errMessage,
@@ -332,7 +395,7 @@ class NotAcceptableError extends RudiError {
   }
 }
 
-class InternalServerError extends RudiError {
+export class InternalServerError extends RudiError {
   constructor(errMessage, ctxMod, ctxFun) {
     super(
       errMessage,
@@ -346,13 +409,13 @@ class InternalServerError extends RudiError {
   }
 }
 
-class ParameterExpectedError extends InternalServerError {
+export class ParameterExpectedError extends InternalServerError {
   constructor(param, ctxMod, ctxFun) {
     super(`${parameterExpected(ctxFun, param)}`, ctxMod, ctxFun)
   }
 }
 
-class NotImplementedError extends RudiError {
+export class NotImplementedError extends RudiError {
   constructor(errMessage, ctxMod, ctxFun) {
     super(
       errMessage,
@@ -364,22 +427,4 @@ class NotImplementedError extends RudiError {
       ctxFun
     )
   }
-}
-
-// ------------------------------------------------------------------------------------------------
-// Exports
-// ------------------------------------------------------------------------------------------------
-
-module.exports = {
-  RudiError,
-  BadRequestError,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ObjectNotFoundError,
-  MethodNotAllowedError,
-  NotAcceptableError,
-  InternalServerError,
-  ParameterExpectedError,
-  NotImplementedError,
 }

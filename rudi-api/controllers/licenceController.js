@@ -1,54 +1,50 @@
-'use strict'
-
 const mod = 'licenceCtrl'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const uuid = require('uuid')
-
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../utils/logging')
-const { isEmptyArray } = require('../utils/jsUtils')
-const db = require('../db/dbQueries')
-const skosController = require('./skosController')
-
-const { InternalServerError, RudiError } = require('../utils/errors')
-
-const {
-  URL_PV_LICENCE_ACCESS,
-  URL_PV_LICENCE_CODES_ACCESS,
-  ACT_INIT,
-} = require('../config/confApi')
-
-const { API_SKOS_CONCEPT_CODE, LICENCE_CONCEPT_ROLE } = require('../db/dbFields')
-const { OBJ_LICENCES } = require('../config/confApi')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import { v4 as uuid } from 'uuid'
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const LICENCES_SCHEME = require('../doc/api/licences.json')
+// -------------------------------------------------------------------------------------------------
+import { OBJ_LICENCES } from '../config/confApi.js'
+import { API_SKOS_CONCEPT_CODE, LICENCE_CONCEPT_ROLE, API_LICENCE_LABEL } from '../db/dbFields.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { isEmptyArray } from '../utils/jsUtils.js'
+import { logD, logT } from '../utils/logging.js'
+import { InternalServerError, RudiError } from '../utils/errors.js'
+import { dbConceptListToRudiRecursive, newSkosScheme } from './skosController.js'
+import { cleanLicences, getAllConceptsWithRole, searchDbIdWithJson } from '../db/dbQueries.js'
+
+import {
+  get as getLicenceCodeList,
+  setAll as setLicenceCodes,
+  initialize as initLicenceCodes,
+} from '../definitions/thesaurus/LicenceCodes.js'
+
+import licenceScheme from '../doc/api/licences.js'
+
+// -------------------------------------------------------------------------------------------------
 // Controller
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Cache for licences
-let LICENCE_LIST, LICENCE_CODE_LIST
+let LICENCE_LIST
 
-exports.getLicences = async () => {
+export const getLicences = async () => {
   const fun = 'getLicenceList'
   try {
-    log.t(mod, fun, ``)
+    logT(mod, fun, ``)
     if (!LICENCE_LIST) {
-      log.d(mod, fun, `Init LICENCE_LIST`)
-      let dblicenceList = await db.getAllConceptsWithRole(LICENCE_CONCEPT_ROLE)
+      logD(mod, fun, `Init LICENCE_LIST`)
+      let dblicenceList = await getAllConceptsWithRole(LICENCE_CONCEPT_ROLE)
       if (isEmptyArray(dblicenceList)) {
-        await this.initializeLicences()
-        dblicenceList = await db.getAllConceptsWithRole(LICENCE_CONCEPT_ROLE)
+        await initializeLicences()
+        dblicenceList = await getAllConceptsWithRole(LICENCE_CONCEPT_ROLE)
       }
-      LICENCE_LIST = await skosController.dbConceptListToRudiRecursive(dblicenceList)
+      LICENCE_LIST = await dbConceptListToRudiRecursive(dblicenceList)
     }
     return LICENCE_LIST
   } catch (err) {
@@ -56,63 +52,66 @@ exports.getLicences = async () => {
   }
 }
 
-exports.getLicenceCodes = async () => {
+export const getLicenceCodes = async () => {
   const fun = `getLicenceCodes`
   try {
-    log.t(mod, fun, ``)
-    if (!LICENCE_CODE_LIST) {
-      const licenceList = await this.getLicences()
+    logT(mod, fun, ``)
+    if (getLicenceCodeList().length === 0) {
+      const licenceList = await getLicences()
       const licenceCodeList = licenceList.map((obj) => obj[API_SKOS_CONCEPT_CODE])
-      LICENCE_CODE_LIST = licenceCodeList.sort()
+      setLicenceCodes(licenceCodeList.sort())
     }
-    return LICENCE_CODE_LIST
+    return getLicenceCodeList()
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.initializeLicences = async () => {
+export const initializeLicences = async () => {
   const fun = 'initializeLicences'
   try {
-    await db.cleanLicences()
-    LICENCE_CODE_LIST = null
-    log.d(mod, fun, `Licences initialized`)
-    const licenceStr = JSON.stringify(LICENCES_SCHEME)
-    const licenceData = JSON.parse(licenceStr.replace(/\{\{\w+\}\}/g, () => uuid.v4()))
-    // log.d(mod, fun, licenceData)
-    const reply = await skosController.newSkosScheme(licenceData)
+    await cleanLicences()
+    initLicenceCodes()
+    logD(mod, fun, `Licences erased`)
+    const licenceStr = JSON.stringify(licenceScheme)
+    const licenceData = JSON.parse(licenceStr.replace(/\{\{\w+\}\}/g, () => uuid()))
+    const reply = await newSkosScheme(licenceData)
     if (!reply) throw new InternalServerError(`Licence integration failed`)
-    return await this.getLicenceCodes()
+
+    const newLicenceCodeList = await getLicenceCodes()
+    setLicenceCodes(newLicenceCodeList.sort())
+    logD(mod, fun, `Licences initialized`)
+    return getLicenceCodeList()
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.getLicenceWithCode = async (licenceCode) => {
-  return await db.searchDbIdWithJson(OBJ_LICENCES, { API_LICENCE_LABEL: licenceCode })
+export const getLicenceWithCode = async (licenceCode) => {
+  return await searchDbIdWithJson(OBJ_LICENCES, { [API_LICENCE_LABEL]: licenceCode })
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Controller
-// ------------------------------------------------------------------------------------------------
-exports.getAllLicences = async (req, reply) => {
+// -------------------------------------------------------------------------------------------------
+export const getAllLicences = async (req, reply) => {
   const fun = `getAllLicences`
-  log.t(mod, fun, `< GET ${URL_PV_LICENCE_ACCESS}`)
-  // log.t(mod, fun, ``)
+  logT(mod, fun, `< ${req?.method} ${req?.url}`)
+  // logT(mod, fun, ``)
 
-  return await this.getLicences()
+  return await getLicences()
 }
 
-exports.getAllLicenceCodes = async (req, reply) => {
+export const getAllLicenceCodes = async (req, reply) => {
   const fun = `getAllLicenceCodes`
-  log.t(mod, fun, `< GET ${URL_PV_LICENCE_CODES_ACCESS}`)
-  // log.t(mod, fun, ``)
+  logT(mod, fun, `< ${req?.method} ${req?.url}`)
+  // logT(mod, fun, ``)
 
-  return await this.getLicenceCodes()
+  return await getLicenceCodes()
 }
 
-exports.initLicences = async (req, reply) => {
+export const initLicences = async (req, reply) => {
   const fun = `initLicences`
-  log.t(mod, fun, `< POST ${URL_PV_LICENCE_ACCESS}/${ACT_INIT}`)
-  return await this.initializeLicences()
+  logT(mod, fun, `< ${req?.method} ${req?.url}`)
+  return await initializeLicences()
 }

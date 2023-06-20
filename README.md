@@ -64,6 +64,10 @@ A local MongoDB database is required by the rudi-api and is optional
 for the rudi-media modules. The location is specified in configuration
 file. The system has been tested using the MongoDB version 3.9.
 
+Several modules require an access to public or private mongo-db
+database. The DB is mandatory only for the API module. The
+installation was validated using the MongoDB system version 3.9.
+
 * * *
 
 ### Current deployment

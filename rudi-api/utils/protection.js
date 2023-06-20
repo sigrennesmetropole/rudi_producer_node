@@ -1,45 +1,45 @@
-'use strict'
-
 const mod = 'protect'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const { HEADERS, HD_AUTH, HD_URL, HD_AUTH_LOWER, HD_METHOD } = require('../config/headers')
+// -------------------------------------------------------------------------------------------------
+const ACTIVATE_LOG = false
+
+import { HEADERS, HD_AUTH, HD_URL, HD_AUTH_LOWER, HD_METHOD } from '../config/headers.js'
 const REQ_AUTH_MAX_LENGTH = 1000
 const REQ_URL_MAX_LENGTH = 200
 
-exports.getUrlMaxLength = () => REQ_URL_MAX_LENGTH
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('./logging')
-const { accessProperty } = require('./jsonAccess')
-const {
+export const getUrlMaxLength = () => REQ_URL_MAX_LENGTH
+
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { HTTP_METHODS } from '../config/confApi.js'
+import { logT } from './logging.js'
+import { RudiError, BadRequestError } from './errors.js'
+import { accessProperty } from './jsonAccess.js'
+import {
   validateSchema,
   REGEX_JWT_AUTH,
   REGEX_URL_WRONG_CHAR,
-} = require('../definitions/schemaValidators')
-
-const { RudiError, BadRequestError } = require('./errors')
-const { HTTP_METHODS } = require('../config/confApi')
-
-// ------------------------------------------------------------------------------------------------
-// Functiôons
-// ------------------------------------------------------------------------------------------------
+  REGEX_BASIC_AUTH,
+} from '../definitions/schemaValidators.js'
+// -------------------------------------------------------------------------------------------------
+// Functions
+// -------------------------------------------------------------------------------------------------
 /**
  * Offers a protection on 'Authorization' property of the request headers
  * @param {*} req
  * @returns
  */
-exports.protectHeaderAuth = (req) => {
+export const protectHeaderAuth = (req) => {
   const fun = 'protectHeaderAuth'
   try {
-    log.t(mod, fun, ``)
+    if (ACTIVATE_LOG) logT(mod, fun, ``)
     const header = accessProperty(req, HEADERS)
     const auth = header[HD_AUTH] || header[HD_AUTH_LOWER]
     if (!auth) return
@@ -47,17 +47,19 @@ exports.protectHeaderAuth = (req) => {
       throw new BadRequestError(
         `The length of the token in request headers exceeds ${REQ_AUTH_MAX_LENGTH} characters (found ${auth.length})`
       )
-    if (!validateSchema(auth, REGEX_JWT_AUTH))
-      throw new BadRequestError(`The token in headers does not respect JWT schema`)
+    if (!validateSchema(auth, REGEX_JWT_AUTH) && validateSchema(auth, REGEX_BASIC_AUTH))
+      throw new BadRequestError(
+        `The token in headers does not respect JWT schema nor usr/pwd authentification`
+      )
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.protectHeaderUrl = (req) => {
+export const protectHeaderUrl = (req) => {
   const fun = 'protectHeaderUrl'
   try {
-    log.t(mod, fun, ``)
+    if (ACTIVATE_LOG) logT(mod, fun, ``)
     const url = accessProperty(req, HD_URL)
     if (url.length > REQ_URL_MAX_LENGTH)
       throw new BadRequestError(`Request URL is too long (${url.length} characters)`)
@@ -68,10 +70,10 @@ exports.protectHeaderUrl = (req) => {
   }
 }
 const httpMethods = Object.values(HTTP_METHODS)
-exports.protectHeaderMethod = (req) => {
+export const protectHeaderMethod = (req) => {
   const fun = 'protectHeaderMethod'
   try {
-    log.t(mod, fun, ``)
+    if (ACTIVATE_LOG) logT(mod, fun, ``)
     const method = accessProperty(req, HD_METHOD)
     if (httpMethods.indexOf(method) < 0) throw new BadRequestError(`Incorrect request method`)
   } catch (err) {

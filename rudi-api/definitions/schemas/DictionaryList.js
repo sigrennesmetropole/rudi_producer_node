@@ -1,33 +1,26 @@
-'use strict'
+// -------------------------------------------------------------------------------------------------
+// Constants
+// -------------------------------------------------------------------------------------------------
+import { DICT_LANG, DICT_TEXT } from '../../db/dbFields.js'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const Language = require('../thesaurus/Languages').get()
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { get as getLanguages } from '../thesaurus/Languages.js'
+const Languages = getLanguages()
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
-const DictionaryList = new mongoose.Schema(
-  {
-    lang: {
-      type: String,
-      default: Language.fr_FR,
-      enum: Object.values(Language),
-      required: true,
-    },
-    text: {
-      type: [String],
-      required: true,
-    },
+// -------------------------------------------------------------------------------------------------
+export const DictionaryListSchema = {
+  [DICT_LANG]: {
+    type: String,
+    default: Languages.fr,
+    enum: Object.values(Languages),
+    required: true,
   },
-  {
-    _id: false,
-  }
-)
-
-// ------------------------------------------------------------------------------------------------
-// Exports
-// ------------------------------------------------------------------------------------------------
-module.exports = DictionaryList
+  [DICT_TEXT]: {
+    type: [String], // THE difference with DictionaryEntry: we can have several labels per langauge here !
+    required: true,
+  },
+}

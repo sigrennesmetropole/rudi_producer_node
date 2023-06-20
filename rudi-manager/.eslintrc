@@ -1,0 +1,54 @@
+{
+  "env": {
+    "node": true,
+    "browser": true,
+    "commonjs": true,
+    "es2021": true
+  },
+  "ignorePatterns": [
+    "**/*.spec.js",
+    "**/*.test.js",
+    "**/node_modules/*",
+    "**/coverage/*",
+    "**/front/*"
+  ],
+  "parserOptions": {
+    "ecmaFeatures": { "jsx": true },
+    "ecmaVersion": "latest"
+  },
+  "rules": {
+    "arrow-body-style": "off",
+    "comma-dangle": ["error", "only-multiline"],
+    "complexity": ["warn", { "max": 25 }],
+    "indent": "off",
+    "no-await-in-loop": "error",
+    "no-console": "off",
+    "no-dupe-keys": "error",
+    "no-empty": "error",
+    "no-invalid-regexp": "error",
+    "no-redeclare": "error",
+    "no-return-assign": "error",
+    "no-self-assign": "warn",
+    "no-self-compare": "warn",
+    "no-undef": "error",
+    "space-before-function-paren": [
+      "error",
+      { "anonymous": "always", "named": "never", "asyncArrow": "always" }
+    ],
+    "unused-imports/no-unused-imports": "warn",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^_|req|res|reply|next",
+        "args": "after-used",
+        "argsIgnorePattern": "^_|req|res|reply|next"
+      }
+    ]
+  },
+  "extends": ["prettier"],
+  "plugins": ["unused-imports"],
+  "settings": {
+    "react": { "version": "detect" }
+  }
+}

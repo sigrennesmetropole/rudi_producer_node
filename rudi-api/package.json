@@ -1,16 +1,19 @@
 {
   "name": "rudi-prod-api",
-  "version": "1.2.3",
-  "private": "true",
+  "version": "2.3.1",
+  "private": false,
   "description": "API for RUDI producer node",
   "main": "./rudiServer.js",
+  "type": "module",
   "scripts": {
     "prestart": "npm install",
     "start": "nodemon ./rudiServer.js",
     "extstart": "nodemon -e js,ini --exec \"npm run rudiapp\"",
     "rudiapp": "npm install && node rudiServer.js",
-    "devstart": "./node_modules/nodemon/bin/nodemon.js ./rudiServer.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "devstart": "nodemon ./rudiServer.js --conf=./0-ini/conf_custom.ini",
+    "tracestart": "nodemon --inspect ./rudiServer.js --conf=./0-ini/conf_custom.ini",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint \"**/*.js\""
   },
   "nodemonConfig": {
     "execMap": {
@@ -24,36 +27,37 @@
     "metadata",
     "open-data"
   ],
-  "author": "Olivier Martineau <olivier.martineau@irisa.fr>",
+  "author": "Olivier Martineau <community@rudi-univ-rennes1.fr>",
   "homepage": "https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER",
   "license": "EUPL-1.2",
   "dependencies": {
+    "@aqmo.org/jwt_lib": "^1.1.9",
     "@aqmo.org/rudi_logger": "^1.1.2",
-    "axios": "^0.24.0",
-    "date-and-time": "^2.2.1",
-    "fastify": "^3.27.2",
-    "ini": "^2.0.0",
+    "axios": "^1.3.4",
+    "date-and-time": "^2.4.2",
+    "fastify": "^4.13.0",
+    "ini": "^3.0.1",
     "lodash": "^4.17.21",
-    "mongoose": "^6.2.4",
-    "mongoose-geojson-schema": "^2.1.7",
+    "mongoose": "^6.10.0",
+    "mongoose-geojson-schema": "^2.2.4",
     "mongoose-int32": "^0.6.0",
-    "nanoid": "^3.3.1",
+    "nanoid": "^4.0.1",
+    "object-path": "^0.11.8",
     "sanitize-filename": "^1.6.3",
     "sshpk": "^1.17.0",
-    "uuid": "^8.3.2",
-    "winston": "^3.6.0",
-    "winston-daily-rotate-file": "^4.6.1",
-    "xstate": "^4.30.3"
+    "uuid": "^9.0.0",
+    "winston": "^3.8.2",
+    "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.15.8",
-    "@babel/eslint-parser": "^7.17.0",
-    "@babel/preset-env": "^7.16.11",
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "eslint-plugin-unused-imports": "^1.1.5",
-    "nodemon": "^2.0.13",
-    "prettier": "^2.4.1"
+    "@babel/core": "^7.21.0",
+    "@babel/eslint-parser": "^7.19.1",
+    "@babel/preset-env": "^7.20.2",
+    "eslint": "^8.34.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-unused-imports": "^2.0.0",
+    "nodemon": "^2.0.20",
+    "prettier": "^2.8.4"
   }
 }

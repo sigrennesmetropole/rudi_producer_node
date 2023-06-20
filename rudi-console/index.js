@@ -1,112 +1,104 @@
 /**
- * Code for the node server to serve the web page that
- * allow the user to update rudi metadata
+ * Code for the node server
+ * Load config, serve dependencies and static content
+ *
+ * args :
+ *  --config        path to config file
+ *  --dev           mode dev
+ *  --revision      expose git hash (for production purposes)
+ *
  * Listen on the port 3038
  * @author Forian Desmortreux
  */
 
 /* ----- INITALIZE VARIABLES AND CONSTANTS ----- */
-const express = require("express");
-const path = require("path");
-var hashId = "";
+const express = require('express');
 
-const config = (function () {
+const config = require('./default_config.json');
+const router = require('./router.js');
+
+// Build config from default config and parse cli args
+const loadConfig = () => {
   let myArgs = process.argv;
-  var config;
-  try {
-    config = require("./custom_config.json");
-  } catch {
-    config = require("./default_config.json");
-  }
   let index = 0;
   while (index < myArgs.length) {
-    if (index + 1 < myArgs.length) {
-      if (myArgs[index] == "--revision") {
-        index++;
-        hashId = myArgs[index];
-      } else if (myArgs[index] == "--config") {
-        index++;
-        var local_config = require(myArgs[index]);
-        try {
-          for (let prop in local_config) {
-            config[prop] = local_config[prop];
+    if (index < myArgs.length) {
+      if (myArgs[index] == '--dev') {
+        config.dev = true;
+      } else if (index + 1 < myArgs.length) {
+        if (myArgs[index] == '--revision') {
+          console.log('revision'); // === hashId
+          index++;
+          config.revision = myArgs[index];
+        } else if (myArgs[index] == '--config') {
+          console.log('config');
+          index++;
+          try {
+            var localConfig = require(myArgs[index]);
+          } catch (e) {
+            console.warn('WARN : --config Not Found');
+            continue;
           }
-        } catch (e) {
-          throw "Error with config file";
+          try {
+            Object.assign(config, localConfig);
+          } catch (e) {
+            throw 'Error with config file';
+          }
         }
       }
     }
     index++;
   }
-  if (hashId == "")
+  if (!config.revision) {
     try {
-      hashId = require("child_process").execSync("git rev-parse --short HEAD");
+      config.revision = `${require('child_process').execSync('git rev-parse --short HEAD')}`.trim();
     } catch (e) {
+      console.e(e);
       /* Ignore.*/
     }
-  return config;
-})();
-
-console.log(new Date().toISOString());
-console.log("Config :\n", config);
-
-/* ----- EXPRESS ----- */
-
-// Routing
-
-const app = express();
-app.use(express.static(__dirname + "/public"));
-
-// Main route
-app.get("/config.json", (req, res) => {
-  console.log("Serving config...");
-  res.send(JSON.stringify(config));
-});
-
-// Main route
-app.get("/", function (req, res) {
-  console.log("main path");
-  res.sendFile(path.join(__dirname + "/public/rudi.html"));
-});
-
-app.get("/contacts", function (req, res) {
-  console.log("main path");
-  res.sendFile(path.join(__dirname + "/public/contact.html"));
-});
-
-app.get("/organizations", function (req, res) {
-  console.log("main path");
-  res.sendFile(path.join(__dirname + "/public/organization.html"));
-});
-
-// Test
-app.get("/test_page", function (req, res) {
-  console.log("main path");
-  res.sendFile(path.join(__dirname + "/public/test_page.html"));
-});
-
-// Get commit id;
-app.get("/commitID", function (req, res) {
-  res.setHeader("Content-type", "text");
-  res.send(hashId);
-});
-
-app.get("/getTemplate/:filename", function (req, res) {
-  var x = req.params;
-  console.log("getTemplate", x.filename);
-  let template;
-  try {
-    template = require(path.join(__dirname + "/templates/" + x.filename));
-  } catch {
-    res.send("Not found");
   }
-  res.send(JSON.stringify(template));
-});
+  if (config.pm_url.endsWith('/'))
+    config.pm_url = config.pm_url.substring(0, config.pm_url.length - 1);
+  if (!config.pm_url.endsWith('api')) config.pm_url = `${config.pm_url}/api`;
+  return config;
+};
 
-// Start node serveur
-// 0.0.0.0 for all interfaces - allow forwarding to rudi
-let server = app.listen(config.port, config.host, function () {
-  var host = server.address().address;
-  var port = server.address().port;
-  console.log("App listening at %s:%s", host, port);
-});
+const launchServer = async () => {
+  /* ----- CONF ----- */
+
+  loadConfig();
+
+  console.log(new Date().toISOString());
+  console.log('Config :\n', config);
+
+  /* ----- EXPRESS ----- */
+
+  // Routing
+
+  const app = express();
+  app.use('/', router);
+
+  // Serve config
+  app.get('/config.json', (req, res) => {
+    console.log('Serving config...');
+    res.json(config);
+  });
+
+  // Get commit id;
+  app.get('/hashId', (req, res) => {
+    console.log('Asking the hash for a friend, here it is: ' + config.revision);
+    res.send(config.revision);
+  });
+  app.get('/hash', (req, res) => res.send(config.revision));
+
+  // Start node serveur
+  const server = app.listen(config.port, config.host, () => {
+    const host = server.address().address;
+    const port = server.address().port;
+    console.log('App listening at %s:%s', host, port);
+  });
+};
+
+launchServer()
+  .then(console.log('--- Server launched ---'))
+  .catch((e) => console.error(e));

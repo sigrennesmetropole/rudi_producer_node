@@ -77,7 +77,8 @@ class LocalLogger {
             prefix: 'RudiLogger-',
             console: true,
             consoleData: true,
-            logRotationSec: 8 * 60 * 60 // 8 hours.
+            logRotationSec: 8 * 60 * 60,
+            level: syslog_1.Severity.Debug
         };
         if ((typeof config.log_local) !== 'undefined') {
             const cfg = config.log_local;
@@ -91,6 +92,8 @@ class LocalLogger {
                 this.config.console = cfg.console;
             if ((typeof cfg.consoleData) == 'boolean')
                 this.config.consoleData = cfg.consoleData;
+            if ((typeof cfg.level) == 'number')
+                this.config.level = cfg.level;
         }
         return this.config;
     }

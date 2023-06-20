@@ -1,65 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react'
+import axios from 'axios'
 
 /**
  * Composant : Monitoring
  * @return {ReactNode}
  */
 function Monitoring({}) {
-  const [generalMonitoring, setGeneralMonitoring] = useState({});
+  const [generalMonitoring, setGeneralMonitoring] = useState({})
 
   useEffect(() => {
     Promise.all([
       axios
-        .get(`${process.env.PUBLIC_URL}/api/admin/resources`, {
-          params: { count_by: 'metadata_info.api_version' },
-        })
-        .catch((e) => {
-          return { data: [] };
+        .get(`api/data/resources`, { params: { count_by: 'metadata_info.api_version' } })
+        .catch(() => {
+          return { data: [] }
         }),
+      axios.get(`api/data/resources`, { params: { count_by: 'storage_status' } }).catch(() => {
+        return { data: [] }
+      }),
       axios
-        .get(`${process.env.PUBLIC_URL}/api/admin/resources`, {
-          params: { count_by: 'storage_status' },
-        })
-        .catch((e) => {
-          return { data: [] };
-        }),
-      axios
-        .get(`${process.env.PUBLIC_URL}/api/admin/resources`, {
+        .get(`api/data/resources`, {
           params: { count_by: 'metadata_info.api_version', updated_after: '2021-10-01' },
         })
-        .catch((e) => {
-          return { data: [] };
+        .catch(() => {
+          return { data: [] }
         }),
       axios
-        .get(`${process.env.PUBLIC_URL}/api/admin/resources`, {
+        .get(`api/data/resources`, {
           params: { count_by: 'producer' },
         })
-        .catch((e) => {
-          return { data: [] };
+        .catch(() => {
+          return { data: [] }
         }),
       axios
-        .get(`${process.env.PUBLIC_URL}/api/admin/report`, {
+        .get(`api/data/reports`, {
           params: { count_by: 'integration_status' },
         })
-        .catch((e) => {
-          return { data: [] };
+        .catch(() => {
+          return { data: [] }
         }),
     ]).then((values) => {
-      console.log(values);
+      console.log(values)
       setGeneralMonitoring({
         total: values[0].data,
         byStorageStatus: values[1].data,
         recentlyMod: values[2].data,
         byProducer: values[3].data,
         reportsByStatus: values[4].data,
-      });
-    });
-  }, []);
+      })
+    })
+  }, [])
 
   return (
     <div className="tempPaddingTop">
-      <div className="row">
+      <div className="row catalogue">
         <div className="col-4">
           <div className="card">
             <h5 className="card-header">
@@ -69,7 +63,7 @@ function Monitoring({}) {
             </h5>
             <div className="card-body">
               <div className="card-text justify-content-between align-items-center">
-                <div className="badge badge-primary badge-pill badge-monitoring">
+                <div className="badge-monitoring">
                   {generalMonitoring.total &&
                     generalMonitoring.total.reduce((accum, item) => accum + item.count, 0)}
                 </div>
@@ -86,7 +80,7 @@ function Monitoring({}) {
             </h5>
             <div className="card-body">
               <div className="card-text justify-content-between align-items-center">
-                <div className="badge badge-primary badge-pill badge-monitoring">
+                <div className="badge-monitoring">
                   {generalMonitoring.recentlyMod &&
                     generalMonitoring.recentlyMod.reduce((accum, item) => accum + item.count, 0)}
                 </div>
@@ -97,7 +91,7 @@ function Monitoring({}) {
       </div>
       <div className="row">
         {generalMonitoring.byStorageStatus &&
-          generalMonitoring.byStorageStatus.map((status, i) => {
+          generalMonitoring.byStorageStatus.map((status) => {
             return (
               <div key={status.storage_status} className="col-4">
                 <div className="card">
@@ -108,42 +102,38 @@ function Monitoring({}) {
                   </h5>
                   <div className="card-body">
                     <div className="card-text justify-content-between align-items-center">
-                      <div className="badge badge-primary badge-pill badge-monitoring">
-                        {status.count}
-                      </div>
+                      <div className="badge-monitoring">{status.count}</div>
                     </div>
                   </div>
                 </div>
               </div>
-            );
+            )
           })}
       </div>
       <div className="row">
         {generalMonitoring.byProducer &&
-          generalMonitoring.byProducer.map((prod, i) => {
+          generalMonitoring.byProducer.map((prod) => {
             return (
               <div key={prod.producer.organization_id} className="col-4">
                 <div className="card">
                   <h5 className="card-header">
                     <div className="d-flex justify-content-between align-items-center">
-                      <span>Métadonnéees par {prod.producer.organization_name} :</span>
+                      <span>Métadonnéees par {prod.producer?.organization_name} :</span>
                     </div>
                   </h5>
                   <div className="card-body">
                     <div className="card-text justify-content-between align-items-center">
-                      <div className="badge badge-primary badge-pill badge-monitoring">
-                        {prod.count}
-                      </div>
+                      <div className="badge-monitoring">{prod.count}</div>
                     </div>
                   </div>
                 </div>
               </div>
-            );
+            )
           })}
       </div>
       <div className="row">
         {generalMonitoring.reportsByStatus &&
-          generalMonitoring.reportsByStatus.map((status, i) => {
+          generalMonitoring.reportsByStatus.map((status) => {
             return (
               <div key={status.integration_status} className="col-4">
                 <div className="card">
@@ -154,19 +144,17 @@ function Monitoring({}) {
                   </h5>
                   <div className="card-body">
                     <div className="card-text justify-content-between align-items-center">
-                      <div className="badge badge-primary badge-pill badge-monitoring">
-                        {status.count}
-                      </div>
+                      <div className="badge-monitoring">{status.count}</div>
                     </div>
                   </div>
                 </div>
               </div>
-            );
+            )
           })}
       </div>
     </div>
-  );
+  )
 }
-Monitoring.propTypes = {};
+Monitoring.propTypes = {}
 
-export default Monitoring;
+export default Monitoring

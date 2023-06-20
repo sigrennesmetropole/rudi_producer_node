@@ -1,72 +1,101 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import InfiniteScroll from 'react-infinite-scroll-component';
-import PropTypes from 'prop-types';
-import UserCard from './userCard';
-import EditUserCard from './editUserCard';
-import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler';
+import axios from 'axios'
+import React, { useEffect, useState } from 'react'
+import PropTypes from 'prop-types'
+import InfiniteScroll from 'react-infinite-scroll-component'
+
+import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
+import ActOnUserCard from './actOnUserCard'
+import UserCard from './userCard'
+
+const propId = 'id'
+const urlUsers = `api/secu/users`
+const urlRoles = `api/secu/roles`
+
+CatalogueUser.propTypes = {
+  editMode: PropTypes.bool,
+}
 
 /**
  * Composant : CatalogueUser
  * @return {ReactNode}
  */
-export default function CatalogueUser({ editMode, display }) {
-  const { defaultErrorHandler } = useDefaultErrorHandler();
-  const [users, setUser] = useState([]);
-  const [hasMore] = useState(false);
+export default function CatalogueUser({ editMode }) {
+  const { defaultErrorHandler } = useDefaultErrorHandler()
 
-  const refresh = () => {
-    getInitialData();
-  };
+  const [isEdit, setEdit] = useState(!!editMode)
+  useEffect(() => setEdit(!!editMode), [editMode])
+
+  const [roleList, setRoleList] = useState([])
+  const [userList, setUserList] = useState([])
+  const [hasMore, setHasMore] = useState(false)
+  const PAGE_SIZE = 20
+  const [currentOffset, setCurrentOffset] = useState(0)
+
+  useEffect(() => fetchInitialData(), [])
+
+  const refresh = () => fetchInitialData()
 
   /**
    * recup la 1er page des métadonnéees et les countBy
    */
-  function getInitialData() {
+  function fetchInitialData() {
     axios
-      .get(`${process.env.PUBLIC_URL}/api/v1/users`)
+      .get(urlRoles)
+      .then((res) => setRoleList(res.data))
+      .catch((err) => defaultErrorHandler(err))
+    axios
+      .get(urlUsers)
       .then((res) => {
-        const userFromAPI = res.data;
-        setUser(userFromAPI);
+        setCurrentOffset(PAGE_SIZE)
+        setUserList(res.data)
       })
-      .catch((e) => {
-        defaultErrorHandler(e);
-      });
+      .catch((err) => defaultErrorHandler(err))
   }
-  useEffect(() => {
-    getInitialData();
-  }, []);
+
+  /**
+   * Fonction utilisée par InfiniteScroll
+   * Récupere la page suivante
+   */
+  const fetchMoreData = () => {
+    axios
+      .get(urlUsers, { params: { limit: PAGE_SIZE, offset: currentOffset } })
+      .then((res) => {
+        const partialObjList = res.data
+        setCurrentOffset(currentOffset + PAGE_SIZE)
+        if (partialObjList.length < PAGE_SIZE) setHasMore(false)
+        setUserList(userList.concat(partialObjList))
+      })
+      .catch((err) => defaultErrorHandler(err))
+  }
 
   return (
     <div className="tempPaddingTop">
-      <div className="row">
+      <div className="row catalogue">
         <div className="col-9">
           <div className="row">
-            {display && display.editJDD && <EditUserCard></EditUserCard>}
-            <InfiniteScroll
-              dataLength={users.length}
-              next={() => {}}
-              hasMore={hasMore}
-              loader={<h4>Loading...</h4>}
-            >
-              {users.map((user, i) => {
-                return (
+            {isEdit && <ActOnUserCard refresh={refresh} roleList={roleList}></ActOnUserCard>}
+            {userList.length ? (
+              <InfiniteScroll
+                dataLength={userList.length}
+                next={fetchMoreData}
+                hasMore={hasMore}
+                loader={<h4>Loading...</h4>}
+              >
+                {userList.map((user) => (
                   <UserCard
+                    roleList={roleList}
                     user={user}
-                    display={display}
+                    key={user[propId]}
                     refresh={refresh}
-                    key={user.id}
                   ></UserCard>
-                );
-              })}
-            </InfiniteScroll>
+                ))}
+              </InfiniteScroll>
+            ) : (
+              'Aucune donnée trouvée'
+            )}
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
-CatalogueUser.propTypes = {
-  display: PropTypes.object,
-  editMode: PropTypes.object,
-};

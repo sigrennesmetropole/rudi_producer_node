@@ -3,17 +3,17 @@
 _This module offers a RESTful interface to access the RUDI metadata publically exposed on the RUDI Producer node.
 It also makes it possible to upload metadata from another module such as the Producer node manager (https://gitlab.aqmo.org/rudidev/rudi-console-proxy)_
 
-##### Author: Olivier Martineau (olivier.martineau@irisa.fr)
+##### Author: Olivier Martineau (community@rudi-univ-rennes1.fr)
 
 ---
 
 ## List of features
 
-The Media driver provides :
+The API module provides :
 
 - A definition of the RUDI metadata that is compatible with the definition (https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER)
-- A public API for fetching metadata
-- A private API for creating, accessing, updating and deleting metadata.
+- An external API for fetching open-data metadata (public and accessible without any authentification)
+- An internal API for creating, accessing, updating and deleting metadata (https://app.swaggerhub.com/apis/OlivierMartineau/RudiProducer-InternalAPI)
 
 ---
 
@@ -103,6 +103,10 @@ _See https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/ for further
 - `GET /api/admin/db`
 - `DELETE /api/admin/db/:object`
 - `DELETE /api/admin/db`
+- `GET /api/admin/check/node/url`
+- `GET /api/admin/check/portal/url`
+- `GET /api/admin/check/portal/resources`
+- `GET /api/admin/check/portal/ids`
 
 ---
 
@@ -118,7 +122,7 @@ When the flag `should_control_private_requests` is true, JWT from incoming reque
 
 The parameter `profiles` indicates the path where is located the security file.
 
-This security file defines the "profiles" for each client that can connect on the private side of the API.
+This security file defines the "profiles" for each client that can connect on the internal side of the API.
 They are defined each by a section whose **name** reflects the `sub` payload field in the JWT.
 
 In this section,
@@ -147,8 +151,57 @@ In this section,
 - `iat` (issued at): date of the generation of the token in Epoch seconds
 - `client_id`: an identifier for the logged user requesting the resource
 
+### Example CURL requests:
+
+- `$USR`: login that has been transmitted to communicate with the token server
+- `$PWD`: password that has been transmitted to communicate with the token server
+- `$DATE`: Epoch date in seconds, e.g. now+1200 to get a token that is valid for 20mn
+- `$SUB`: The value set for the robot/harvester in the file `rudi_proxy.ini` for `token_server_subject` and associated to a private key (e.g. `rudi_token`)
+- `$MTD`: HTTP method for the request to the API (`GET` | `POST` | `PUT` | `DELETE`)
+- `$URL`: URL of the request to the API (e.g.: `/api/admin/resources``)
+- `$CID`: client ID, the way you wish identify the sender of the request (e.g. 'PostmanRobot')
+- `$NODE`: URL of the producer node (e.g.: `https://rm.fenix.rudi-univ-rennes1.fr`)
+
+```sh
+# Create a token
+JWT=`curl -X POST --user $USR:$PWD -H 'Content-Type: application/json' -d "{\"exp\":$DATE,\"sub\":\"$SUB\",\"req_mtd\":\"$MTD\",\"req_url\":\"$URL\",\"client_id\":\"$CID\"}" $NODE/crypto/jwt/forge`
+
+# Check a token
+curl -X POST --user $USR:$PWD -H 'Content-Type: application/json' -d "\"$JWT\"" $NODE/crypto/jwt/check
+
+# Send the request to the API
+curl -X $MTD -H "Authorization: Bearer $JWT" ${NODE}${URL}
+```
+
+---
+
+## Commit process
+
+Two commit processes types are ongoing parallely:
+
+1. MediaFile
+   Each MediaFile get uploaded to the Media module: the upload status determines if the MediaFile status is set to commited.
+   More technically speaking, in case of success
+
+   - `available_formats[i].file_storage_status` is set to `available`
+   - `available_formats[i].file_status_update` is updated
+
+2. Metadata
+   If all the media were set as available, the metadata is sent to the portal and its status set to `pending`.
+   If at least one upload fails to be committed, the metadata is set as `unavailable` and the user has to re-upload
+   the file for the status to be updated anew.
+
+## Verification process
+
+Each MediaFile will be periodically checked.
+
+If the file is found, the field `available_formats[i].media_dates.verified` is updated.
+If `available_formats[i].storage_status` was set to `nonexistant` or `missing`, it is set to `available` and `available_formats[i].status_update` date is updated.
+
+If the file is not found and `available_formats[i].storage_status === 'available'`, then `available_formats[i].storage_status` is set to `missing` and `available_formats[i].status_update` date is updated.
+
 ---
 
 ## Test files
 
-In `tests/env-rudi-*.postman_environment.json` the value for the key `cryptoJwtUrl` should be replaced with the valid address of the client/crypto module
+In `tests/env-rudi-*.postman_environment.json` the value for the key `cryptoJwtUrl` should be replaced with the valid address of the client/crypto module. See [Tests documentation.md](tests/Tests_documentation.md) for further details

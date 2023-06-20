@@ -1,40 +1,38 @@
-'use strict'
-
 const mod = 'hashThes'
 
-const { BadRequestError, RudiError } = require('../../utils/errors')
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const { parameterExpected } = require('../../utils/msg')
+// -------------------------------------------------------------------------------------------------
+import { BadRequestError, RudiError } from '../../utils/errors.js'
+import { parameterExpected } from '../../utils/msg.js'
+import { logW } from '../../utils/logging.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // Method for computing the integrity hash of the data
 const HashAlgorithms = ['MD5', 'SHA-256', 'SHA-512']
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Getter / setter
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 let Thesaurus = HashAlgorithms
 
-exports.initialize = (arg) => {
+export const initialize = (arg) => {
   if (arg) Thesaurus = []
 }
 
-exports.get = () => {
-  return Thesaurus
+export const get = (prop) => {
+  return prop ? Thesaurus[prop] : Thesaurus
 }
 
-exports.set = (newValue) => {
+export const set = (newValue) => {
   const fun = 'set'
   try {
     if (!newValue) {
       const errMsg = parameterExpected(fun, 'newValue')
-      log.w(mod, fun, errMsg)
+      logW(mod, fun, errMsg)
       throw new BadRequestError(errMsg)
     }
     newValue = `${newValue}`.trim()
@@ -44,13 +42,13 @@ exports.set = (newValue) => {
   }
 }
 
-exports.isValid = (value, shouldInit) => {
+export const isValid = (value, shouldInit) => {
   const fun = 'isValid'
   if (!value) {
-    log.w(mod, fun, parameterExpected(fun, 'value'))
+    logW(mod, fun, parameterExpected(fun, 'value'))
     return false
   }
-  const isIn = Thesaurus.indexOf(value) > -1
+  const isIn = get().indexOf(value) > -1
   if (!isIn && shouldInit) {
     this.set(value)
     return true

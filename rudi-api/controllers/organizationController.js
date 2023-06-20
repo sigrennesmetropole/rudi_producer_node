@@ -1,40 +1,41 @@
-'use strict'
-
 const mod = 'orgCtrl'
 /*
  * This file describes the steps followed for each
  * action on the organizations (producer or publisher)
  */
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../utils/logging')
-const { beautify } = require('../utils/jsUtils')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import { logT } from '../utils/logging.js'
+import { beautify } from '../utils/jsUtils.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Data models
-// ------------------------------------------------------------------------------------------------
-const { Organization } = require('../definitions/models/Organization')
-const { RudiError } = require('../utils/errors')
-// const cache = require('../db/dbCache')
+// -------------------------------------------------------------------------------------------------
+import { Organization } from '../definitions/models/Organization.js'
+import { RudiError } from '../utils/errors.js'
+import { getOrganizationWithJson } from '../db/dbQueries.js'
+// import cache from '../db/dbCache'
 
-exports.newOrganization = async (orgJson) => {
+// -------------------------------------------------------------------------------------------------
+// Functions
+// -------------------------------------------------------------------------------------------------
+export const newOrganization = async (orgJson) => {
   const fun = 'newOrganization'
-  log.d(mod, fun, `${beautify(orgJson)}`)
-
-  let dbOrganization
-
+  logT(mod, fun, beautify(orgJson))
   try {
-    dbOrganization = await new Organization(orgJson)
+    const org = await getOrganizationWithJson(orgJson)
+    if (!!org) return org
+
+    const dbOrganization = new Organization(orgJson)
     await dbOrganization.save()
-    // cache.addOrganization(dbOrganization)
+    return dbOrganization
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
-  return dbOrganization
 }

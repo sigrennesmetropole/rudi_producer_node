@@ -33,16 +33,10 @@ exports.convertEncoding = (data, fromEncoding, toEncoding) => {
 // -----------------------------------------------------------------------------
 // Dates
 // -----------------------------------------------------------------------------
-exports.nowISO = () => {
-  return new Date().toISOString()
-}
+exports.nowISO = () => new Date().toISOString()
+exports.nowEpochMs = () => new Date().getTime()
+exports.nowEpochS = () => floor(this.nowEpochMs() / 1000)
 
-exports.nowEpochMs = () => {
-  return new Date().getTime()
-}
-exports.nowEpochS = () => {
-  return floor(this.nowEpochMs() / 1000)
-}
 exports.dateEpochSToIso = (utcSeconds) => {
   const fun = 'dateEpochSToIso'
   try {
@@ -115,7 +109,6 @@ exports.quietAccess = (obj, prop) => {
   }
 }
 
-
 /**
  * Safe access to a property of a JSON object: ensures the property is defined
  * @param {JSON} jsonObject
@@ -123,7 +116,7 @@ exports.quietAccess = (obj, prop) => {
  * @returns {String} The property value
  * @throws object property is missing
  */
- exports.accessProperty = (jsonObject, jsonProperty) => {
+exports.accessProperty = (jsonObject, jsonProperty) => {
   // log.d(mod, fun, `Accessing property '${jsonProperty}' from object '${utils.beautify(jsonObject)}'`)
   const value = jsonObject[jsonProperty]
   // log.d(mod, fun, `=> value = ${utils.beautify(value)}`)
@@ -131,7 +124,6 @@ exports.quietAccess = (obj, prop) => {
   // log.d(mod, fun, `=> ${jsonProperty} = ${utils.beautify(value)}`)
   return value
 }
-
 
 /** !! TODO: treat object arrays! */
 exports.getPaths = async (root, parentKeyName) => {

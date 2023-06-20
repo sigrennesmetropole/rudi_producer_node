@@ -1,155 +1,183 @@
-const passport = require('passport');
-const bcrypt = require('bcrypt');
-const databaseManager = require('../database/database');
-const utils = require('../utils/utils');
-const log = require('../utils/logger');
-const mod = 'authController';
+const mod = 'authController'
 
-const registerUser = (data) => {
-  const fun = 'registerUser';
-  // TODO : throw error instead
-  if (!data.password || !data.confirmPassword || data.password !== data.confirmPassword) return;
-  return databaseManager
-    .getUserByUsername(data.username)
-    .then((user) => {
-      // Create new User
-      if (!user) {
-        const newUser = { username: data.username, password: data.password, email: data.email };
-        // Hash password before saving in database
-        return bcrypt
-          .genSalt(10)
-          .then((salt) => {
-            return bcrypt.hash(newUser.password, salt).then((hash) => {
-              newUser.password = hash;
-              return databaseManager.createUser(newUser).then((user) => {
-                return user;
-              });
-            });
-          })
-          .catch((err) => {
-            log.e(mod, fun, err);
-            throw err;
-          });
-      } else {
-        return Promise.reject(new Error(`User '${data.username}' already exists!`));
-      }
-    })
-    .catch((err) => {
-      log.e(mod, fun, err);
-      throw err;
-    });
-};
+// External dependencies
+const passport = require('passport')
 
-exports.postLogin = (req, res, next) => {
-  passport.authenticate('local', function (err, user, info) {
+// Internal dependencies
+const { decodeBase64 } = require('../utils/utils')
+const log = require('../utils/logger')
+const { BadRequestError, RudiError, UnauthorizedError } = require('../utils/errors')
+const { getDbConf } = require('../config/config')
+
+const errorHandler = require('./errorHandler')
+const {
+  CONSOLE_TOKEN_NAME,
+  createFrontUserTokens,
+  hashPassword,
+  matchPassword,
+  PM_FRONT_TOKEN_NAME,
+  consoleCookieOpts,
+  pmFrontCookieOpts,
+} = require('../utils/secu')
+const {
+  dbGetHashedPassword,
+  dbGetUserRolesByUsername,
+  dbHashAndUpdatePassword,
+  dbOpen,
+  dbRegisterUser,
+  dbUpdatePasswordWithField,
+} = require('../database/database')
+
+// Controllers
+/**
+ * Used for a user to login
+ * @param {*} req
+ * @param {*} res
+ * @param {*} next
+ * @returns {Object} user info
+ */
+exports.postLogin = async (req, res, next) => {
+  const fun = 'postLogin'
+  // log.d(mod, 'postLogin', '<--')
+  passport.authenticate('local', (err, user, info) => {
     if (err) {
-      return res.status(400).json({ errors: err });
+      log.sysWarn(mod, fun, err)
+      return res.status(400).send(err)
     }
-    if (!user) {
-      return res.status(400).json({ errors: 'No user found' });
-    }
-    req.login(user, { session: false }, function (err) {
-      if (err) {
-        return res.status(400).json({ errors: err });
+    if (!user)
+      try {
+        return res
+          .status(401)
+          .send(info?.message || `User not found or incorrect password: '${req?.body?.username}'`)
+      } catch (e) {
+        log.e(mod, fun, e)
+        return
       }
+    const username = user.username
+    dbGetUserRolesByUsername(null, username)
+      .then((roles) => {
+        if (!roles?.length)
+          return res
+            .status(401)
+            .cookie(CONSOLE_TOKEN_NAME, '', consoleCookieOpts(0))
+            .cookie(PM_FRONT_TOKEN_NAME, '', pmFrontCookieOpts(0))
+            .json({ [CONSOLE_TOKEN_NAME]: '', [PM_FRONT_TOKEN_NAME]: '' })
+            .send(`Admin validation is required for this user: '${user.username}'`)
 
-      const { authToken, publicToken, exp } = utils.createToken(user);
+        req.login(user, { session: false }, async (err) => {
+          if (err) return res.status(400).json({ errors: err })
+          user.roles = roles
+          const { consoleToken, pmFrontToken, exp } =  createFrontUserTokens(user)
 
-      // sameSite: 'Lax' ?
-      return res
-        .status(200)
-        .cookie('authToken', authToken, {
-          secure: !!process.env.NODE_ENV,
-          httpOnly: true,
-          sameSite: 'Strict',
-          expires: new Date(exp * 1000),
+          // sameSite: 'Lax' ?
+          return res
+            .status(200)
+            .cookie(CONSOLE_TOKEN_NAME, consoleToken, consoleCookieOpts(exp))
+            .cookie(PM_FRONT_TOKEN_NAME, pmFrontToken, pmFrontCookieOpts(exp))
+            .json({ username, roles })
         })
-        .cookie('publicToken', publicToken, {
-          secure: !!process.env.NODE_ENV,
-          httpOnly: false,
-          expires: new Date(exp * 1000),
-        })
-        .json({
-          success: `logged in ${user.username}`,
-          token: publicToken,
-          expires: new Date(exp * 1000),
-        });
-      // TODO : remove .json() for cookie only? or give refresh token instead
-    });
-  })(req, res, next);
-};
-
-exports.postRegister = (req, res, next) => {
-  const fun = 'postRegister';
-  try {
-    const data = req.body;
-    registerUser(data)
-      .then((user) => {
-        // TODO : send mail? random password? temp password? link to first password?
-        res.json(user);
       })
-      .catch((err) => {
-        res.status(400).send(err.message);
-      });
+      .catch((er) => {
+        log.e(mod, fun, er)
+        this.logout()
+        try {
+          return res.status(er.statusCode || 501).send(er)
+        } catch (e) {
+          log.e(mod, fun, e)
+          return
+        }
+      })
+    // TODO : remove .json() for cookie only? or give refresh token instead
+  })(req, res, next)
+}
+
+exports.postRegister = async (req, res) => {
+  const fun = 'postRegister'
+  try {
+    const { username, email, password, confirmPassword } = req.body
+    if (!password || password !== confirmPassword)
+      throw new BadRequestError('Password and its confirmation should not be null and be the same.')
+
+    const user = await dbRegisterUser(null, { username, email, password })
+    res.status(200).send(user)
   } catch (err) {
-    log.e(mod, fun, err);
-    res.status(400).send(err);
+    log.e(mod, fun, err)
+    try {
+      res.status(err.code || 400).send(err.message)
+    } catch (e) {
+      log.e(mod, fun, e)
+      return
+    }
   }
-};
+}
 exports.postForgot = (req, res, next) => {
-  const fun = 'postForgot';
+  const fun = 'postForgot'
   try {
     // TODO
   } catch (err) {
-    log.e(mod, fun, err);
-    throw err;
+    log.e(mod, fun, err)
+    throw err
   }
-};
-exports.postReset = (req, res, next) => {
-  const fun = 'postReset';
+}
+
+const INIT_PWD = decodeBase64(getDbConf('db_no_pwd'))
+
+exports.putPassword = async (req, res, next) => {
+  const fun = 'changePwd'
   try {
-    // TODO
+    const { username, password, newPassword, confirmNewPassword } = req.body
+    if (
+      !username ||
+      !password ||
+      !newPassword ||
+      newPassword === password ||
+      newPassword !== confirmNewPassword
+    )
+      res.status(401).send('Prerequisites not met')
+
+    const db = dbOpen()
+    const dbUserInfo = await dbGetHashedPassword(db, username)
+    const dbUserHash = dbUserInfo?.password
+
+    passport.authenticate('local', (err, user, info) => {
+      if (err) return res.status(400).send(err)
+      if (!user && !matchPassword(INIT_PWD, dbUserHash))
+        return res.status(401).send(info.message || 'User not found')
+
+      return dbHashAndUpdatePassword(db, username, newPassword)
+        .then((userInfo) => res.json(userInfo))
+        .catch((err) => {
+          log.e(mod, fun, err)
+          res.status(400).send(err.message)
+        })
+    })(req, res, next)
   } catch (err) {
-    log.e(mod, fun, err);
-    throw err;
+    log.e(mod, fun, err)
+    res.status(400).send(err)
   }
-};
+}
 
-exports.logout = (req, res, next) => {
+exports.resetPassword = async (req, res, next) => {
+  try {
+    // ONLY ADMIN !
+    const { id } = req.params
+    if (id === 0)
+      throw new UnauthorizedError(`Le mot de passe du SU ne peut être modifié via l'API`)
+    await dbUpdatePasswordWithField(null, 'id', id, hashPassword(INIT_PWD))
+    res.status(200).send(`Password reiniitalized for user ${id}`)
+  } catch (err) {
+    const error = errorHandler.error(err, req, { opType: 'reset_pwd' })
+    try {
+      return res.status(err.statusCode).json(new RudiError(error.message))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+}
+
+exports.logout = (req, res, next) =>
   res
     .status(200)
-    .cookie('authToken', null, {
-      secure: !!process.env.NODE_ENV,
-      httpOnly: true,
-      sameSite: 'Strict',
-      expires: new Date(0),
-    })
-    .cookie('publicToken', null, {
-      secure: !!process.env.NODE_ENV,
-      httpOnly: false,
-      expires: new Date(0),
-    })
-    .json({});
-};
-exports.getToken = (req, res, next) => {
-  const { authToken, publicToken, exp } = utils.createToken(req.user);
-  res
-    .status(200)
-    .cookie('authToken', authToken, {
-      secure: !!process.env.NODE_ENV,
-      httpOnly: true,
-      sameSite: 'Strict',
-      expires: new Date(exp * 1000),
-    })
-    .cookie('publicToken', publicToken, {
-      secure: !!process.env.NODE_ENV,
-      httpOnly: false,
-      expires: new Date(exp * 1000),
-    })
-    .json({
-      token: authToken,
-      expires: new Date(exp * 1000),
-    });
-};
-
-exports.registerUser = registerUser;
+    .cookie(CONSOLE_TOKEN_NAME, '', consoleCookieOpts(0))
+    .cookie(PM_FRONT_TOKEN_NAME, '', pmFrontCookieOpts(0))
+    .json({ [CONSOLE_TOKEN_NAME]: '', [PM_FRONT_TOKEN_NAME]: '', message: 'logout' })

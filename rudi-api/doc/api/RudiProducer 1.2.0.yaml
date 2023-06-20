@@ -16,9 +16,9 @@
 #   - Schemas 'SkosConcept' and 'SkosScheme'
 #   - Added 'access_condition' and especially 'access_condition.licence'
 #   - Licence, LicenceCustom and LicenceStandard schemas
-#   - $ref: 'UUIDv4' replaced by {type: string; format: uuid}. 
+#   - $ref: 'UUIDv4' replaced by {type: string; format: uuid}.
 #   - 'UUIDv4' schema deleted
-#   - 
+#   -
 #
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 openapi: 3.0.0
@@ -26,10 +26,10 @@ info:
   version: 1.2.0
   title: rudi-proxi-api
   description: "API pour l'accès aux données au niveau du nœud producteur RUDI"
-  termsOfService: "no"
+  termsOfService: 'no'
   contact:
     name: Olivier Martineau
-    email: 'olivier.martineau@irisa.fr'
+    email: 'community@rudi-univ-rennes1.fr'
   license:
     name: GPLv3
     url: 'https://www.gnu.org/licenses/gpl-3.0.html'
@@ -41,7 +41,7 @@ info:
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 # DEFINITIONS
 # - 'Portal': the main RUDI catalog for all metadata in the RUDI system
-# - 'Producer node': The RUDI node where data is produced and published with its 
+# - 'Producer node': The RUDI node where data is produced and published with its
 #                    metadata
 # - 'Producer': Entity that produces the data on the Producer node
 # - 'Provider': Entity that publishes the data and metadata on the Producer node
@@ -51,36 +51,35 @@ info:
 
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 tags:
-- name: Metadata
-- name: Organization
-- name: Contact
-- name: Report
+  - name: Metadata
+  - name: Organization
+  - name: Contact
+  - name: Report
 
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 paths:
-
   #=============================================================================
   # METADATA
   #=============================================================================
   '/resources/{id}':
     summary: Access the metadata for one identified resource
     parameters:
-    - name: 'id'
-      description: Unique id of the resource
-      in: path
-      required: true
-      schema:
-        type: string   
-        format: uuid
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     'get':
       tags:
-      - Metadata
+        - Metadata
       description: Returns the metadata for the identified resource
       # - links for downloading the resource?
       # - can we access a metadata but not the resource?
       operationId: getMetadata
       security:
-      - authRudi: [portal, backoffice]
+        - authRudi: [portal, backoffice]
       responses:
         '200':
           description: All metadata for the identified resource
@@ -90,41 +89,41 @@ paths:
                 $ref: '#/components/schemas/Metadata'
         # These errors are the standard error responses for every query
         '400':
-          $ref: "#/components/responses/Error400BadRequest"
+          $ref: '#/components/responses/Error400BadRequest'
         '401':
-          $ref: "#/components/responses/Error401Unauthorized"
+          $ref: '#/components/responses/Error401Unauthorized'
         '403':
-          $ref: "#/components/responses/Error403Forbidden"
+          $ref: '#/components/responses/Error403Forbidden'
         '404':
-          $ref: "#/components/responses/Error404NotFound"
+          $ref: '#/components/responses/Error404NotFound'
         '405':
-          $ref: "#/components/responses/Error405MethodNotAllowed"
+          $ref: '#/components/responses/Error405MethodNotAllowed'
         '406':
-          $ref: "#/components/responses/Error406NotAcceptable"
+          $ref: '#/components/responses/Error406NotAcceptable'
         '408':
-          $ref: "#/components/responses/Error408RequestTimeout"
+          $ref: '#/components/responses/Error408RequestTimeout'
         '410':
-          $ref: "#/components/responses/Error410Gone"
+          $ref: '#/components/responses/Error410Gone'
         '423':
-          $ref: "#/components/responses/Error423Locked"
+          $ref: '#/components/responses/Error423Locked'
         '429':
-          $ref: "#/components/responses/Error429TooManyRequests"
+          $ref: '#/components/responses/Error429TooManyRequests'
         '500':
-          $ref: "#/components/responses/Error500InternalServerError"
+          $ref: '#/components/responses/Error500InternalServerError'
         '503':
-          $ref: "#/components/responses/Error503ServiceUnavailable"
+          $ref: '#/components/responses/Error503ServiceUnavailable'
 
-  #=============================================================================
-  # '/resources/{id}':
+    #=============================================================================
+    # '/resources/{id}':
     'delete':
       tags:
-      - Metadata
+        - Metadata
       description: Deletes one identified resource
       # - should we keep the metadata for some time?
       # - see above: can we access a metadata but not the resource?
       operationId: deleteResource
       security:
-      - authRudi: [backadmin]
+        - authRudi: [backadmin]
       responses:
         '200':
           description: Resource successfully deleted.
@@ -133,7 +132,7 @@ paths:
               schema:
                 # The deleted resource
                 $ref: '#/components/schemas/Metadata'
-                
+
   #=============================================================================
   '/resources':
     summary: Access the metadata for a set of resources
@@ -146,28 +145,28 @@ paths:
       # - links for downloading every resource?
       # - can we access a metadata but not the resource?
       tags:
-      - Metadata
+        - Metadata
       operationId: getMetadataList
       security:
-      - authRudi: [portal, backoffice]
+        - authRudi: [portal, backoffice]
       parameters:
-      - name: 'limit'
-        description: Max number of resource to return
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 500 #default MAX to limit the server overload
-        example: 100
-      - name: 'offset'
-        description: Index of the first line of resources to display
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 0
-          example: 1
+        - name: 'limit'
+          description: Max number of resource to return
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 500 #default MAX to limit the server overload
+          example: 100
+        - name: 'offset'
+          description: Index of the first line of resources to display
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            example: 1
       responses:
         '200':
           description: Metadata for every resource
@@ -185,25 +184,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Metadata'
-        
-  #=============================================================================
-  #'/resources':
+
+    #=============================================================================
+    #'/resources':
     'post':
       tags:
-      - Metadata
-      description:
-        Create one new resource
+        - Metadata
+      description: Create one new resource
       operationId: addResource
       security:
-      - authRudi: [backoffice]
-        # NOTES:
-        # - the request implies global_id is present in the body, so
-        #   '/resources/{id}' is redundant
-        # - the uploader chooses the global_ids!
-        # - the resource global_id should not exist already, or the upload will
-        #   fail
-        # - data in the proxi/organization node + metadata both on producer node
-        #   AND on RUDI catalog node
+        - authRudi: [backoffice]
+          # NOTES:
+          # - the request implies global_id is present in the body, so
+          #   '/resources/{id}' is redundant
+          # - the uploader chooses the global_ids!
+          # - the resource global_id should not exist already, or the upload will
+          #   fail
+          # - data in the proxi/organization node + metadata both on producer node
+          #   AND on RUDI catalog node
       requestBody:
         content:
           application/json:
@@ -214,24 +212,23 @@ paths:
       responses:
         '202':
           description: The creation of the resource has been initiated.
-        
-  #=============================================================================
-  #'/resources':
+
+    #=============================================================================
+    #'/resources':
     'put':
       tags:
-      - Metadata
-      description:
-        Update data and metadata on the Proxi/organization node for one identified
+        - Metadata
+      description: Update data and metadata on the Proxi/organization node for one identified
         resource
       operationId: updateResource
       security:
-      - authRudi: [backoffice]
-        # NOTES:
-        # - the request implies global_id is present in the body, so
-        #   '/resources/{id}' is redundant
-        # - the resource global_id should exist already, or the upload will fail
-        # - data is located on the proxi/organization node, metadata both on 
-        #   producer node and on RUDI catalog node
+        - authRudi: [backoffice]
+          # NOTES:
+          # - the request implies global_id is present in the body, so
+          #   '/resources/{id}' is redundant
+          # - the resource global_id should exist already, or the upload will fail
+          # - data is located on the proxi/organization node, metadata both on
+          #   producer node and on RUDI catalog node
       requestBody:
         content:
           application/json:
@@ -242,22 +239,21 @@ paths:
         '202':
           description: The update of the resource has been initiated
 
-  #=============================================================================
-  #'/resources':
+    #=============================================================================
+    #'/resources':
     'delete':
       tags:
-      - Metadata
-      description:
-        Delete every metadata on the Proxi/organization node 
+        - Metadata
+      description: Delete every metadata on the Proxi/organization node
       operationId: deleteEveryResource
       security:
-      - authRudi: [backadmin]
-        # NOTES:
-        # - the request implies global_id is present in the body, so
-        #   '/resources/{id}' is redundant
-        # - the resource global_id should exist already, or the upload will fail
-        # - data is located on the proxi/organization node, metadata both on 
-        #   producer node and on RUDI catalog node
+        - authRudi: [backadmin]
+          # NOTES:
+          # - the request implies global_id is present in the body, so
+          #   '/resources/{id}' is redundant
+          # - the resource global_id should exist already, or the upload will fail
+          # - data is located on the proxi/organization node, metadata both on
+          #   producer node and on RUDI catalog node
       responses:
         '202':
           description: The deletion of the resource has been initiated
@@ -266,13 +262,13 @@ paths:
   '/resources/deletion':
     'post':
       tags:
-      - Metadata
+        - Metadata
       description:
         Delete data on the Proxi/organization node for several identified resources
         #TODO: and metadata? After e.g. a year?
       operationId: deleteResources
       security:
-      - authRudi: [backadmin]
+        - authRudi: [backadmin]
       requestBody:
         content:
           application/json:
@@ -291,20 +287,20 @@ paths:
   '/organizations/{id}':
     summary: Access the metadata for an identified organization
     parameters:
-    - name: 'id'
-      description: Unique id of the organization
-      in: path
-      required: true
-      schema:
-        type: string      
-        format: uuid    
+      - name: 'id'
+        description: Unique id of the organization
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     'get':
       tags:
-      - Organization
+        - Organization
       description: Returns the metadata for the identified organization
       operationId: getOrganization
       security:
-      - authRudi: [portal, backoffice]
+        - authRudi: [portal, backoffice]
       responses:
         '200':
           description: All metadata for the identified organization
@@ -315,16 +311,17 @@ paths:
                 items:
                   $ref: '#/components/schemas/Organization'
 
-  #=============================================================================
-  #'/organizations/{id}':
+    #=============================================================================
+    #'/organizations/{id}':
     'delete':
       tags:
-      - Organization
-      description: Deletes one identified organization
+        - Organization
+      description:
+        Deletes one identified organization
         # - action will fail for a organization that still has resources attached
       operationId: deleteOrganization
       security:
-      - authRudi: [backadmin]
+        - authRudi: [backadmin]
       responses:
         '200':
           description: Organization successfully deleted
@@ -338,29 +335,29 @@ paths:
   '/organizations':
     'get':
       tags:
-      - Organization
+        - Organization
       description: Access the data for a set of organizations
       operationId: getOrganizationList
       security:
-      - authRudi: [portal, backoffice]
+        - authRudi: [portal, backoffice]
       parameters:
-      - name: 'limit'
-        description: Max number of organizations to return
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 500 #default MAX to limit the server overload
-        example: 100
-      - name: 'offset'
-        description: Index of the first line of organizations to display
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 0
-          example: 1
+        - name: 'limit'
+          description: Max number of organizations to return
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 500 #default MAX to limit the server overload
+          example: 100
+        - name: 'offset'
+          description: Index of the first line of organizations to display
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            example: 1
       responses:
         '200':
           description: Metadata for every organization
@@ -378,46 +375,44 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Organization'
-        
-  #=============================================================================
-  # '/organizations':
+
+    #=============================================================================
+    # '/organizations':
     'post':
       tags:
-      - Organization
-      description:
-        Create one new organization in RUDI system
+        - Organization
+      description: Create one new organization in RUDI system
       operationId: addOrganization
       security:
-      - authRudi: [backoffice]
+        - authRudi: [backoffice]
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Organization"
+              $ref: '#/components/schemas/Organization'
       responses:
         '202':
           description: The creation of the organization has been initiated
 
-  #=============================================================================
-  # '/organizations':
+    #=============================================================================
+    # '/organizations':
     'put':
       tags:
-      - Organization
-      description:
-        Updates one organization in RUDI system
+        - Organization
+      description: Updates one organization in RUDI system
       operationId: updateOrganization
       security:
-      - authRudi: [backoffice]
-        # NOTES:
-        # - the request implies organization ID is present in the body, so
-        #   '/organizations/{id}' is redundant
-        # - the organization ID should exist already, or the upload will fail
+        - authRudi: [backoffice]
+          # NOTES:
+          # - the request implies organization ID is present in the body, so
+          #   '/organizations/{id}' is redundant
+          # - the organization ID should exist already, or the upload will fail
       requestBody:
         content:
           application/json:
             schema:
               # The updated organization
-              $ref: "#/components/schemas/Organization"
+              $ref: '#/components/schemas/Organization'
       responses:
         '202':
           description: The update of the organization has been initiated
@@ -426,13 +421,13 @@ paths:
   '/organizations/deletion':
     'post':
       tags:
-      - Organization
+        - Organization
       description:
         Delete data on the Producer node for several identified organizations
         # - action will fail for every organization that still has resources attached
       operationId: deleteOrganizations
       security:
-      - authRudi: [backadmin]
+        - authRudi: [backadmin]
       requestBody:
         content:
           application/json:
@@ -444,27 +439,27 @@ paths:
       responses:
         '202':
           description: The deletion of the organizations has been initiated
-  
+
   #=============================================================================
   # CONTACT
   #=============================================================================
   '/contacts/{id}':
     summary: Access the metadata an identified contacts
     parameters:
-    - name: 'id'
-      description: Unique id of the contact
-      in: path
-      required: true
-      schema:
-        type: string    
-        format: uuid    
+      - name: 'id'
+        description: Unique id of the contact
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     'get':
       tags:
-      - Contact
+        - Contact
       description: Returns the metadata for the identified contact
       operationId: getContact
       security:
-      - authRudi: [portal, backoffice]
+        - authRudi: [portal, backoffice]
       responses:
         '200':
           description: All metadata for the identified contact
@@ -475,16 +470,17 @@ paths:
                 items:
                   $ref: '#/components/schemas/Contact'
 
-  #=============================================================================
-  #'/contacts/{id}':
+    #=============================================================================
+    #'/contacts/{id}':
     'delete':
       tags:
-      - Contact
-      description: Deletes one identified contact
+        - Contact
+      description:
+        Deletes one identified contact
         # - action will fail for a contact that still has resources attached
       operationId: deleteContact
       security:
-      - authRudi: [backadmin]
+        - authRudi: [backadmin]
       responses:
         '200':
           description: Contact successfully deleted.
@@ -498,29 +494,29 @@ paths:
   '/contacts':
     'get':
       tags:
-      - Contact
+        - Contact
       description: Access the data for a set of contacts
       operationId: getContactList
       security:
-      - authRudi: [portal, backoffice]
+        - authRudi: [portal, backoffice]
       parameters:
-      - name: 'limit'
-        description: Max number of contacts to return
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 500 #default MAX to limit the server overload
-        example: 100
-      - name: 'offset'
-        description: Index of the first line of contacts to display
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 0
-          example: 1
+        - name: 'limit'
+          description: Max number of contacts to return
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 500 #default MAX to limit the server overload
+          example: 100
+        - name: 'offset'
+          description: Index of the first line of contacts to display
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            example: 1
       responses:
         '200':
           description: Metadata for every contact
@@ -538,46 +534,44 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Contact'
-        
-  #=============================================================================
-  # '/contacts':
+
+    #=============================================================================
+    # '/contacts':
     'post':
       tags:
-      - Contact
-      description:
-        Create one new contact in RUDI system
+        - Contact
+      description: Create one new contact in RUDI system
       operationId: addContact
       security:
-      - authRudi: [backoffice]
+        - authRudi: [backoffice]
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/Contact"
+              $ref: '#/components/schemas/Contact'
       responses:
         '202':
           description: The creation of the contact has been initiated
 
-  #=============================================================================
-  # '/contacts':
+    #=============================================================================
+    # '/contacts':
     'put':
       tags:
-      - Contact
-      description:
-        Updates one contact
+        - Contact
+      description: Updates one contact
       operationId: updateContact
       security:
-      - authRudi: [backoffice]
-        # NOTES:
-        # - the request implies contact_id is present in the body, so
-        #   '/contacts/{id}' is redundant
-        # - the contact_id should exist already, or the upload will fail
+        - authRudi: [backoffice]
+          # NOTES:
+          # - the request implies contact_id is present in the body, so
+          #   '/contacts/{id}' is redundant
+          # - the contact_id should exist already, or the upload will fail
       requestBody:
         content:
           application/json:
             schema:
               # The updated contact
-              $ref: "#/components/schemas/Contact"
+              $ref: '#/components/schemas/Contact'
       responses:
         '202':
           description: The update of the contact has been initiated
@@ -586,13 +580,13 @@ paths:
   '/contacts/deletion':
     'post':
       tags:
-      - Contact
+        - Contact
       description:
         Delete data on the Proxi/organization node for several identified contacts
         # - action will fail for every contact that still has resources attached
       operationId: deleteContacts
       security:
-      - authRudi: [backadmin]
+        - authRudi: [backadmin]
       requestBody:
         content:
           application/json:
@@ -604,50 +598,49 @@ paths:
       responses:
         '202':
           description: The deletion of the contacts has been initiated.
-        
+
   #=============================================================================
   # REPORT
   #=============================================================================
   '/resources/{id}/report':
     parameters:
-    - name: 'id'
-      description: Unique id of the resource
-      in: path
-      required: true
-      schema:
-        type: string   
-        format: uuid
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     'post':
       tags:
-      - Report
+        - Report
       description: >
         Action called when receiving an ackowledgement for an integration
         operation from the Portal
       operationId: addIntegrationReport
       security:
-      - authRudi: [node]
+        - authRudi: [node]
       #TODO maybe such operation should stay private
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: A new report was created.
     'put':
       tags:
-      - Report
-      description:
-        Report from the Portal on the result of a previous operation request
+        - Report
+      description: Report from the Portal on the result of a previous operation request
       operationId: updateIntegrationReport
       security:
-      - authRudi: [portal]
+        - authRudi: [portal]
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: The report has been received.
@@ -655,128 +648,123 @@ paths:
   #=============================================================================
   '/organizations/{id}/report':
     parameters:
-    - name: 'id'
-      description: Unique id of the organization
-      in: path
-      required: true
-      schema:
-        type: string        
-        format: uuid
+      - name: 'id'
+        description: Unique id of the organization
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     'post':
       tags:
-      - Report
+        - Report
       description: >
         Action called when receiving an ackowledgement for an integration
         operation from the Portal
       operationId: addOrganizationIntegrationReport
       security:
-      - authRudi: [node]
+        - authRudi: [node]
       #TODO maybe such operation should stay private
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: A new report was created.
     'put':
       tags:
-      - Report
-      description:
-        Report from the Portal on the result of a previous operation request
+        - Report
+      description: Report from the Portal on the result of a previous operation request
       operationId: updateOrganizationReport
       security:
-      - authRudi: [portal]
+        - authRudi: [portal]
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: The report has been received.
   #=============================================================================
   '/contacts/{id}/report':
     parameters:
-    - name: 'id'
-      description: Unique id of the resource
-      in: path
-      required: true
-      schema:
-        type: string        
-        format: uuid
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
     'post':
       tags:
-      - Report
+        - Report
       description: >
         Action called when receiving an ackowledgement for an integration
         operation from the Portal
       operationId: addContactIntegrationReport
       security:
-      - authRudi: [node]
+        - authRudi: [node]
       #TODO maybe such operation should stay private
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: A new report was created.
     'put':
       tags:
-      - Report
-      description:
-        Report from the Portal on the result of a previous operation request
+        - Report
+      description: Report from the Portal on the result of a previous operation request
       operationId: updateContactReport
       security:
-      - authRudi: [portal]
+        - authRudi: [portal]
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: The report has been received.
 
-
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 components:
-
   #=============================================================================
   # See schemas definitions at
   # https://github.com/sigrennesmetropole/rudi_documentation/tree/main/schemas
   #=============================================================================
   schemas:
- 
     #---------------------------------------------------------------------------
     'Metadata':
       type: object
       required:
-      - global_id
-      
-      - resource_title
-      - synopsis
-      - summary
-      
-      - theme
-      - keywords
-      
-      - producer
-      - contacts
-      
-      - available_formats
-      
-      #- temporal_spread
-      #- geography
-      - dataset_dates
-      - storage_status
-      
-      - access_condition
-      
-      - metadata_info
+        - global_id
+
+        - resource_title
+        - synopsis
+        - summary
+
+        - theme
+        - keywords
+
+        - producer
+        - contacts
+
+        - available_formats
+
+        #- temporal_spread
+        #- geography
+        - dataset_dates
+        - storage_status
+
+        - access_condition
+
+        - metadata_info
 
       properties:
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
@@ -793,8 +781,7 @@ components:
           #TODO: Constraints?
           # - pattern for avoiding spaces and unusal characters?
           # - max lenght?
-          example:
-            "2020.11-Laennec-AQMO-air quality sensors measures"
+          example: '2020.11-Laennec-AQMO-air quality sensors measures'
 
         #——————————————————————————
         'doi':
@@ -807,8 +794,7 @@ components:
           description: Simple name for the resource
           type: string
           maxLength: 150
-          example:
-            "Données de capteurs de la qualité de l'air, novembre 2020, Laënnec"
+          example: "Données de capteurs de la qualité de l'air, novembre 2020, Laënnec"
         # !DICO!
 
         #——————————————————————————
@@ -887,14 +873,14 @@ components:
             For a one-time measurement, one can fill both start and end date 
             with the same value.
           type: object
-          required: 
-          - start_date
+          required:
+            - start_date
           properties:
             #......................
-            'start_date': 
+            'start_date':
               $ref: '#/components/schemas/Date'
             #......................
-            'end_date': 
+            'end_date':
               $ref: '#/components/schemas/Date'
 
         #——————————————————————————
@@ -902,8 +888,8 @@ components:
           description: Geographic localisation of the data
           type: object
           required:
-          - bounding_box
-          properties: 
+            - bounding_box
+          properties:
             #......................
             'bounding_box':
               description: >
@@ -912,14 +898,13 @@ components:
                 norm ISO 6709
               type: object
               required:
-              - west_longitude
-              - east_longitude
-              - north_latitude
-              - south_latitude
+                - west_longitude
+                - east_longitude
+                - north_latitude
+                - south_latitude
               properties:
-                'north_latitude': 
-                  description: 
-                    Northernmost latitude given as a decimal number (norm ISO 6709)
+                'north_latitude':
+                  description: Northernmost latitude given as a decimal number (norm ISO 6709)
                   type: number
                   minimum: -90
                   maximum: 90
@@ -941,14 +926,15 @@ components:
             #......................
             'geographic_distribution':
               allOf:
-              - description: Precise geographic distribution of the data 
-                type: object  
-              - $ref: 'https://app.swaggerhub.com/apis/OlivierMartineau/GeoJSON/#/schemas/GeoJsonObject'
+                - description: Precise geographic distribution of the data
+                  type: object
+                - $ref: 'https://app.swaggerhub.com/apis/OlivierMartineau/GeoJSON/#/schemas/GeoJsonObject'
             #......................
             'projection':
               description: Cartographic projection used to describe the data
               type: string
-              example: 'WGS 84 (EPSG:4326)'
+              example:
+                'WGS 84 (EPSG:4326)'
                 # 'RGF93/Lambert-93 (EPSG:2154)'
                 # 'RGF93/CC48 (EPSG:3948)'
               #TODO: 'Projection' thesaurus
@@ -957,16 +943,16 @@ components:
         'dataset_size':
           description: Indicative total size of the data
           type: object
-          properties: 
+          properties:
             #......................
-            'numbers_of_records':            
+            'numbers_of_records':
               type: integer
               minimum: 0
             #......................
             'number_of_fields':
               type: integer
               minimum: 0
-    
+
         #——————————————————————————
         'dataset_dates':
           allOf:
@@ -997,14 +983,14 @@ components:
             #TODO: to be defined. Possible redundencies with other fields!
           type: object
           required:
-          - licence
+            - licence
           properties:
             #......................
             'confidentiality':
               description: Restriction level for the resource
               type: object
               properties:
-                'restricted_access': 
+                'restricted_access':
                   description: >
                     True if the dataset has a restricted access.
                     False for open data
@@ -1023,18 +1009,18 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DictionaryEntry'
-              example: 
+              example:
                 {
-                  "lang": "fr",
-                  "text": "Usage libre sous réserve des mentions obligatoires sur tout document de diffusion"
+                  'lang': 'fr',
+                  'text': 'Usage libre sous réserve des mentions obligatoires sur tout document de diffusion',
                 }
             #......................
             'bibliographical_reference':
               description: >
-                  Information that MUST be cited every time the data is used, 
-                  most likely a BibTeX entry
+                Information that MUST be cited every time the data is used, 
+                most likely a BibTeX entry
               type: array
-              items: 
+              items:
                 $ref: '#/components/schemas/DictionaryEntry'
             #......................
             'mandatory_mention':
@@ -1045,11 +1031,7 @@ components:
               items:
                 $ref: '#/components/schemas/DictionaryEntry'
               minItems: 1
-              example: 
-                {
-                  "lang": "fr-FR",
-                  "text": "Source: Région Bretagne"
-                }
+              example: { 'lang': 'fr-FR', 'text': 'Source: Région Bretagne' }
             #......................
             'access_constraint':
               type: array
@@ -1060,20 +1042,16 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DictionaryEntry'
-              example: 
-                {
-                  "lang": "fr",
-                  "text": "Pas de restriction d'accès public"
-                }
-           
+              example: { 'lang': 'fr', 'text': "Pas de restriction d'accès public" }
+
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
         # METADATA INFO
         #——————————————————————————
         'metadata_info':
           description: Metadata on the metadata
           type: object
-          required: 
-          - api_version
+          required:
+            - api_version
           properties:
             #......................
             'api_version':
@@ -1085,22 +1063,19 @@ components:
             #......................
             'metadata_provider':
               allOf:
-              - description: 
-                  Description of the organization that produced the metadata
-                type: object
-              - $ref: '#/components/schemas/Organization'
+                - description: Description of the organization that produced the metadata
+                  type: object
+                - $ref: '#/components/schemas/Organization'
             #......................
             'metadata_contacts':
-              description: 
-                Addresses to get further information on the metadata
+              description: Addresses to get further information on the metadata
               type: array
               items:
                 $ref: '#/components/schemas/Contact'
 
     #---------------------------------------------------------------------------
     'Organization': # Organization
-      description: 
-        Entity that produced the data or provided the associated metadata
+      description: Entity that produced the data or provided the associated metadata
       type: object
       required:
         - organization_id
@@ -1118,19 +1093,19 @@ components:
         #——————————————————————————
         'organization_address':
           description: Updated offical postal address of the organization
-          type: string    
+          type: string
 
     #---------------------------------------------------------------------------
     'Contact':
       description: Address to get further information on the resource
       type: object
       required:
-      - contact_id
-      - contact_name
-      - email
+        - contact_id
+        - contact_name
+        - email
       properties:
         #——————————————————————————
-        'contact_id': 
+        'contact_id':
           type: string
           format: uuid
         #——————————————————————————
@@ -1156,67 +1131,66 @@ components:
           format: email
           #TODO: RGPD compliant!
 
-     
     #---------------------------------------------------------------------------
     'Licence':
       description: Abstract object from which standard and custom licences inherit
       type: object
       required:
-      - licence_type
+        - licence_type
       properties:
         #——————————————————————————
         'licence_type':
           type: string
           enum: ['STANDARD', 'CUSTOM']
- 
-      discriminator:  
+
+      discriminator:
         propertyName: licence_type
         mapping:
           'STANDARD': '#/components/schemas/LicenceStandard'
           'CUSTOM': '#/components/schemas/LicenceCustom'
-                
+
     #---------------------------------------------------------------------------
     'LicenceStandard':
       allOf:
-      - $ref: "#/components/schemas/Licence"
-      - description: Standard license (recognized by RUDI system)
-        type: object
-        required:
-        - licence_label
-        properties: 
-          'licence_label':
-            description: Value of the field SkosConcept.concept_code
-            type: string
-            format: skosConceptCode
-          
-     #---------------------------------------------------------------------------
+        - $ref: '#/components/schemas/Licence'
+        - description: Standard license (recognized by RUDI system)
+          type: object
+          required:
+            - licence_label
+          properties:
+            'licence_label':
+              description: Value of the field SkosConcept.concept_code
+              type: string
+              format: skosConceptCode
+
+      #---------------------------------------------------------------------------
     'LicenceCustom':
       allOf:
-      - $ref: "#/components/schemas/Licence"
-      - description: Custom license
-        type: object
-        required: 
-        - custom_licence_label
-        - custom_licence_uri
-        properties: 
-          'custom_licence_label':
-            description: Title of the custom licence 
-            type: array
-            items: 
-              $ref: '#/components/schemas/DictionaryEntry'
-          'custom_licence_uri':
-            description: URL towards the custom licence
-            type: string
-            format: URI
-         
+        - $ref: '#/components/schemas/Licence'
+        - description: Custom license
+          type: object
+          required:
+            - custom_licence_label
+            - custom_licence_uri
+          properties:
+            'custom_licence_label':
+              description: Title of the custom licence
+              type: array
+              items:
+                $ref: '#/components/schemas/DictionaryEntry'
+            'custom_licence_uri':
+              description: URL towards the custom licence
+              type: string
+              format: URI
+
     #---------------------------------------------------------------------------
     'Media':
       description: Abstract object from which File and Series inherit
       type: object
       required:
-      - media_type
-      - media_id
-      - connector
+        - media_type
+        - media_id
+        - connector
       properties:
         #——————————————————————————
         'media_type':
@@ -1230,119 +1204,112 @@ components:
         #——————————————————————————
         'connector':
           $ref: '#/components/schemas/Connector'
-          
-      discriminator:  
+
+      discriminator:
         propertyName: media_type
         mapping:
           'FILE': '#/components/schemas/MediaFile'
           'SERIES': '#/components/schemas/MediaSeries'
-      
+
     #---------------------------------------------------------------------------
     'MediaFile':
       allOf:
-      - $ref: '#/components/schemas/Media'
-      - description: Description of the container of data as a file
-        type: object
-        required:
-        - file_type
-        - file_size
-        - checksum
-        properties:
-  
-          #——————————————————————————
-          'file_type':
-            # File type (determined automatically)
-            $ref: '#/components/schemas/MediaType'
-  
-          #——————————————————————————
-          'file_size':
-            description: >
-              Size of the file, in bytes 
-              (determined automatically)
-            type: integer
-  
-          #——————————————————————————
-          'checksum':
-            description: 
-              Hash that makes it possible to check the a file intergrity
-              (determined automatically)
-            type: object
-            required:
-            - algo
-            - hash
-            properties:
-              'algo':
-                $ref: '#/components/schemas/HashAlgorithm'
-              'hash':
-                type: string
-                
-          #——————————————————————————
-          'file_structure':
-            description: >
-              Link towards the resource that describes the structure of the data
-              (language, norm, data structure, JSON schema, OpenAPI, etc.)
-            type: string
-            format: URI
-            #'URI definition - https://tools.ietf.org/html/rfc2396'
-  
-          #——————————————————————————
-          'file_encoding':
-            description: 
-              Source encoding of the data 
-              (determined automatically)
-            type: string
-            #format:
-            #ISO/CEI 10646'
-            #TODO: thesaurus for encoding
+        - $ref: '#/components/schemas/Media'
+        - description: Description of the container of data as a file
+          type: object
+          required:
+            - file_type
+            - file_size
+            - checksum
+          properties:
+            #——————————————————————————
+            'file_type':
+              # File type (determined automatically)
+              $ref: '#/components/schemas/MediaType'
 
-                  
+            #——————————————————————————
+            'file_size':
+              description: >
+                Size of the file, in bytes 
+                (determined automatically)
+              type: integer
+
+            #——————————————————————————
+            'checksum':
+              description: Hash that makes it possible to check the a file intergrity
+                (determined automatically)
+              type: object
+              required:
+                - algo
+                - hash
+              properties:
+                'algo':
+                  $ref: '#/components/schemas/HashAlgorithm'
+                'hash':
+                  type: string
+
+            #——————————————————————————
+            'file_structure':
+              description: >
+                Link towards the resource that describes the structure of the data
+                (language, norm, data structure, JSON schema, OpenAPI, etc.)
+              type: string
+              format: URI
+              #'URI definition - https://tools.ietf.org/html/rfc2396'
+
+            #——————————————————————————
+            'file_encoding':
+              description: Source encoding of the data
+                (determined automatically)
+              type: string
+              #format:
+              #ISO/CEI 10646'
+              #TODO: thesaurus for encoding
+
     #---------------------------------------------------------------------------
     'MediaSeries':
       allOf:
-      - $ref: '#/components/schemas/Media'
-      - description: Description of the container of data as a file
-        type: object
-        properties: 
-          #——————————————————————————
-          'latency':
-            description: >
-              Theorical delay between the production of the record and its availability,
-              in milliseconds.
-            type: integer
-            minimum: 0
-  
-          #——————————————————————————
-          'period':
-            description:
-              Theorical delay between the production of two records, in milliseconds.
-            type: integer
-            minimum: 0
-  
-          #——————————————————————————
-          'current_number_of_records':    
-            description: Actual number of records
-            type: integer
-            minimum: 0
-            
-          #——————————————————————————
-          'current_size':
-            description: 
-              Actual size of the data, in bytes (refreshed automatically)
-            type: integer
-            minimum: 0
+        - $ref: '#/components/schemas/Media'
+        - description: Description of the container of data as a file
+          type: object
+          properties:
+            #——————————————————————————
+            'latency':
+              description: >
+                Theorical delay between the production of the record and its availability,
+                in milliseconds.
+              type: integer
+              minimum: 0
 
-          #——————————————————————————
-          'total_number_of_records':    
-            description: Estimated total number of records
-            type: integer
-            minimum: 0
-            
-          #——————————————————————————
-          'total_size':
-            description: 
-              Estimated total size of the data, in bytes 
-            type: integer
-            minimum: 0
+            #——————————————————————————
+            'period':
+              description: Theorical delay between the production of two records, in milliseconds.
+              type: integer
+              minimum: 0
+
+            #——————————————————————————
+            'current_number_of_records':
+              description: Actual number of records
+              type: integer
+              minimum: 0
+
+            #——————————————————————————
+            'current_size':
+              description: Actual size of the data, in bytes (refreshed automatically)
+              type: integer
+              minimum: 0
+
+            #——————————————————————————
+            'total_number_of_records':
+              description: Estimated total number of records
+              type: integer
+              minimum: 0
+
+            #——————————————————————————
+            'total_size':
+              description: Estimated total size of the data, in bytes
+              type: integer
+              minimum: 0
 
     #---------------------------------------------------------------------------
     'Connector':
@@ -1355,7 +1322,7 @@ components:
         If it is not defined, the link should be a direct download link.
       type: object
       required:
-      - url
+        - url
       properties:
         #——————————————————————————
         'url':
@@ -1369,8 +1336,8 @@ components:
     #---------------------------------------------------------------------------
     'IntegrationError':
       required:
-      - error_code
-      - error_message
+        - error_code
+        - error_message
       properties:
         'error_code':
           type: integer
@@ -1382,8 +1349,8 @@ components:
     #---------------------------------------------------------------------------
     'IntegrationReport':
       required:
-      - report_id
-      - resource_id
+        - report_id
+        - resource_id
       properties:
         #——————————————————————————
         'report_id':
@@ -1401,36 +1368,32 @@ components:
         #——————————————————————————
         'submission_date':
           allOf:
-          - description: >
-              Date when the integration request was submitted by the 
-              Producer node
-            type: string
-          - $ref: '#/components/schemas/Date'
+            - description: >
+                Date when the integration request was submitted by the 
+                Producer node
+              type: string
+            - $ref: '#/components/schemas/Date'
         #——————————————————————————
         'treatment_date':
           allOf:
-          - description:
-              Date when the integration request was processed by the Portal
-            type: string
-          - $ref: '#/components/schemas/Date'
+            - description: Date when the integration request was processed by the Portal
+              type: string
+            - $ref: '#/components/schemas/Date'
         #——————————————————————————
-        'method' :
-          description:
-            Method used by the Producer node for the integration request 
+        'method':
+          description: Method used by the Producer node for the integration request
           type: string
-          enum: [ POST, PUT, DELETE ]
+          enum: [POST, PUT, DELETE]
         #——————————————————————————
-        'version' :
-          description:
-              Version number of the integration contract used for the file
+        'version':
+          description: Version number of the integration contract used for the file
           type: string
           # pattern: '^[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]{1,2})?[a-z]*$'
         #——————————————————————————
         'integration_status':
-          description:
-            State of the integration of the resource in the Portal
+          description: State of the integration of the resource in the Portal
           type: string
-          enum: [ OK, KO ]
+          enum: [OK, KO]
         #——————————————————————————
         'comment':
           description: >
@@ -1449,8 +1412,7 @@ components:
 
     #---------------------------------------------------------------------------
     'DOI':
-      description:
-        Digital object identifier (modern Crossref DOIs version)
+      description: Digital object identifier (modern Crossref DOIs version)
       type: string
       pattern: '^10.\d{4,9}/[-.;()/:\w]+$'
       # \d : digit character == [0-9]
@@ -1465,62 +1427,62 @@ components:
         Most common Media types formerly known as MIME types, as definied in 
         RFC 2049
       type: string
-      enum: 
-      - 'application/x-executable'
-      - 'application/graphql'
-      - 'application/javascript' # (.js)
-      - 'application/json' # (.json)
-      - 'application/ld+json'
-      - 'application/msword' # (.doc)
-      - 'application/pdf' # (.pdf)
-      - 'application/sql'
-      - 'application/vnd.api+json'
-      - 'application/vnd.ms-excel' # (.xls)
-      - 'application/vnd.ms-powerpoint' # (.ppt)
-      - 'application/vnd.oasis.opendocument.text' # (.odt)
-      - 'application/vnd.openxmlformats-officedocument.presentationml.presentation' # (.pptx)
-      - 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' # (.xlsx)
-      - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' # (.docx)'
-      - 'application/x-www-form-urlencoded'
-      - 'application/xml'
-      - 'application/zip' # (.zip)
-      - 'application/zstd' # (.zst)
-      - 'audio/mpeg' # (.mpeg | .mpg)
-      - 'audio/ogg' # (.ogg)
-      - 'image/gif' # (.gif)
-      - 'image/apng'
-      - 'image/flif'
-      - 'image/webp'
-      - 'image/x-mng'
-      - 'image/jpeg' # (.jpeg)
-      - 'image/png' # (.png)
-      - 'multipart/form-data'
-      - 'text/css' # (.css)
-      - 'text/csv' # (.csv)
-      - 'text/html' # (.html | .htm)
-      - 'text/php' # (.php)
-      - 'text/plain' # (.txt)
-      - 'text/xml' # (.xml)
+      enum:
+        - 'application/x-executable'
+        - 'application/graphql'
+        - 'application/javascript' # (.js)
+        - 'application/json' # (.json)
+        - 'application/ld+json'
+        - 'application/msword' # (.doc)
+        - 'application/pdf' # (.pdf)
+        - 'application/sql'
+        - 'application/vnd.api+json'
+        - 'application/vnd.ms-excel' # (.xls)
+        - 'application/vnd.ms-powerpoint' # (.ppt)
+        - 'application/vnd.oasis.opendocument.text' # (.odt)
+        - 'application/vnd.openxmlformats-officedocument.presentationml.presentation' # (.pptx)
+        - 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' # (.xlsx)
+        - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' # (.docx)'
+        - 'application/x-www-form-urlencoded'
+        - 'application/xml'
+        - 'application/zip' # (.zip)
+        - 'application/zstd' # (.zst)
+        - 'audio/mpeg' # (.mpeg | .mpg)
+        - 'audio/ogg' # (.ogg)
+        - 'image/gif' # (.gif)
+        - 'image/apng'
+        - 'image/flif'
+        - 'image/webp'
+        - 'image/x-mng'
+        - 'image/jpeg' # (.jpeg)
+        - 'image/png' # (.png)
+        - 'multipart/form-data'
+        - 'text/css' # (.css)
+        - 'text/csv' # (.csv)
+        - 'text/html' # (.html | .htm)
+        - 'text/php' # (.php)
+        - 'text/plain' # (.txt)
+        - 'text/xml' # (.xml)
 
     #---------------------------------------------------------------------------
     'FileExtension':
       description: Source format of the data
       type: string
-      enum: 
-      - csv
-      - doc
-      - docx
-      - jpg
-      - json
-      - odt
-      - pdf
-      - png
-      - ppt
-      - pptx
-      - txt
-      - xls
-      - xlsx
-      - xml
+      enum:
+        - csv
+        - doc
+        - docx
+        - jpg
+        - json
+        - odt
+        - pdf
+        - png
+        - ppt
+        - pptx
+        - txt
+        - xls
+        - xlsx
+        - xml
 
     #---------------------------------------------------------------------------
     'HashAlgorithm':
@@ -1555,8 +1517,8 @@ components:
       description: 'Dates of the actions on the data'
       type: object
       required:
-      - created
-      - updated
+        - created
+        - updated
       properties:
         'created':
           $ref: '#/components/schemas/Date'
@@ -1573,39 +1535,31 @@ components:
     'DictionaryList':
       type: object
       required:
-      - lang
-      - text
+        - lang
+        - text
       properties:
         'lang':
           $ref: '#/components/schemas/Language'
         'text':
           type: array
-          items: 
+          items:
             type: string
             #TODO: possibly set limitations (size, characters allowed, HTML-ready or not)
-      example:
-        {
-          lang: 'fr-FR',
-          text: ["abeilles", "Apis"]
-        }
+      example: { lang: 'fr-FR', text: ['abeilles', 'Apis'] }
 
     #---------------------------------------------------------------------------
     'DictionaryEntry':
       type: object
       required:
-      - lang
-      - text
+        - lang
+        - text
       properties:
         'lang':
           $ref: '#/components/schemas/Language'
         'text':
           type: string
           #TODO: possibly set limitations (size, characters allowed, HTML-ready or not)
-      example:
-        {
-          lang: 'fr-FR',
-          text: "abeilles"
-        }
+      example: { lang: 'fr-FR', text: 'abeilles' }
 
     #---------------------------------------------------------------------------
     'SkosScheme':
@@ -1614,8 +1568,8 @@ components:
         relationships.
       type: object
       required:
-      - scheme_id
-      - scheme_label
+        - scheme_id
+        - scheme_label
       properties:
         #——————————————————————————
         'scheme_id':
@@ -1624,8 +1578,7 @@ components:
           format: uuid
         #——————————————————————————
         'scheme_code':
-          description: 
-            'Short abstract code that identifies uniquely the concept scheme'
+          description: 'Short abstract code that identifies uniquely the concept scheme'
           type: string
           minLength: 2
           maxLength: 30
@@ -1633,22 +1586,21 @@ components:
         'scheme_label':
           description: 'Short code for the concept scheme'
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/DictionaryEntry'
           minItems: 1
         #——————————————————————————
         'scheme_icon':
-          description: 
-            'URI towards a graphical resource that describes the concept scheme'
+          description: 'URI towards a graphical resource that describes the concept scheme'
           type: string
           format: uri
         #——————————————————————————
         'top_concepts':
           description: 'List of the highest level concepts in the concept scheme'
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/SkosConcept'
-          
+
     #---------------------------------------------------------------------------
     'SkosConcept':
       description: >
@@ -1661,10 +1613,10 @@ components:
         meaning will be hard to unify.
       type: object
       required:
-      - concept_id
-      - concept_code
-      - skos_scheme_class
-      - pref_label
+        - concept_id
+        - concept_code
+        - skos_scheme_class
+        - pref_label
       properties:
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
         # Identification
@@ -1686,8 +1638,7 @@ components:
           format: uri
         #——————————————————————————
         'concept_icon':
-          description: 
-            'URI towards a graphical resource that describes the concept'
+          description: 'URI towards a graphical resource that describes the concept'
           type: string
           format: uri
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
@@ -1696,36 +1647,36 @@ components:
         'pref_label':
           description: 'Preferred lexical label for the resource, one for each language'
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/DictionaryEntry'
           minItems: 1
         #——————————————————————————
         'alt_labels':
           description: 'List of alternative labels (in each language)'
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/DictionaryList'
         #——————————————————————————
         'hidden_labels':
           description: 'List of alternative orthographs for the label (in each language)'
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/DictionaryList'
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
         # Classification
         #——————————————————————————
         'of_scheme':
           allOf:
-          - description: >
-              Reference to the constrained vocabulary, thesaurus or classification scheme
-            type: object
-          - $ref: '#/components/schemas/SkosScheme'
+            - description: >
+                Reference to the constrained vocabulary, thesaurus or classification scheme
+              type: object
+            - $ref: '#/components/schemas/SkosScheme'
         #——————————————————————————
         'concept_role':
           description: >
-              Underlines a particular use for this Concept, e.g. a potential
-              value for a property (e.g. "metadata.theme", "metadata.keywords", 
-              "metadata.licence")
+            Underlines a particular use for this Concept, e.g. a potential
+            value for a property (e.g. "metadata.theme", "metadata.keywords", 
+            "metadata.licence")
           type: string
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
         # Relationships
@@ -1737,7 +1688,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SkosConcept'
-          # beware to avoid graph loops with narrower (children) or 
+          # beware to avoid graph loops with narrower (children) or
           # siblingly (neighbours) concepts !
         #——————————————————————————
         'narrower_concepts':
@@ -1747,7 +1698,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SkosConcept'
-          # beware to avoid graph loops with broader (parents) or 
+          # beware to avoid graph loops with broader (parents) or
           # siblingly (neighbours) concepts !
         #——————————————————————————
         'siblings_concepts':
@@ -1757,13 +1708,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SkosConcept'
-          # beware to avoid graph loops with broader (children) or 
+          # beware to avoid graph loops with broader (children) or
           # narrower (children) concepts !
         #——————————————————————————
         'relative_concepts':
           description: >
             References to the SKOS concepts that can be associated in a 
-            non-transitive relationship 
+            non-transitive relationship
           type: array
           items:
             $ref: '#/components/schemas/SkosConcept'
@@ -1772,24 +1723,24 @@ components:
         #——————————————————————————
         'scope_note':
           description: >
-             Contextual information about the intended meaning of the concept, 
-             especially as an indication of how the use of the concept
+            Contextual information about the intended meaning of the concept, 
+            especially as an indication of how the use of the concept
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/DictionaryEntry'
         #——————————————————————————
         'concept_definition':
           description: 'Complete explanation of the intended meaning of a concept'
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/DictionaryEntry'
         #——————————————————————————
         'concept_example':
           description: 'Example of the use of a concept'
           type: array
-          items: 
+          items:
             $ref: '#/components/schemas/DictionaryEntry'
-      
+
     #---------------------------------------------------------------------------
     'Language':
       description: >
@@ -1799,22 +1750,52 @@ components:
         lowercase ISO-639 language code alone
       type: string
       pattern: '^[a-z]{2}(-[A-Z]{2})?$'
-      enum: ['cs-CZ', 'da-DK', 'de-CH', 'de-DE', 'en-GB', 'en-US', 'el-GR', 
-        'es-ES', 'fr-FR', 'hu-HU', 'it-IT', 'no-NO', 'pl-PL', 'pt-PT', 'ro-RO', 
-        'ru-RU', 'sk-SK', 'cs', 'da', 'de', 'en', 'el', 'es', 'fr', 'hu', 'it', 
-        'no', 'pl', 'pt', 'ro', 'ru', 'sk']
-        
+      enum:
+        [
+          'cs-CZ',
+          'da-DK',
+          'de-CH',
+          'de-DE',
+          'en-GB',
+          'en-US',
+          'el-GR',
+          'es-ES',
+          'fr-FR',
+          'hu-HU',
+          'it-IT',
+          'no-NO',
+          'pl-PL',
+          'pt-PT',
+          'ro-RO',
+          'ru-RU',
+          'sk-SK',
+          'cs',
+          'da',
+          'de',
+          'en',
+          'el',
+          'es',
+          'fr',
+          'hu',
+          'it',
+          'no',
+          'pl',
+          'pt',
+          'ro',
+          'ru',
+          'sk',
+        ]
+
       # norm: https://www.rfc-editor.org/rfc/bcp/bcp47.txt
       # source for enum: https://app.swaggerhub.com/apis/nologo/thesaurus/1.0.0#/default/get_thesaurus_v1
 
       # !SKOS!
 
-#TODO : thesaurus : tableau de valeurs simples ou couples {label: "Texte à
-#       afficher pour l'utilisateur", "valeur": "ValeurAssociee"}
+  #TODO : thesaurus : tableau de valeurs simples ou couples {label: "Texte à
+  #       afficher pour l'utilisateur", "valeur": "ValeurAssociee"}
 
   #=============================================================================
   responses:
-
     #---------------------------------------------------------------------------
     'Error400BadRequest':
       description: The JSON is not valid.
@@ -1826,7 +1807,7 @@ components:
               'status_code':
                 type: integer
                 enum: [400]
-              'message': 
+              'message':
                 type: string
                 enum: ['The JSON is not valid.']
     #---------------------------------------------------------------------------
@@ -1840,7 +1821,7 @@ components:
               'status_code':
                 type: integer
                 enum: [401]
-              'message': 
+              'message':
                 type: string
                 enum: ['The request requires an user authentication.']
     #---------------------------------------------------------------------------
@@ -1854,7 +1835,7 @@ components:
               'status_code':
                 type: integer
                 enum: [403]
-              'message': 
+              'message':
                 type: string
                 enum: ['The access is not allowed.']
     #---------------------------------------------------------------------------
@@ -1868,13 +1849,12 @@ components:
               'status_code':
                 type: integer
                 enum: [404]
-              'message': 
+              'message':
                 type: string
                 enum: ['The resource was not found.']
     #---------------------------------------------------------------------------
     'Error405MethodNotAllowed':
-      description:
-        Request method is not supported for the requested resource.
+      description: Request method is not supported for the requested resource.
       content:
         application/json:
           schema:
@@ -1883,13 +1863,12 @@ components:
               'status_code':
                 type: integer
                 enum: [405]
-              'message': 
+              'message':
                 type: string
                 enum: ['Request method is not supported for the requested resource.']
     #---------------------------------------------------------------------------
     'Error406NotAcceptable':
-      description:
-        Headers sent in the request are not compatible with the service.
+      description: Headers sent in the request are not compatible with the service.
       content:
         application/json:
           schema:
@@ -1898,7 +1877,7 @@ components:
               'status_code':
                 type: integer
                 enum: [406]
-              'message': 
+              'message':
                 type: string
                 enum: ['Headers sent in the request are not compatible with the service.']
     #---------------------------------------------------------------------------
@@ -1915,9 +1894,12 @@ components:
               'status_code':
                 type: integer
                 enum: [408]
-              'message': 
+              'message':
                 type: string
-                enum: ['The client did not produce a request within the time that the server was prepared to wait. The client may repeat the request without modifications at any later time.']
+                enum:
+                  [
+                    'The client did not produce a request within the time that the server was prepared to wait. The client may repeat the request without modifications at any later time.',
+                  ]
     #---------------------------------------------------------------------------
     'Error410Gone':
       description: >
@@ -1931,9 +1913,12 @@ components:
               'status_code':
                 type: integer
                 enum: [410]
-              'message': 
+              'message':
                 type: string
-                enum: ['The requested resource is no longer available and will not be available again. The resource should be purged from the client system.']
+                enum:
+                  [
+                    'The requested resource is no longer available and will not be available again. The resource should be purged from the client system.',
+                  ]
     #---------------------------------------------------------------------------
     'Error423Locked':
       description: The resource that is being accessed is locked.
@@ -1945,7 +1930,7 @@ components:
               'status_code':
                 type: integer
                 enum: [423]
-              'message': 
+              'message':
                 type: string
                 enum: ['The resource that is being accessed is locked.']
     #---------------------------------------------------------------------------
@@ -1959,7 +1944,7 @@ components:
               'status_code':
                 type: integer
                 enum: [429]
-              'message': 
+              'message':
                 type: string
                 enum: ['The user has sent too many requests in a short period.']
     #---------------------------------------------------------------------------
@@ -1973,7 +1958,7 @@ components:
               'status_code':
                 type: integer
                 enum: [500]
-              'message': 
+              'message':
                 type: string
                 enum: ['An unexpected error occured.']
     #---------------------------------------------------------------------------
@@ -1987,9 +1972,9 @@ components:
               'status_code':
                 type: integer
                 enum: [503]
-              'message': 
+              'message':
                 type: string
-                enum: ['The server is currently unable to handle the request.']         
+                enum: ['The server is currently unable to handle the request.']
 
   #=============================================================================
   securitySchemes:
@@ -2006,5 +1991,4 @@ components:
             backoffice: Actions accessible from the backoffice UI
             backadmin: Actions accessible from the backoffice admin
             node: Local Producer node actions (private actions)
-
 #•••••••••••••••••••••••••••••••••••[ EOF ]••••••••••••••••••••••••••••••••••••#

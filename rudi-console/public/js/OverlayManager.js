@@ -5,8 +5,8 @@
  * Overlays created has methods to be shown and hide
  * Provide event handler
  */
-var overlay_manager = document.createElement('div');
-overlay_manager.classList.add('overlay_manager');
+var overlayManager = document.createElement('div');
+overlayManager.classList.add('overlay_manager');
 
 var style = document.createElement('style');
 style.textContent = `
@@ -38,8 +38,8 @@ body > div.overlay_manager > div.overlay_wrapper > * {
     background-color: white;
     min-height: 50vh;
 }`
-overlay_manager.appendChild(style);
-document.body.appendChild(overlay_manager);
+overlayManager.appendChild(style);
+document.body.appendChild(overlayManager);
 
 
 /**
@@ -48,37 +48,37 @@ document.body.appendChild(overlay_manager);
  * @param {Boolean} easyClose true by default, close the div when clicking outside the overlay 
  */
 function addOverlay(overlay, easyClose = true) {
-    var overlay_wrapper = document.createElement("div");
-    overlay_wrapper.setAttribute("class", "overlay_wrapper")
+    var overlayWrapper = document.createElement("div");
+    overlayWrapper.setAttribute("class", "overlay_wrapper")
     
     /** Display the overlay */
     overlay.show = function() {
         var vh = document.documentElement.clientHeight;
         var defaultScrollHeight = document.documentElement.scrollHeight;
         var scrollTop = document.documentElement.scrollTop;
-        overlay_manager.style.display = "block";
-        overlay_wrapper.style.display = "block";
-        var vertical_margin = (vh - overlay.offsetHeight) / 2;
-        vertical_margin = Math.max(vertical_margin, 16);
-        overlay.style.top = Math.floor(vertical_margin + scrollTop) + "px";
+        overlayManager.style.display = "block";
+        overlayWrapper.style.display = "block";
+        var verticalMargin = (vh - overlay.offsetHeight) / 2;
+        verticalMargin = Math.max(verticalMargin, 16);
+        overlay.style.top = Math.floor(verticalMargin + scrollTop) + "px";
         var scrollHeight = document.documentElement.scrollHeight;
-        overlay_manager.style.height = (defaultScrollHeight < scrollHeight) ? `calc(8em + ${scrollHeight}px)` : defaultScrollHeight + "px";
+        overlayManager.style.height = (defaultScrollHeight < scrollHeight) ? `calc(8em + ${scrollHeight}px)` : defaultScrollHeight + "px";
         if (overlay.onoverlayshow) overlay.onoverlayshow();
     }
 
     /** Hide the overlay */
     overlay.hide = function() { 
-        overlay_manager.style.display = "none";
-        overlay_wrapper.style.display = "none";
+        overlayManager.style.display = "none";
+        overlayWrapper.style.display = "none";
         if (overlay.onoverlayhide) overlay.onoverlayhide();
     }
 
-    if (easyClose) overlay_wrapper.onclick = overlay.hide;
+    if (easyClose) overlayWrapper.onclick = overlay.hide;
     
-    overlay.onclick = function() { event.stopPropagation(); }
-    overlay.wrapper = overlay_wrapper;
-    overlay_wrapper.appendChild(overlay);
-    overlay_manager.appendChild(overlay_wrapper);
+    overlay.onclick = function(event) { event.stopPropagation(); }
+    overlay.wrapper = overlayWrapper;
+    overlayWrapper.appendChild(overlay);
+    overlayManager.appendChild(overlayWrapper);
     return overlay;
 }
 

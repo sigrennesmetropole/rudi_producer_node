@@ -1,134 +1,196 @@
 /* eslint-disable quote-props */
-'use strict'
 
 const mod = 'portalCtrl'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const { parseKey } = require('sshpk')
-const axios = require('axios')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import axios from 'axios'
+import https from 'node:https'
+import { extractJwt, readPublicKeyPem, verifyToken } from '@aqmo.org/jwt_lib'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const { extractJwt, JWT_EXP, REQ_MTD } = require('../utils/crypto')
-const {
+// -------------------------------------------------------------------------------------------------
+import { PORTAL_API_VERSION, OBJ_METADATA, PARAM_ID, USER_AGENT } from '../config/confApi.js'
+import {
   API_METAINFO_VERSION_PROPERTY,
   API_METAINFO_PROPERTY,
   API_COLLECTION_TAG,
   getUpdatedDate,
+  API_STORAGE_STATUS,
+  API_METADATA_ID,
+  DB_UPDATED_AT,
+  API_REPORT_ID,
   API_MEDIA_PROPERTY,
-  API_MEDIA_TYPE,
-  API_FILE_TYPE,
-} = require('../db/dbFields')
+  API_FILE_STORAGE_STATUS,
+  API_FILE_STATUS_UPDATE,
+  API_INTEGRATION_ERROR_ID,
+  API_METAINFO_SOURCE_PROPERTY,
+} from '../db/dbFields.js'
 
-const { MediaTypes } = require('../definitions/models/Media')
-const { MIME_YAML } = require('../definitions/thesaurus/FileTypes')
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { JWT_EXP, REQ_MTD } from '../utils/crypto.js'
+import { logD, logE, logT, logV, logW } from '../utils/logging.js'
+import {
+  beautify,
+  dateEpochSToIso,
+  decodeBase64,
+  deepClone,
+  nowEpochS,
+  padWithEqualSignBase4,
+  toBase64,
+} from '../utils/jsUtils.js'
+import { accessProperty, accessReqParam } from '../utils/jsonAccess.js'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const db = require('../db/dbQueries')
-const log = require('../utils/logging')
-const api = require('../config/confApi')
-const utils = require('../utils/jsUtils')
-const json = require('../utils/jsonAccess')
+import { httpGet, httpPost, httpDelete, directPost, directGet, httpPut } from '../utils/httpReq.js'
+import {
+  FIELD_TOKEN,
+  getAuthUrl,
+  getCheckAuthUrl,
+  getCredentials,
+  getPortalMetaUrl,
+  getPortalJwtPubKeyUrl,
+  isPortalConnectionDisabled,
+  JWT_USER,
+  PARAM_TOKEN,
+  postPortalMetaUrl,
+  getPortalCryptPubUrl,
+} from '../config/confPortal.js'
 
-const {
-  httpGet,
-  httpPost,
-  httpDelete,
-  directPost,
-  directGet,
-  httpPut,
-} = require('../utils/httpReq')
+import { isUUID } from '../definitions/schemaValidators.js'
+import { StorageStatus } from '../definitions/thesaurus/StorageStatus.js'
 
-const portal = require('../config/confPortal')
+import {
+  getLatestStoredPortalToken,
+  getObjectWithRudiId,
+  storePortalToken,
+} from '../db/dbQueries.js'
 
-const validate = require('../definitions/schemaValidators')
-
-const {
+import {
   NotFoundError,
   InternalServerError,
-  NotImplementedError,
   BadRequestError,
   ForbiddenError,
   NotAcceptableError,
   RudiError,
   UnauthorizedError,
-} = require('../utils/errors')
+} from '../utils/errors.js'
+import { isEveryMediaAvailable } from '../definitions/models/Metadata.js'
 
-// ------------------------------------------------------------------------------------------------
-// Token manager
-// ------------------------------------------------------------------------------------------------
-// const { RMTokenManager } = require('../definitions/constructors/RMTokenManager')
-// const portalInfo = {
-//   host: portal.API_GET_HOST,
-//   port: portal.API_GET_PORT,
-//   path_request: portal.API_GET_PATH,
-//   path_check: portal.API_SEND_PATH,
-//   login: portal.LOGIN,
-//   passw: portal.PASSW,
-// }
-// const agent = `RUDI/${api.VERSION}`
+// -------------------------------------------------------------------------------------------------
+// Portal auth header
+// -------------------------------------------------------------------------------------------------
+const portalHttpsAgent = new https.Agent({
+  rejectUnauthorized: false,
+})
 
-// const tokenManager = new RMTokenManager(portalInfo, agent)
-
-// ------------------------------------------------------------------------------------------------
-// REST access
-// ------------------------------------------------------------------------------------------------
-exports.exposedGetPortalToken = async (req, reply) => {
-  const fun = 'exposedGetPortalToken'
-  log.t(mod, fun, `< GET new portal token`)
+export const getPortalAuthHeaderBasic = () => {
+  const fun = 'getPortalAuthHeaderBasic'
   try {
-    // log.d(mod, fun, portal.getAuthUrl())
-    return await this.getNewTokenFromPortal()
+    logT(mod, fun, ``)
+    const [usr, pwdb64] = getCredentials()
+    const pwd = decodeBase64(pwdb64)
+    const basicAuth = padWithEqualSignBase4(toBase64(`${usr}:${pwd}`))
+    return {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Authorization: `Basic ${basicAuth}`,
+      },
+    }
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+export const getPortalAuthHeaderBearer = async () => {
+  const fun = 'getPortalAuthHeaderBearer'
+  try {
+    logT(mod, fun, ``)
+    return {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Authorization: `Bearer ${await getPortalToken()}`,
+      },
+    }
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.checkPortalTokenInHeader = async (req, reply) => {
+// -------------------------------------------------------------------------------------------------
+// Token manager
+// -------------------------------------------------------------------------------------------------
+// import { RMTokenManager } from '../definitions/constructors/RMTokenManager'
+// const portalInfo = {
+//   host: API_GET_HOST,
+//   port: API_GET_PORT,
+//   path_request: API_GET_PATH,
+//   path_check: API_SEND_PATH,
+//   login: LOGIN,
+//   passw: PASSW,
+// }
+// const agent = `RUDI/${VERSION}`
+
+// const tokenManager = new RMTokenManager(portalInfo, agent)
+
+// -------------------------------------------------------------------------------------------------
+// REST access
+// -------------------------------------------------------------------------------------------------
+export const exposedGetPortalToken = async (req, reply) => {
+  const fun = 'exposedGetPortalToken'
+  logT(mod, fun, `< GET new portal token`)
+  try {
+    // logD(mod, fun, getAuthUrl())
+    return await getNewTokenFromPortal()
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+export const checkPortalTokenInHeader = async (req, isCheckOptional) => {
   const fun = 'checkPortalTokenInHeader'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
     const token = extractJwt(req)
-    const jwtInfo = await this.verifyPortalToken(token)
+    const jwtInfo = await verifyPortalToken(token)
     return jwtInfo
-    // return await this.getTokenCheckedByPortal(token)
+    // return await getTokenCheckedByPortal(token)
   } catch (err) {
+    if (isCheckOptional) throw err
     const error = new UnauthorizedError(err)
     throw RudiError.treatError(mod, fun, error)
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Controllers
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 /**
  * Get a new token from the portal
  */
-exports.getPortalToken = async () => {
+export const getPortalToken = async () => {
   const fun = 'getPortalToken'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   let token, rmToken
   try {
-    rmToken = await db.getLatestStoredPortalToken()
-    if (!rmToken || rmToken.expires_in < utils.nowEpochS()) {
-      log.d(mod, fun, 'Need for a new portal token')
-      rmToken = await this.getNewTokenFromPortal()
+    rmToken = await getLatestStoredPortalToken()
+    // logD(mod, fun, beautify(rmToken))
+    if (!rmToken || rmToken.exp < nowEpochS()) {
+      logD(mod, fun, 'Need for a new portal token')
+      rmToken = await getNewTokenFromPortal()
     }
 
-    token = json.accessProperty(rmToken, portal.FIELD_TOKEN)
-    // log.d(mod, fun, `token: ${utils.beautify(token)}`)
-    await this.verifyPortalToken(token)
-    log.d(mod, fun, 'Stored token seems OK')
+    token = accessProperty(rmToken, FIELD_TOKEN)
+    // logD(mod, fun, `token: ${ beautify(token)}`)
+    await verifyPortalToken(token)
+    logD(mod, fun, 'Stored token seems OK')
 
-    await this.getTokenCheckedByPortal(token)
+    // await getTokenCheckedByPortal(token)
     return token
-    // log.d(mod, fun, 'Stored token was validated by the Portal')
+    // logD(mod, fun, 'Stored token was validated by the Portal')
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
     //  new InternalServerError(`Failed to get a new token from the portal: ${err}`)
@@ -138,112 +200,136 @@ exports.getPortalToken = async () => {
 /**
  * Ensure a token is valid
  */
-exports.checkStoredToken = async (req, reply) => {
+export const checkStoredToken = async (req, reply) => {
   const fun = 'checkStoredToken'
-  log.t(mod, fun, ``)
-  // log.t(mod, fun, `< GET portal check token`)
+  logT(mod, fun, ``)
+  // logT(mod, fun, `< GET portal check token`)
   try {
-    const token = await db.getLatestStoredPortalToken()
+    const token = await getLatestStoredPortalToken()
     if (!token) throw new NotFoundError('No Portal token is actually stored')
-    return await this.getTokenCheckedByPortal(token[portal.FIELD_TOKEN])
+    return await getTokenCheckedByPortal(token[FIELD_TOKEN])
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.checkInputToken = async (req, reply) => {
+export const checkInputToken = async (req, reply) => {
   const fun = 'checkInputToken'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
-    const token = json.accessReqParam(req.params, portal.PARAM_TOKEN)
-    return await this.getTokenCheckedByPortal(token[portal.FIELD_TOKEN])
+    const token = accessReqParam(req.params, PARAM_TOKEN)
+    return await getTokenCheckedByPortal(token[FIELD_TOKEN])
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.getMetadata = async (req, reply) => {
+export const getMetadata = async (req, reply) => {
   const fun = 'getMetadata'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
-    let metadataId = req.params[api.PARAM_ID]
-    log.d(mod, fun, `metadataId: ${metadataId}`)
-    if (metadataId && !validate.isUUID(metadataId)) metadataId = null
+    let metadataId = req.params[PARAM_ID]
+    if (metadataId && !isUUID(metadataId)) metadataId = undefined
+    if (metadataId) logD(mod, fun, `metadataId: ${metadataId}`)
 
-    return await this.getMetadataFromPortal(metadataId)
+    const additionalParameters = req.url?.split('?')[1]
+
+    return await getMetadataFromPortal(metadataId, additionalParameters)
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.sendMetadata = async (req, reply) => {
+export const sendMetadata = async (req, reply) => {
   const fun = 'sendMetadata'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
-    let metadataId = req.params[api.PARAM_ID]
-    log.d(mod, fun, `metadataId: ${metadataId}`)
-    if (!metadataId || !validate.isUUID(metadataId))
+    let metadataId = req.params[PARAM_ID]
+    logD(mod, fun, `metadataId: ${metadataId}`)
+    if (!metadataId || !isUUID(metadataId))
       throw new BadRequestError('Parameter is not a valid UUID v4')
 
-    return await this.sendMetadataToPortal(metadataId)
+    return await sendMetadataToPortal(metadataId)
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.deleteMetadata = async (req, reply) => {
+export const deleteMetadata = async (req, reply) => {
   const fun = 'deleteMetadata'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
-    let metadataId = req.params[api.PARAM_ID]
-    log.d(mod, fun, `metadataId: ${metadataId}`)
-    if (metadataId && !validate.isUUID(metadataId)) metadataId = null
+    let metadataId = req.params[PARAM_ID]
+    logD(mod, fun, `metadataId: ${metadataId}`)
+    if (metadataId && !isUUID(metadataId)) metadataId = null
 
-    return await this.deletePortalMetadata(metadataId)
+    return await deletePortalMetadata(metadataId)
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Portal calls: GET public key
-// ------------------------------------------------------------------------------------------------
-let cachedPortalPubKey
+// -------------------------------------------------------------------------------------------------
 // ----- GET Portal public key
-exports.getPortalPublicKey = async () => {
-  const fun = 'getPortalPublicKey'
+let CACHED_PORTAL_PUB
+export const getPortalJwtPubKey = async () => {
+  const fun = 'getPortalJwtPubKey'
   try {
-    log.t(mod, fun, ``)
-    if (cachedPortalPubKey) return cachedPortalPubKey
+    logT(mod, fun, ``)
+    if (CACHED_PORTAL_PUB) return CACHED_PORTAL_PUB
 
-    const publicKeyUrl = portal.getPortalPubKeyUrl()
-    log.d(mod, fun, 'publicKeyUrl: ' + publicKeyUrl)
+    const publicKeyUrl = getPortalJwtPubKeyUrl()
+    // logD(mod, fun, 'publicKeyUrl: ' + publicKeyUrl)
 
-    const publicKeyObj = await httpGet(publicKeyUrl)
-    // log.d(mod, fun, 'publicKeyObj: ' + publicKeyObj)
-    const publicKey = publicKeyObj ? publicKeyObj.value : null
-    // log.d(mod, fun, 'publicKey: ' + publicKey)
-
-    cachedPortalPubKey = publicKey
-    return cachedPortalPubKey
-    log.d(mod, fun, `publicKey: ${publicKey}`)
+    const publicKeyObj = await axios.get(publicKeyUrl, getPortalAuthHeaderBasic())
+    // logD(mod, fun, 'publicKeyObj: ' + beautify(publicKeyObj))
+    const cachedPortalJwtPubKeyPem = publicKeyObj?.data?.value
+    // logD(mod, fun, `portalJwtPubKey: ${cachedPortalJwtPubKey}`)
+    CACHED_PORTAL_PUB = readPublicKeyPem(cachedPortalJwtPubKeyPem)
+    return CACHED_PORTAL_PUB
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-// ------------------------------------------------------------------------------------------------
-// Portal calls: token
-// ------------------------------------------------------------------------------------------------
-exports.getNewTokenFromPortal = async () => {
-  const fun = 'getNewTokenFromPortal'
-  log.t(mod, fun, ``)
+let cachedPortalEncryptPubKey
+export const getPortalEncryptPubKey = async () => {
+  const fun = 'getPortalEncryptPubKey'
   try {
-    const [usr, pwdb64] = portal.getCredentials()
-    const portalAuthUrl = portal.getAuthUrl()
+    logT(mod, fun, ``)
+    // if (cachedPortalEncryptPubKey) return cachedPortalEncryptPubKey
+
+    // cachedPortalEncryptPubKey = await axiosInstanceForPortal.get(getPortalCryptPubUrl())
+    const portalCryptPubData = await axios.get(getPortalCryptPubUrl(), {
+      headers: {
+        'User-Agent': USER_AGENT,
+        Authorization: `Bearer ${await getPortalToken()}`,
+      },
+      httpsAgent: portalHttpsAgent,
+    })
+    cachedPortalEncryptPubKey = portalCryptPubData?.data
+    // logD(mod, fun, `portalEncryptPubKey: ${beautify(cachedPortalEncryptPubKey)}`)
+    return cachedPortalEncryptPubKey
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+// -------------------------------------------------------------------------------------------------
+// Portal calls: token
+// -------------------------------------------------------------------------------------------------
+export const getNewTokenFromPortal = async () => {
+  const fun = 'getNewTokenFromPortal'
+  try {
+    logT(mod, fun, ``)
+    const [usr, pwdb64] = getCredentials()
+    const pwd = decodeBase64(pwdb64)
+    // consoleLog(mod, fun, pwdb64)
+    // consoleLog(mod, fun, pwd)
+    const portalAuthUrl = getAuthUrl()
     // LM -- the password is now provided in base64
-    const pwd = utils.decodeBase64(pwdb64)
-    // log.d(mod, fun, `pwdb64: ${pwdb64}`)
-    // log.d(mod, fun, `pwd: ${pwd}`)
+    // logD(mod, fun, `pwdb64: ${pwdb64}`)
+    // logD(mod, fun, `pwd: ${pwd}`)
     // const body = {
     //   grant_type: 'password',
     //   scope: 'read',
@@ -254,83 +340,67 @@ exports.getNewTokenFromPortal = async () => {
     const body =
       `grant_type=password&scope=read&username=${encodeURIComponent(usr)}&` +
       `password=${encodeURIComponent(pwd)}`
-    // log.d(mod, fun, `body: ${body}`)
-
-    const basicAuth = utils.padWithEqualSignBase4(utils.toBase64(`${usr}:${pwd}`))
-    // log.d(mod, fun, `basicAuth: ${basicAuth}`)
-
-    const opts = {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': `RudiProd/${api.API_VERSION}`,
-        Authorization: `Basic ${basicAuth}`,
-      },
-    }
-    // log.d(mod, fun, utils.beautify(opts))
     let answer
     try {
-      answer = await directPost(portalAuthUrl, body, opts)
+      answer = await directPost(portalAuthUrl, body, getPortalAuthHeaderBasic())
     } catch (err) {
       if (RudiError.isRudiError(err)) throw RudiError.treatError(mod, fun, err)
       else {
-        const error = new InternalServerError(`Post to portal failed: ${utils.beautify(err)}`)
+        const error = new InternalServerError(`Post to portal failed: ${beautify(err)}`)
         throw RudiError.treatError(mod, fun, error)
       }
     }
-    // log.d(mod, fun, `answer.status: ${answer.status}`)
+    // logD(mod, fun, `answer.status: ${answer.status}`)
 
-    if (answer.status === 200) {
-      // log.d(mod, fun, `config: ${utils.beautify(answer.config)}`)
-      // log.d(mod, fun, `data: ${utils.beautify(answer.data)}`)
+    if (answer?.status === 200) {
+      // logD(mod, fun, `config: ${ beautify(answer.config)}`)
+      // logD(mod, fun, `data: ${ beautify(answer.data)}`)
       const portalToken = answer.data
 
-      const jwToken = portalToken[portal.FIELD_TOKEN]
-      if (typeof portalToken !== 'object' || !portalToken[portal.FIELD_TOKEN])
+      const jwToken = portalToken[FIELD_TOKEN]
+      if (typeof portalToken !== 'object' || !portalToken[FIELD_TOKEN])
         throw new NotAcceptableError(`The portal delivered an incorrect reply: ${portalToken}`)
 
-      // log.d(mod, fun, `portalToken: ${utils.beautify(portalToken)}`)
+      // logD(mod, fun, `portalToken: ${ beautify(portalToken)}`)
 
-      const jwtBody = (await this.verifyPortalToken(jwToken))[1]
+      const jwtBody = (await verifyPortalToken(jwToken))[1]
       portalToken[JWT_EXP] = jwtBody[JWT_EXP]
-      log.d(
-        mod,
-        fun,
-        `We got a new token, that expires on ${utils.dateEpochSToIso(jwtBody[JWT_EXP])}`
-      )
-      await this.getTokenCheckedByPortal(portalToken[portal.FIELD_TOKEN])
-      await db.storePortalToken(portalToken)
+      logD(mod, fun, `We got a new token, that expires on ${dateEpochSToIso(jwtBody[JWT_EXP])}`)
+      await getTokenCheckedByPortal(portalToken[FIELD_TOKEN])
+      await storePortalToken(portalToken)
 
       return portalToken
     } else {
-      const errMsg = `${utils.beautify(answer)}`
-      // log.w(mod, fun, errMsg)
+      const errMsg = `${beautify(answer)}`
+      // logW(mod, fun, errMsg)
       throw RudiError.createRudiHttpError(answer.status, errMsg, mod, fun)
     }
   } catch (err) {
     if (RudiError.isRudiError(err)) {
-      log.t(mod, fun, 'is a RudiError')
+      logT(mod, fun, 'is a RudiError')
       throw RudiError.treatError(mod, fun, err)
     } else {
-      log.t(mod, fun, `is not a RudiError: ${err}`)
-      const error = new ForbiddenError(`Failed to get a token from Portal: ${utils.beautify(err)}`)
+      logT(mod, fun, `is not a RudiError: ${err}`)
+      const error = new ForbiddenError(`Failed to get a token from Portal: ${beautify(err)}`)
       throw RudiError.treatError(mod, fun, error)
     }
   }
 }
 
-exports.getTokenCheckedByPortal = async (token) => {
+export const getTokenCheckedByPortal = async (token) => {
   const fun = 'getTokenCheckedByPortal'
   try {
-    log.t(mod, fun, ``)
+    logT(mod, fun, ``)
     if (!token) throw new BadRequestError('No token to check!')
-    const portalUrl = portal.getCheckAuthUrl()
+    const portalUrl = getCheckAuthUrl()
+    // logD(mod, fun, portalUrl)
 
-    const requestUrl = `${portalUrl}?${portal.PARAM_TOKEN}=${token}`
-    // log.d(mod, fun, requestUrl)
+    const requestUrl = `${portalUrl}?${PARAM_TOKEN}=${token}`
+    // logD(mod, fun, requestUrl)
     const portalResponse = await directGet(requestUrl)
 
-    if (portalResponse.status === 200) {
-      log.v(mod, fun, `RUDI Portal validated the token`)
+    if (portalResponse?.status === 200) {
+      logV(mod, fun, `RUDI Portal validated the token`)
       return portalResponse.data
     } else throw new ForbiddenError(`Portal invalidated the token: ${portalResponse.data}`)
   } catch (err) {
@@ -364,230 +434,268 @@ jwtBody = {
   scope: ['read']
 }
 */
-/* 
-  exports.checkSignatureWithSecret = (accessToken) => {
+/*
+  export const checkSignatureWithSecret = (accessToken) => {
     const fun = 'checkSignatureWithSecret'
-    log.t(mod, fun, ``)
+    logT(mod, fun, ``)
 
     try {
       if (!accessToken) throw new BadRequestError('No token = no signature to verify!')
       const [jwtHeaderBase64, jwtPayloadBase64, jwtSignatureBase64] = accessToken.split('.')
 
-      const hash = createHmac('sha256', portal.getSecret())
+      const hash = createHmac('sha256', getSecret())
         .update(`${jwtHeaderBase64}.${jwtPayloadBase64}`)
         .digest('base64url')
 
       if (hash !== jwtSignatureBase64) {
         const errMsg = `Forged token? Computed hash: ${hash} != jwt signature: ${jwtSignatureBase64}`
-        log.w(mod, fun, errMsg)
+        logW(mod, fun, errMsg)
       }
       return hash === jwtSignatureBase64
 
       // if (hash !== jwtSignatureBase64) {
       //   const errMsg = `Forged token? Computed hash: ${hash} != jwt signature: ${jwtSignatureBase64}`
-      //   log.w(mod, fun, errMsg)
+      //   logW(mod, fun, errMsg)
       //   throw new Error(errMsg)
       // }
       // return true
     } catch (err) {
       const errMsg = `Invalid token: ${err}`
-      log.w(mod, fun, errMsg)
+      logW(mod, fun, errMsg)
       throw err
     }
   }
  */
-exports.checkSignatureWithPubKey = async (accessToken) => {
-  const fun = 'checkSignatureWithPubKey'
-  try {
-    log.t(mod, fun, ``)
 
-    if (!accessToken) throw new BadRequestError('No token = no signature to check!')
-    const [jwtHeaderBase64url, jwtPayloadBase64url, jwtSignatureBase64url] = accessToken.split('.')
-
-    // Retrieve the public key
-    let pubKeyPem
-    try {
-      pubKeyPem = await this.getPortalPublicKey()
-    } catch (err) {
-      throw new InternalServerError(`Couldn't retrieve online portal public key: ${err}`)
-    }
-    let sslKey
-    try {
-      sslKey = parseKey(pubKeyPem)
-    } catch (err) {
-      throw new InternalServerError(
-        `The Portal public key is incorrect, please check the content: ${err}`
-      )
-    }
-
-    // log.d(mod, fun, `sslKey: ${utils.beautify(sslKey)}`)
-    // const keyName = sslKey.comment && sslKey.comment !== '(unnamed)' ? `'${sslKey.comment}' ` : ''
-    // log.d(mod, fun, `${keyName}public key: ${sslKey.type} ${sslKey.size} bits`)
-    let signatureIsValid
-    try {
-      const verifier = sslKey.createVerify('sha256')
-      verifier.update(`${jwtHeaderBase64url}.${jwtPayloadBase64url}`)
-      signatureIsValid = verifier.verify(jwtSignatureBase64url, 'base64url')
-    } catch (err) {
-      throw new ForbiddenError(`Error while verifying the Portal token signature: ${err}`)
-    }
-    if (signatureIsValid) {
-      log.i(mod, fun, `signature is valid`)
-    } else {
-      log.w(mod, fun, `signature is not valid`)
-    }
-    return signatureIsValid
-  } catch (err) {
-    throw RudiError.treatError(mod, fun, err)
-  }
-}
-
-exports.verifyPortalToken = async (accessToken) => {
+export const verifyPortalToken = async (accessToken) => {
   const fun = 'verifyPortalToken'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
 
   try {
-    if (!accessToken) throw new BadRequestError('No token to verify!')
-    const [jwtHeaderBase64, jwtPayloadBase64, _] = accessToken.split('.')
+    if (!accessToken) throw new ForbiddenError('No token to verify!')
 
-    // Check JWT header
-    const jwtHeader = JSON.parse(utils.decodeBase64url(jwtHeaderBase64))
+    const portalPubKey = await getPortalJwtPubKey()
+    const { header, payload } = verifyToken(portalPubKey, accessToken)
 
-    // Check JWT body
-    const jwtPayload = JSON.parse(utils.decodeBase64url(jwtPayloadBase64))
-
-    const jwtPortalUser = jwtPayload[portal.JWT_USER]
-    if (!jwtPortalUser && jwtPayload[REQ_MTD])
+    if (!payload[JWT_USER] && payload[REQ_MTD])
       throw new ForbiddenError(`Using a RUDI internal JWT to access a Portal route is incorrect.`)
-    /*
-      // const login = portal.getCredentials()[0]
-      // log.d(mod, fun, `JWT Portal payload: ${utils.beautify(jwtPayload)}`)
-      // log.d(mod, fun, `JWT Portal user: ${jwtPortalUser}`)
-      if (jwtPortalUser !== login) {
-        // log.w(mod, fun, `Portal JWT: incorrect user: ${jwtPortalUser}`)
-        log.e(`Portal JWT: incorrect user: ${jwtPortalUser}, token=${accessToken}`)
-        // throw new ForbiddenError(`Portal JWT: incorrect user`)
-      }
-      // if (jwtPayload[portal.JWT_CLIENT] !== login)
-      //   throw new ForbiddenError('Portal JWT: incorrect client')
-    */
-    if (jwtPayload[JWT_EXP] < utils.nowEpochS())
-      throw new ForbiddenError(
-        `Portal JWT expired: ` +
-          `expire_date=${utils.dateEpochSToIso(jwtPayload[JWT_EXP])}` +
-          ` < now=${utils.dateEpochSToIso(utils.nowEpochS())}`
-      )
-    // log.d(mod, fun, `jwtHeader: ${utils.beautify(jwtHeader)}`)
-    // log.d(mod, fun, `jwtPayload: ${utils.beautify(jwtPayload)}`)
 
-    // Check JWT signature
-    if (!(await this.checkSignatureWithPubKey(accessToken)))
-      throw new ForbiddenError('Portal JWT signature is not valid')
-
-    // log.d(mod, fun, `jwtHeader: ${utils.beautify(jwtHeader)}`)
-    // log.d(mod, fun, `jwtPayload: ${utils.beautify(jwtPayload)}`)
-    return [jwtHeader, jwtPayload]
+    return [header, payload]
   } catch (err) {
-    const errMsg = `Invalid token: ${err}`
-    log.w(mod, fun, errMsg)
+    // const errMsg = `Invalid token: ${err}`
+    // logV(mod, fun, errMsg)
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Portal calls: metadata
-// ------------------------------------------------------------------------------------------------
-exports.sendMetadataToPortal = async (metadataId) => {
-  const fun = 'sendMetadataToPortal'
+// -------------------------------------------------------------------------------------------------
+const metadatasWaitingForPortalFeedback = []
+
+export const removeMetadataFromWaitingList = (metadataId, reportId) => {
+  const fun = 'removeMetadataFromWaitingList'
   try {
-    log.t(mod, fun, ``)
-    if (portal.isPortalConnectionDisabled()) return
+    const waitIndex = metadatasWaitingForPortalFeedback.findIndex(
+      (sentMetadata) => sentMetadata[API_METADATA_ID] === metadataId
+    )
+    if (waitIndex === -1) {
+      const warnMsg = `Metadata ${metadataId} (report ${reportId}) not found in the from waiting room`
+      logW(mod, fun, warnMsg)
+      return
+    }
+    if (metadatasWaitingForPortalFeedback[waitIndex][API_REPORT_ID] !== reportId) {
+      const warnMsg = `Removing metadata ${metadataId} from the waiting room with mismatching reportId ${reportId}`
+      logW(mod, fun, warnMsg)
+    } else {
+      const msg = `Removing metadata ${metadataId} from the waiting room with reportId ${reportId}`
+      logD(mod, fun, msg)
+    }
+    metadatasWaitingForPortalFeedback.splice(waitIndex, 1)
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+const WAITING_ROOM_TIMEOUT_S = 3600
+const WAIT_DATE = 'wait_date'
+/**
+ * Check a metadata
+ * @param {String} metadataId UUID v4 (global_id) that identifies a metadata in this system
+ * @return {Object} The metadata
+ */
+const isMetadataSendableToPortal = async (metadataId) => {
+  const fun = 'isMetadataAcceptableByPortal'
+  try {
+    if (isPortalConnectionDisabled()) return false
 
     //--- Check input param
-    if (!metadataId) throw new NotImplementedError('Not yet implemented')
-    if (!validate.isUUID(metadataId)) throw new BadRequestError('Bad formatted UUID')
+    if (!metadataId) throw new BadRequestError('Input metadata id is requested', mod, fun)
+    if (!isUUID(metadataId)) throw new BadRequestError(`Badly formatted UUID: ${metadataId}`)
 
     //--- Get local metadata from ID
-    const metadata = await db.getEnsuredObjectWithRudiId(api.OBJ_METADATA, metadataId)
+    const metadata = await getObjectWithRudiId(OBJ_METADATA, metadataId)
     if (!metadata) {
       const errMsg = `No data found locally for id '${metadataId}'`
-      log.w(mod, fun, errMsg)
+      logW(mod, fun, errMsg)
       throw new NotFoundError(errMsg)
     }
 
-    //--- If 'collection_tag' is set (ie for tests), metadata is not sent
+    //--- If 'collection_tag' is set (ie for tests), metadata is not sent to the Portal
     const collectionTag = metadata[API_COLLECTION_TAG]
     if (collectionTag) {
-      log.d(mod, fun, `Not sending to portal: ${metadataId} (${collectionTag})`)
-      return
+      logD(mod, fun, `Not sending to portal: ${metadataId} (${collectionTag})`)
+      return false
     }
 
-    //--- Ensuring compatibility with portal
-    const metadataClean = utils.deepClone(metadata)
-    // API version
-    metadataClean[API_METAINFO_PROPERTY][API_METAINFO_VERSION_PROPERTY] = api.API_VERSION
-    // MIME type: YAML
-    metadataClean[API_MEDIA_PROPERTY].map((media) => {
-      if (media[API_MEDIA_TYPE] === MediaTypes.File && media[API_FILE_TYPE] === MIME_YAML) {
-        media[API_FILE_TYPE] = 'text/plain'
+    //--- If media still need to be uploaded, metadata is not sent to the Portal
+    if (
+      metadata[API_STORAGE_STATUS] === StorageStatus.Pending ||
+      !isEveryMediaAvailable(metadata)
+    ) {
+      logD(mod, fun, `Waiting for other media to get uploaded: ${metadataId}`)
+      return false
+    }
+
+    //--- Purging the waiting room / buffer of metadatas waiting for an integration report
+    try {
+      for (let i = metadatasWaitingForPortalFeedback.length - 1; i >= 0; i--)
+        if (
+          metadatasWaitingForPortalFeedback[i] &&
+          metadatasWaitingForPortalFeedback[i][WAIT_DATE] < nowEpochS() + WAITING_ROOM_TIMEOUT_S
+        )
+          metadatasWaitingForPortalFeedback.splice(i, 1)
+    } catch (e) {
+      logE(mod, fun + '.purgeWaitBuffer', e)
+    }
+
+    //--- Check if the metadata has already been sent to portal
+    let isMetadataAlreadyWaitingToBeSent = false
+    for (const sentMetadata of metadatasWaitingForPortalFeedback) {
+      if (
+        sentMetadata[API_METADATA_ID] === metadata[API_METADATA_ID] &&
+        sentMetadata[DB_UPDATED_AT] >= metadata[DB_UPDATED_AT]
+      ) {
+        isMetadataAlreadyWaitingToBeSent = true
+        break
       }
+    }
+    if (isMetadataAlreadyWaitingToBeSent) {
+      logD(mod, fun, `Metadata is already waiting to be sent: ${metadataId}`)
+      return false
+    }
+    const waitingMetadata = {
+      [API_METADATA_ID]: metadata[API_METADATA_ID],
+      [DB_UPDATED_AT]: metadata[DB_UPDATED_AT],
+      [WAIT_DATE]: nowEpochS(),
+    }
+    // console.log(
+    //   `T (isMetadataSendableToPortal) waitingMetadata ${metadatasWaitingForPortalFeedback.length}`,
+    //   waitingMetadata
+    // )
+    metadatasWaitingForPortalFeedback.push(waitingMetadata)
+    //--- If a media is restricted, metadata is not sent to the Portal
+    // if( metadata[API_RESTRICTED_ACCESS]&&metadata[API_MEDIA_PROPERTY][0][API_MEDIA_CONNECTOR]
+
+    return { metadata, waitIndex: metadatasWaitingForPortalFeedback.length - 1 }
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+const PORTAL_POST_URL = postPortalMetaUrl()
+export const sendMetadataToPortal = async (metadataId) => {
+  const fun = 'sendMetadataToPortal'
+  try {
+    logT(mod, fun, ``)
+
+    const sendableData = await isMetadataSendableToPortal(metadataId)
+    if (!sendableData) return
+    // console.log(`T (sendMetadataToPortal) sendableData`, sendableData)
+    const { metadata, waitIndex } = sendableData
+    const waitingMetadata = metadatasWaitingForPortalFeedback[waitIndex]
+    // console.log(`T (sendMetadataToPortal) waitingMetadata [${waitIndex}]`, waitingMetadata)
+    //--- Ensuring compatibility with portal
+    const metadataClean = deepClone(metadata)
+    // API version
+    metadataClean[API_METAINFO_PROPERTY][API_METAINFO_VERSION_PROPERTY] = PORTAL_API_VERSION
+
+    metadataClean[API_MEDIA_PROPERTY].map((media) => {
+      delete media[API_FILE_STORAGE_STATUS]
+      delete media[API_FILE_STATUS_UPDATE]
+
+      // delete media[API_MEDIA_THUMBNAIL]
+      // delete media[API_MEDIA_SATELLITES]
     })
+    delete metadataClean[API_INTEGRATION_ERROR_ID]
+    delete metadataClean[API_METAINFO_PROPERTY][API_METAINFO_SOURCE_PROPERTY]
 
-    // log.d(mod, fun, utils.beautify(metadataClean))
-
+    logV(mod, fun, `Metadata sent to portal: ${beautify(metadataClean)}`)
+    // console.debug('T (sendMetadataToPortal) metadata', metadataClean[API_MEDIA_PROPERTY][0])
     //--- Sending to portal
-    const sendPortalUrl = portal.postPortalMetaUrl()
-    const portalToken = await this.getPortalToken()
+    const portalToken = await getPortalToken()
     const reqOpts = {
       headers: {
-        'User-Agent': 'Rudi-Producer',
+        'User-Agent': USER_AGENT,
         'Content-Type': 'application/json',
         Authorization: `Bearer ${portalToken}`,
       },
     }
+    let portalAnswer
     try {
-      log.d(mod, fun, `Checking if the metadata is on the portal`)
-      const answer = await axios.get(portal.getPortalMetaUrl(metadataId), reqOpts)
-      const portalMetadata = answer.data
-
-      if (getUpdatedDate(portalMetadata) < getUpdatedDate(metadataClean)) {
-        log.d(mod, fun, `Metadata is on the portal and older: updating '${metadataId}'`)
-        return httpPut(sendPortalUrl, metadataClean, portalToken)
-      } else {
-        log.d(mod, fun, `Metadata is on the portal and same: not updating '${metadataId}'`)
-      }
+      logD(mod, fun, `Checking if the metadata is on the portal`)
+      portalAnswer = await axios.get(getPortalMetaUrl(metadataId), reqOpts)
     } catch (err) {
-      log.e(mod, fun, err)
-      log.d(mod, fun, `Metadata is not on the portal: sending '${metadataId}'`)
-      return httpPost(sendPortalUrl, metadataClean, portalToken)
+      // logV(mod, fun, err)
+      logD(mod, fun, `Metadata is not on the portal: sending '${metadataId}'`)
+      const postAnswer = await httpPost(PORTAL_POST_URL, metadataClean, portalToken)
+      waitingMetadata[API_REPORT_ID] = isUUID(postAnswer) ? postAnswer : postAnswer.data
+      // console.log('T (sendMetadataToPortal.post) waiting room', metadatasWaitingForPortalFeedback)
+      return postAnswer
     }
-    // log.d(mod, fun, `reply: ${utils.beautify(reply)}`)
+    const portalMetadata = portalAnswer.data
+
+    if (getUpdatedDate(portalMetadata) < getUpdatedDate(metadataClean)) {
+      logD(mod, fun, `Metadata is on the portal and older: updating '${metadataId}'`)
+      const putAnswer = await httpPut(PORTAL_POST_URL, metadataClean, portalToken)
+      waitingMetadata[API_REPORT_ID] = isUUID(putAnswer) ? putAnswer : putAnswer.data
+      // console.log('T (sendMetadataToPortal.put) putAnswer', putAnswer)
+      // console.log('T (sendMetadataToPortal.put) waiting room', metadatasWaitingForPortalFeedback)
+      return putAnswer
+    } else {
+      metadatasWaitingForPortalFeedback.splice(waitIndex, 1)
+      logD(mod, fun, `Metadata is on the portal and same: not updating '${metadataId}'`)
+      // console.log('T (sendMetadataToPortal.none) waiting room', metadatasWaitingForPortalFeedback)
+    }
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.getMetadataFromPortal = async (metadataId) => {
+export const getPortalMetadataListWithToken = (token, additionalParameters) =>
+  httpGet(getPortalMetaUrl(null, additionalParameters), token)
+
+export const getMetadataFromPortal = async (metadataId, additionalParameters) => {
   const fun = 'getMetadataFromPortal'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
-    const token = await this.getPortalToken()
+    const token = await getPortalToken()
 
-    if (!metadataId) return httpGet(portal.getPortalMetaUrl(), token)
-    else return httpGet(portal.getPortalMetaUrl(metadataId), token)
+    if (!metadataId) return httpGet(getPortalMetaUrl(null, additionalParameters), token)
+    else return httpGet(getPortalMetaUrl(metadataId, additionalParameters), token)
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.deletePortalMetadata = async (metadataId) => {
+export const deletePortalMetadata = async (metadataId) => {
   const fun = 'deletePortalMetadata'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
     if (!metadataId) throw new BadRequestError('Metadata id required') // Can't get the resouces list yet.
 
-    const token = await this.getPortalToken()
-    const reply = await httpDelete(portal.postPortalMetaUrl(metadataId), token)
+    const token = await getPortalToken()
+    const reply = await httpDelete(postPortalMetaUrl(metadataId), token)
 
     return reply
   } catch (err) {

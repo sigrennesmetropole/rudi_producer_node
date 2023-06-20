@@ -1,100 +1,48 @@
-'use strict'
-
 const mod = 'metaSch'
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // External dependencies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { omit } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
-// eslint-disable-next-line no-unused-vars
-const GeoJSON = require('mongoose-geojson-schema')
-const Int32 = require('mongoose-int32')
+import _ from 'lodash'
+const { omit } = _
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const msg = require('../../utils/msg')
-const json = require('../../utils/jsonAccess')
-const utils = require('../../utils/jsUtils')
+import GeoJSON from 'mongoose-geojson-schema'
 
-const Validation = require('../schemaValidators')
-const { NotFoundError, BadRequestError, RudiError } = require('../../utils/errors')
-const { makeSearchable } = require('../../db/dbActions')
+import mongooseInt32 from 'mongoose-int32'
+const Int32 = mongooseInt32.loadType(mongoose)
 
-// ------------------------------------------------------------------------------------------------
-// Thesaurus definiitons
-// ------------------------------------------------------------------------------------------------
-// log.d(mod, 'init', 'Schemas, Models and definitions')
-const Keywords = require('../thesaurus/Keywords')
-const Themes = require('../thesaurus/Themes')
+import objectPath from 'object-path'
 
-const Languages = require('../thesaurus/Languages')
-const Projections = require('../thesaurus/Projections')
-const StorageStatus = require('../thesaurus/StorageStatus')
-// ------------------------------------------------------------------------------------------------
-// Schema definitions
-// ------------------------------------------------------------------------------------------------
-const { DOI, UUIDv4 } = require('../schemas/Identifiers')
-
-const DictionaryEntry = require('../schemas/DictionaryEntry')
-const ReferenceDates = require('../schemas/ReferenceDates')
-
-// ------------------------------------------------------------------------------------------------
-// Model definitions
-// ------------------------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------------------------
-// Other controllers
-// ------------------------------------------------------------------------------------------------
-const licenceController = require('../../controllers/licenceController')
-
-// ------------------------------------------------------------------------------------------------
-// Validators
-// ------------------------------------------------------------------------------------------------
-const validArrayNotNull = {
-  validator: utils.isNotEmptyArray,
-  message: `'{PATH}' property should not be empty`,
-}
-const validObjectNotEmpty = {
-  validator: utils.isNotEmptyObject,
-  message: `'{PATH}' property should not be empty`,
-}
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Fields
-// ------------------------------------------------------------------------------------------------
-const { DEFAULT_LANG } = require('../../config/confApi')
+// -------------------------------------------------------------------------------------------------
+import { DEFAULT_LANG, OBJ_METADATA, URL_PREFIX_PUBLIC } from '../../config/confApi.js'
 
-const {
+import {
   API_DATA_PRODUCER_PROPERTY,
   API_DATA_CONTACTS_PROPERTY,
-
   API_ACCESS_CONDITION,
   API_LICENCE,
   API_LICENCE_TYPE,
   API_LICENCE_LABEL,
   API_LICENCE_CUSTOM_LABEL,
   API_LICENCE_CUSTOM_URI,
-
-  API_GEOGRAPHY_PROPERTY,
+  API_GEOGRAPHY,
   API_GEO_BBOX_PROPERTY,
   API_GEO_PROJECTION_PROPERTY,
   API_PERIOD_PROPERTY,
   API_START_DATE_PROPERTY,
-
   API_METAINFO_PROPERTY,
   API_METAINFO_CONTACTS_PROPERTY,
   API_METAINFO_PROVIDER_PROPERTY,
-  API_METAINFO_DATES_PROPERTY,
-
-  API_DATES_CREATED_PROPERTY,
-  API_DATES_EDITED_PROPERTY,
-  API_DATES_PUBLISHED_PROPERTY,
-
+  API_METAINFO_DATES,
+  API_DATES_CREATED,
+  API_DATES_EDITED,
+  API_DATES_PUBLISHED,
+  API_DATES_VALIDATED,
+  API_DATES_EXPIRES,
   API_MEDIA_PROPERTY,
-
   FIELDS_TO_SKIP,
   API_DATA_DATES_PROPERTY,
   API_THEME_PROPERTY,
@@ -115,14 +63,80 @@ const {
   API_GEO_BBOX_SOUTH,
   API_GEO_BBOX_NORTH,
   API_GEO_GEOJSON_PROPERTY,
-  API_METAINFO_VERSION_PROPERTY,
   LicenceTypes,
-} = require('../../db/dbFields')
+  DICT_TEXT,
+  API_MEDIA_TYPE,
+  API_FILE_MIME,
+  API_CONFIDENTIALITY,
+  API_RESTRICTED_ACCESS,
+  API_METAINFO_SOURCE_PROPERTY,
+  API_DATES_DELETED,
+  API_METAINFO_VERSION_PROPERTY,
+  API_STORAGE_STATUS,
+  API_MEDIA_ID,
+  API_INTEGRATION_ERROR_ID,
+  API_STATUS_PROPERTY,
+  MetadataStatus,
+} from '../../db/dbFields.js'
 
-// ------------------------------------------------------------------------------------------------
+import { get as getFileTypes, MIME_YAML_ALT, MIME_YAML } from '../thesaurus/FileTypes.js'
+import { Longitude, Latitude } from '../schemas/GpsCoordinates.js'
+
+// -------------------------------------------------------------------------------------------------
+// Validators
+// -------------------------------------------------------------------------------------------------
+
+const validArrayNotNull = {
+  validator: isNotEmptyArray,
+  message: `'{PATH}' property should not be empty`,
+}
+// const validObjectNotEmpty = {
+//   validator: isNotEmptyObject,
+//   message: `'{PATH}' property should not be empty`,
+// }
+
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { beautify, isNotEmptyArray, isNothing, multiSplit } from '../../utils/jsUtils.js'
+import { logD, logE, logT, logV } from '../../utils/logging.js'
+import { incorrectVal, incorrectValueForEnum } from '../../utils/msg.js'
+import { NotFoundError, BadRequestError, RudiError } from '../../utils/errors.js'
+import { accessProperty, requireSubProperty } from '../../utils/jsonAccess.js'
+import { makeSearchable } from '../../db/dbActions.js'
+
+// -------------------------------------------------------------------------------------------------
+// Thesaurus definiitons
+// -------------------------------------------------------------------------------------------------
+// logD(mod, 'init', 'Schemas, Models and definitions')
+import Keywords from '../thesaurus/Keywords.js'
+import Themes from '../thesaurus/Themes.js'
+
+import { isValid as isLanguageValid } from '../thesaurus/Languages.js'
+import { isValid as isProjectionValid } from '../thesaurus/Projections.js'
+import { isValid as isStorageStatusValid, StorageStatus } from '../thesaurus/StorageStatus.js'
+import { get as getLicenceCodes } from '../thesaurus/LicenceCodes.js'
+
+// -------------------------------------------------------------------------------------------------
+// Schema definitions
+// -------------------------------------------------------------------------------------------------
+import { DoiSchema, UuidSchema, UuidV4Schema } from '../schemas/Identifiers.js'
+
+import { DictionaryEntrySchema } from '../schemas/DictionaryEntry.js'
+import { checkDates, ReferenceDatesSchema } from '../schemas/ReferenceDates.js'
+import { AccesConditionSchema } from '../schemas/AccesConditions.js'
+
+// -------------------------------------------------------------------------------------------------
+// Model definitions
+// -------------------------------------------------------------------------------------------------
+import { isMediaMissing, MediaTypes } from './Media.js'
+import { VALID_API_VERSION, VALID_URI } from '../schemaValidators.js'
+import { getApiUrl } from '../../config/confSystem.js'
+
+// -------------------------------------------------------------------------------------------------
 // Fields with specific treatments
-// ------------------------------------------------------------------------------------------------
-const METADATA_FIELDS_TO_POPULATE = [
+// -------------------------------------------------------------------------------------------------
+export const METADATA_FIELDS_TO_POPULATE = [
   API_DATA_PRODUCER_PROPERTY,
   API_DATA_CONTACTS_PROPERTY,
   `${API_METAINFO_PROPERTY}.${API_METAINFO_PROVIDER_PROPERTY}`,
@@ -130,16 +144,53 @@ const METADATA_FIELDS_TO_POPULATE = [
   API_MEDIA_PROPERTY,
 ].join(' ')
 
-const SKIP_FIELDS = `-${FIELDS_TO_SKIP.join(' -')}`
-
 const POPULATE_OPTS = {
   path: METADATA_FIELDS_TO_POPULATE,
-  select: SKIP_FIELDS,
+  select: `-${FIELDS_TO_SKIP.concat(API_RESTRICTED_ACCESS).join(' -')}`,
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Helper functions
+// -------------------------------------------------------------------------------------------------
+/**
+ * For a given Metadata object, Lists the ids of the Media that are not yet stored
+ * @param {Object} rudiMetadata JSON that represents a Rudi Metadata
+ * @return {Array} The list of media that are still not available
+ */
+export const listMissingMedia = (rudiMetadata) => {
+  const metadataMediaList = rudiMetadata[API_MEDIA_PROPERTY]
+  const missingMediaList = []
+  metadataMediaList.map((media) => {
+    if (media[API_MEDIA_TYPE] === MediaTypes.File && isMediaMissing(media))
+      missingMediaList.push(media[API_MEDIA_ID])
+  })
+  return missingMediaList.length > 0 ? missingMediaList : null
+}
+
+export const isEveryMediaAvailable = (rudiMetadata) => {
+  const fun = 'isEveryMediaAvailable'
+  try {
+    logT(mod, fun, ``)
+    // console.log('T (isEveryMediaAvailable) metadata:', rudiMetadata)
+
+    const metadataMediaList = rudiMetadata[API_MEDIA_PROPERTY]
+    // console.log('T (isEveryMediaAvailable) metadataMediaList:', metadataMediaList)
+    let isOneMediaMissing = false
+    for (const media of metadataMediaList) {
+      if (isMediaMissing(media)) {
+        isOneMediaMissing = true
+        break
+      }
+    }
+    return !isOneMediaMissing
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
 // Custom schema definitions
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const MetadataSchema = new mongoose.Schema(
   {
     // ---------------------------
@@ -147,7 +198,7 @@ const MetadataSchema = new mongoose.Schema(
     // ---------------------------
 
     /** Unique and permanent identifier for the ressource in RUDI system (required) */
-    [API_METADATA_ID]: UUIDv4,
+    [API_METADATA_ID]: UuidV4Schema,
 
     /** Identifier for the ressource in the producer system (optional) */
     [API_METADATA_LOCAL_ID]: {
@@ -158,14 +209,15 @@ const MetadataSchema = new mongoose.Schema(
         // accept empty values as non-duplicates
         partialFilterExpression: {
           [API_METADATA_LOCAL_ID]: {
-            $type: 'string',
+            $exists: true,
+            $gt: '',
           },
         },
       },
     },
 
     // Digital Object Identifier for the ressource (optional)
-    doi: DOI,
+    doi: DoiSchema,
 
     // ---------------------------
     // Dataset description
@@ -180,22 +232,25 @@ const MetadataSchema = new mongoose.Schema(
 
     /** 'synopsis': short description for the whole dataset */
     [API_DATA_DETAILS_PROPERTY]: {
-      type: [DictionaryEntry],
+      type: [DictionaryEntrySchema],
       required: true,
       validate: validArrayNotNull,
+      _id: false,
     },
 
     /** 'summary': more precise description for the whole dataset */
     [API_DATA_DESCRIPTION_PROPERTY]: {
-      type: [DictionaryEntry],
+      type: [DictionaryEntrySchema],
       required: true,
       validate: validArrayNotNull,
+      _id: false,
     },
 
     /** Context, objectives and final use of the data */
     purpose: {
-      type: [DictionaryEntry],
+      type: [DictionaryEntrySchema],
       default: undefined,
+      _id: false,
     },
 
     // ---------------------------
@@ -219,6 +274,9 @@ const MetadataSchema = new mongoose.Schema(
     [API_COLLECTION_TAG]: {
       type: String,
     },
+
+    /** 'integration_error_id': id of the last integration error report from the portal */
+    [API_INTEGRATION_ERROR_ID]: UuidSchema,
 
     // ---------------------------
     // Involved parties
@@ -291,39 +349,26 @@ const MetadataSchema = new mongoose.Schema(
      * 'geography': Geographic distribution of the data.
      * Particularly relevant in the case of located sensors.
      */
-    [API_GEOGRAPHY_PROPERTY]: {
+    [API_GEOGRAPHY]: {
       /**
        * 'bounding_box': Geographic distribution of the data as a rectangle.
        * The 4 parameters are given as decimal as described in the norm ISO 6709
        */
       [API_GEO_BBOX_PROPERTY]: {
-        type: Object,
-        // Custom validation in pre-save hook: required if 'geography' is defined !
+        type: {
+          // Custom validation in pre-save hook: required if 'geography' is defined !
 
-        /** 'west_longitude': Westernmost latitude given as a decimal number */
-        [API_GEO_BBOX_WEST]: {
-          type: Number,
-          min: -180,
-          max: 180,
+          /** 'west_longitude': Westernmost longitude given as a decimal number */
+          [API_GEO_BBOX_WEST]: Longitude,
+          /* 'east_longitude': Easternmost longitude given as a decimal number */
+          [API_GEO_BBOX_EAST]: Longitude,
+          /** 'south_latitude': Southernmost latitude given as a decimal number */
+          [API_GEO_BBOX_SOUTH]: Latitude,
+          /** 'north_latitude': Northernmost latitude given as a decimal number */
+          [API_GEO_BBOX_NORTH]: Latitude,
         },
-        /* 'east_longitude': Easternmost latitude given as a decimal number */
-        [API_GEO_BBOX_EAST]: {
-          type: Number,
-          min: -180,
-          max: 180,
-        },
-        /** 'south_latitude': Southernmost latitude given as a decimal number */
-        [API_GEO_BBOX_SOUTH]: {
-          type: Number,
-          min: -90,
-          max: 90,
-        },
-        /** 'north_latitude': Northernmost latitude given as a decimal number */
-        [API_GEO_BBOX_NORTH]: {
-          type: Number,
-          min: -90,
-          max: 90,
-        },
+        _id: false,
+        default: undefined,
       },
 
       /**
@@ -337,25 +382,21 @@ const MetadataSchema = new mongoose.Schema(
        *
        * Source: https://tools.ietf.org/html/rfc7946#section-3.1.1
        */
-      [API_GEO_GEOJSON_PROPERTY]: {
-        type: GeoJSON,
-      },
+      [API_GEO_GEOJSON_PROPERTY]: GeoJSON,
 
       /**
        * 'projection': Cartographic projection used to describe the data
        */
       [API_GEO_PROJECTION_PROPERTY]: {
         type: String,
+        // default: 'WGS 84 (EPSG:4326)',
         // ,enum: Object.values(Projections)
-        // default: 'WGS 84'
       },
 
       /**
        * Data topology
        */
-      spatial_representation: {
-        type: String,
-      },
+      spatial_representation: String,
     },
 
     /**
@@ -375,19 +416,16 @@ const MetadataSchema = new mongoose.Schema(
     /**
      * 'dataset_dates': Dates of the actions performed on the data (creation, publishing, update, deletion...)
      */
-    [API_DATA_DATES_PROPERTY]: {
-      type: ReferenceDates,
-      required: true,
-    },
+    [API_DATA_DATES_PROPERTY]: ReferenceDatesSchema,
 
     // Status of the storage of the dataset
     // Metadata can exist without the data
     //   - online = data are published and available
     //   - archived = data are not immediately available, access is not automatic
     //   - unavailable = data were deleted
-    storage_status: {
+    [API_STORAGE_STATUS]: {
       type: String,
-      // enum: Object.values(StorageStatus),
+      enum: Object.values(StorageStatus),
       required: true,
     },
 
@@ -396,104 +434,7 @@ const MetadataSchema = new mongoose.Schema(
      * licence, confidentiality, terms of service, habilitation or required rights,
      * economical model. Default is open licence.
      */
-    [API_ACCESS_CONDITION]: {
-      _id: false,
-      required: true,
-      validate: validObjectNotEmpty,
-      type: {
-        /** Restriction level for the resource */
-        confidentiality: {
-          /**
-           * True if the dataset has a restricted access.
-           * False for open data
-           * */
-          restricted_access: {
-            type: Boolean,
-            default: false,
-          },
-
-          /** True if the dataset embeds personal data */
-          gdpr_sensitive: {
-            type: Boolean,
-            default: false,
-          },
-        },
-
-        /**
-         * 'licence': Standard licence (recognized by RUDI system)
-         */
-        [API_LICENCE]: {
-          required: true,
-          _id: false,
-          type: {
-            /** Enum to differenciate standard from custom licence */
-            [API_LICENCE_TYPE]: {
-              type: String,
-              enum: Object.values(LicenceTypes),
-              required: true,
-            },
-
-            /** Standard licence (recognized by RUDI system): label of the licence = concept code */
-            [API_LICENCE_LABEL]: {
-              type: String,
-              default: undefined,
-            },
-
-            /** Custom licence: Title of the custom licence */
-            [API_LICENCE_CUSTOM_LABEL]: {
-              type: [DictionaryEntry],
-              default: undefined,
-            },
-
-            /** Custom licence: Informative URL towards the custom licence */
-            [API_LICENCE_CUSTOM_URI]: {
-              type: String,
-              match: Validation.VALID_URI,
-              index: {
-                unique: true,
-                // accept empty values as non-duplicates
-                partialFilterExpression: {
-                  [API_LICENCE_CUSTOM_URI]: {
-                    $type: 'string',
-                  },
-                },
-              },
-            },
-          },
-        },
-
-        /** Describes how constrained is the use of the resource */
-        usage_constraint: {
-          type: [DictionaryEntry],
-          default: undefined,
-        },
-
-        /** Information that MUST be cited every time the data is used */
-        bibliographical_reference: {
-          type: [DictionaryEntry],
-          default: undefined,
-        },
-
-        /**
-         * Mention that must be cited verbatim in every publication that
-         * makes use of the data
-         */
-        mandatory_mention: {
-          type: [DictionaryEntry],
-          default: undefined,
-        },
-
-        access_constraint: {
-          type: [DictionaryEntry],
-          default: undefined,
-        },
-
-        other_constraints: {
-          type: [DictionaryEntry],
-          default: undefined,
-        },
-      },
-    },
+    [API_ACCESS_CONDITION]: AccesConditionSchema,
 
     /** 'metadata_info': Metadata on the metadata */
     [API_METAINFO_PROPERTY]: {
@@ -501,17 +442,14 @@ const MetadataSchema = new mongoose.Schema(
       [API_METAINFO_VERSION_PROPERTY]: {
         type: String,
         required: true,
-        match: Validation.VALID_API_VERSION,
+        match: VALID_API_VERSION,
       },
 
       /** 'metadata_dates': Dates of the actions performed on the metadata (creation, publishing, update...) */
-      [API_METAINFO_DATES_PROPERTY]: {
-        validated: {
-          type: Date,
-        },
-        deleted: {
-          type: Date,
-        },
+      [API_METAINFO_DATES]: {
+        [API_DATES_VALIDATED]: Date,
+        [API_DATES_DELETED]: Date,
+        [API_DATES_EXPIRES]: Date,
       },
 
       /** 'metadata_provider': Description of the organization that produced the metadata */
@@ -530,12 +468,17 @@ const MetadataSchema = new mongoose.Schema(
         ],
         default: undefined,
       },
+
+      /** 'metadata_source': Places where the metadata was created */
+      [API_METAINFO_SOURCE_PROPERTY]: {
+        type: String,
+        match: VALID_URI,
+      },
     },
 
     /** 'publishedAt': Date when the resource has been successfully integrated on Rudi Portal for the first time */
-    [DB_PUBLISHED_AT]: {
-      type: Date,
-    },
+    [DB_PUBLISHED_AT]: Date,
+
     /** Creation date, made immutable  */
     [DB_CREATED_AT]: {
       type: Date,
@@ -561,133 +504,202 @@ const MetadataSchema = new mongoose.Schema(
   }
 )
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Validation
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// eslint-disable-next-line unused-imports/no-unused-vars
+async function checkMetadataSource(metadata) {
+  const fun = 'checkMetadataSource'
+  try {
+    if (!metadata[API_METAINFO_PROPERTY][API_METAINFO_SOURCE_PROPERTY])
+      metadata[API_METAINFO_PROPERTY][API_METAINFO_SOURCE_PROPERTY] = getApiUrl(
+        `${URL_PREFIX_PUBLIC}/${OBJ_METADATA}/${metadata[API_METADATA_ID]}`
+      )
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
 async function checkLicence(metadata) {
   const fun = 'checkLicence'
   try {
-    log.t(mod, fun, ``)
-    const accessCondition = json.accessProperty(metadata, API_ACCESS_CONDITION)
-    const licence = json.requireSubProperty(metadata, API_ACCESS_CONDITION, API_LICENCE)
-    const licenceType = json.requireSubProperty(accessCondition, API_LICENCE, API_LICENCE_TYPE)
+    logT(mod, fun, ``)
+    const accessCondition = accessProperty(metadata, API_ACCESS_CONDITION)
+    const licence = requireSubProperty(metadata, API_ACCESS_CONDITION, API_LICENCE)
+    const licenceType = requireSubProperty(accessCondition, API_LICENCE, API_LICENCE_TYPE)
 
     switch (licenceType) {
       case LicenceTypes.Standard: {
-        // log.d(mod, fun, `licenceType: ${utils.beautify(licenceType)}`)
-        const licenceLabel = json.requireSubProperty(
+        // logD(mod, fun, `licenceType: ${beautify(licenceType)}`)
+        const licenceLabel = requireSubProperty(
           accessCondition,
           API_LICENCE,
           API_LICENCE_LABEL,
           API_LICENCE_TYPE,
           LicenceTypes.Standard
         )
-        const listLicenceCode = await licenceController.getLicenceCodes()
-        // log.d(mod, fun, `licence list: ${utils.beautify(listLicenceCode)}`)
+        const listLicenceCode = await getLicenceCodes()
+        // logD(mod, fun, ` [T] licence list: ${beautify(listLicenceCode)}`)
         if (listLicenceCode.indexOf(licenceLabel) === -1) {
           throw new NotFoundError(
             `Licence label '${licenceLabel}' was not found in licence list '${listLicenceCode}'`
           )
-        } else {
-          metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] = undefined
-          // delete metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL]
-          return licenceLabel
         }
+
+        metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] = undefined
+        // delete metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL]
+        return licenceLabel
       }
       case LicenceTypes.Custom: {
-        // log.d(mod, fun, `licenceType: ${utils.beautify(licenceType)}`)
-        json.requireSubProperty(
+        // logD(mod, fun, `licenceType: ${beautify(licenceType)}`)
+        requireSubProperty(
           accessCondition,
           API_LICENCE,
           API_LICENCE_CUSTOM_LABEL,
           API_LICENCE_TYPE,
           LicenceTypes.Custom
         )
-        json.requireSubProperty(
+        requireSubProperty(
           accessCondition,
           API_LICENCE,
           API_LICENCE_CUSTOM_URI,
           API_LICENCE_TYPE,
           LicenceTypes.Custom
         )
+        if (typeof customLicenceLabel === 'string') {
+          throw new BadRequestError(
+            `La propriété '${API_LICENCE_CUSTOM_LABEL}' doit être multilingue`,
+            mod,
+            fun,
+            [API_ACCESS_CONDITION, API_LICENCE, API_LICENCE_CUSTOM_LABEL]
+          )
+        }
         return licence[API_LICENCE_CUSTOM_LABEL]
       }
       default: {
-        const errMsg = msg.incorrectValueForEnum(
+        const errMsg = incorrectValueForEnum(
           `${API_ACCESS_CONDITION}.${API_LICENCE}.${API_LICENCE_TYPE}`,
           licenceType
         )
-        log.e(mod, fun, errMsg)
-        throw new BadRequestError(errMsg)
+        logE(mod, fun, errMsg)
+        throw new BadRequestError(errMsg, mod, fun, [
+          API_ACCESS_CONDITION,
+          API_LICENCE,
+          API_LICENCE_TYPE,
+        ])
       }
     }
   } catch (err) {
-    log.d(mod, fun, `metadata: ${utils.beautify(metadata)}`)
+    logD(mod, fun, `metadata: ${beautify(metadata)}`)
     throw RudiError.treatError(mod, fun, err)
   }
 }
+async function checkFileTypes(metadata) {
+  const fun = 'checkFileTypes'
+  try {
+    logT(mod, fun, ``)
+    const medias = metadata[API_MEDIA_PROPERTY]
+    medias.map((media, i) => {
+      if (media[API_MEDIA_TYPE] !== MediaTypes.File) return
 
+      const [mimeType, encrypted] = /^(.*?)(\+crypt)?$/.exec(media[API_FILE_MIME])
+      // Backward compatibility for harvesters
+      if (mimeType === MIME_YAML_ALT) {
+        media[API_FILE_MIME] = MIME_YAML + encrypted
+        return true
+      }
+      const fileTypes = getFileTypes()
+      // logT(mod, fun + ' fileTypes', beautify(fileTypes))
+      if (fileTypes.indexOf(mimeType) == -1)
+        throw new BadRequestError(`Unrecognized MIME type: '${mimeType}'`, mod, fun, [
+          API_MEDIA_PROPERTY,
+          i,
+          API_FILE_MIME,
+        ])
+    })
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
 async function checkThesaurus(metadata) {
   const fun = 'checkThesaurus'
-  // if (metadata.init) log.d(mod, fun, `init`)
   try {
+    logT(mod, fun, ``)
+    if (metadata.init) logD(mod, fun, `init`)
     const shouldInit = metadata[API_COLLECTION_TAG] === 'init'
     const dataTheme = metadata[API_THEME_PROPERTY]
     // const themes = Themes.get()
     const themeLabels = Themes.getLabels(DEFAULT_LANG)
+    // logT(mod, fun + ' themeLabels [T]', beautify(themeLabels))
+    const themeKeyIndex =
+      Object.keys(themeLabels).indexOf(dataTheme) ||
+      Object.keys(themeLabels).find((key) => themeLabels[key]?.fr === dataTheme)
 
-    const themeKeyIndex = Object.keys(themeLabels).indexOf(dataTheme)
+    // logT(mod, fun + ' themeLabels [T]', beautify(themeLabels))
     if (themeKeyIndex === -1) {
+      // logT(mod, fun + ' themeLabelsVals [T]', beautify(Object.values(themeLabels)))
       const themeValIndex = Object.values(themeLabels).indexOf(dataTheme)
       if (themeValIndex > -1) {
         const allowedDataTheme = Object.keys(themeLabels)[themeValIndex]
-        log.d(mod, fun, `Changing Theme value: ${dataTheme} -> ${allowedDataTheme}`)
+        // logD(mod, fun, `Changing Theme value: ${dataTheme} -> ${allowedDataTheme}`)
         metadata[API_THEME_PROPERTY] = allowedDataTheme
       } else if (!(await Themes.isValid(dataTheme, shouldInit))) {
         throw new BadRequestError(
-          `${msg.incorrectVal(API_THEME_PROPERTY, dataTheme)}. ` +
-            `Allowed: ${utils.beautify(Themes.get())} ` +
-            `(metadata ${metadata[API_METADATA_ID]}) `
+          `${incorrectVal(API_THEME_PROPERTY, dataTheme)}. ` +
+            `Allowed: ${beautify(Themes.get())} ` +
+            `(metadata ${metadata[API_METADATA_ID]}) `,
+          mod,
+          fun,
+          [API_THEME_PROPERTY]
         )
       }
     }
 
-    const keywords = metadata[API_KEYWORDS_PROPERTY]
-    // log.d(mod, fun, `keywords: ${utils.beautify(keywords)}`)
+    const origKeywords = metadata[API_KEYWORDS_PROPERTY]
+    const keywords = origKeywords.length === 1 ? multiSplit(origKeywords, [',', ';']) : origKeywords
+
+    logT(mod, fun, `keywords: ${beautify(keywords)}`)
 
     await Promise.all(
       keywords.map((keyword, index) => {
-        // log.d(mod, fun, `keyword: ${keyword}`)
+        keyword = `${keyword}`.trim()
+        // logT(mod, fun, `keyword: ${keyword}`)
         Keywords.isValid(keyword, true)
-          .then((resolve) => {
-            if (resolve) {
-              if (keyword !== keyword.trim()) {
-                metadata[API_KEYWORDS_PROPERTY][index] = keyword.trim()
-              }
+          .then((isKnown) => {
+            if (isKnown) {
+              metadata[API_KEYWORDS_PROPERTY][index] = keyword
               return true
             } else {
-              throw new BadRequestError(msg.incorrectVal(API_KEYWORDS_PROPERTY, keyword))
+              throw new BadRequestError(
+                incorrectVal(API_KEYWORDS_PROPERTY, keyword),
+                mod,
+                fun[API_KEYWORDS_PROPERTY]
+              )
             }
           })
           .catch((err) => {
-            // log.w(mod, fun, err)
+            // logW(mod, fun, err)
             throw RudiError.treatError(mod, fun, err)
           })
       })
     )
 
+    logT(mod, fun, `languages`)
     const languages = metadata[API_LANGUAGES_PROPERTY]
     if (languages) {
-      const langStr = utils.beautify(languages)
+      const langStr = beautify(languages)
       if (langStr === '[]' || langStr === '[null]') {
         delete metadata[API_LANGUAGES_PROPERTY]
       } else {
         await Promise.all(
           languages.map((lang) => {
-            if (!Languages.isValid(lang, shouldInit))
+            if (!isLanguageValid(lang, shouldInit))
               throw new BadRequestError(
-                msg.incorrectVal(API_LANGUAGES_PROPERTY, lang) +
-                  ` (metadata ${metadata[API_METADATA_ID]})`
+                incorrectVal(API_LANGUAGES_PROPERTY, lang) +
+                  ` (metadata ${metadata[API_METADATA_ID]})`,
+                mod,
+                fun,
+                [API_LANGUAGES_PROPERTY]
               )
             return true
           })
@@ -695,38 +707,51 @@ async function checkThesaurus(metadata) {
       }
     }
 
-    const geography = metadata[API_GEOGRAPHY_PROPERTY]
+    logT(mod, fun, `geography`)
+    const geography = metadata[API_GEOGRAPHY]
+    // logI(mod, fun, `geography: ${beautify(geography)}`)
     if (geography) {
       const projection = geography[API_GEO_PROJECTION_PROPERTY]
       if (projection) {
-        if (!Projections.isValid(projection, shouldInit))
+        if (projection === 'WGS 84') geography[API_GEO_PROJECTION_PROPERTY] = 'WGS 84 (EPSG:4326)'
+        else if (!isProjectionValid(projection, shouldInit))
           throw new BadRequestError(
-            msg.incorrectVal(`${API_GEOGRAPHY_PROPERTY}.${API_GEO_PROJECTION_PROPERTY}`, projection)
+            incorrectVal(`${API_GEOGRAPHY}.${API_GEO_PROJECTION_PROPERTY}`, projection),
+            mod,
+            fun,
+            [API_GEOGRAPHY, API_GEO_PROJECTION_PROPERTY]
           )
       }
     }
 
-    if (!StorageStatus.isValid(metadata.storage_status, shouldInit)) {
-      throw new BadRequestError(msg.incorrectVal('storage_status', metadata.storage_status))
+    logT(mod, fun, `is storage status valid`)
+    if (!isStorageStatusValid(metadata[API_STORAGE_STATUS], shouldInit)) {
+      throw new BadRequestError(
+        incorrectVal(API_STORAGE_STATUS, metadata[API_STORAGE_STATUS]),
+        mod,
+        fun,
+        [API_STORAGE_STATUS]
+      )
     }
+    return true
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
-/* 
+/*
   function checkMedia(metadata) {
     const fun = 'checkMedia'
-    log.d(mod, fun, `metadata: ${utils.beautify(metadata)}`)
+    logD(mod, fun, `metadata: ${beautify(metadata)}`)
     try {
       const media = metadata[API_MEDIA_PROPERTY]
-      if (!media) throw new BadRequestError(msg.missingField(API_MEDIA_PROPERTY)+` (metadata ${this[API_METADATA_ID]})`)
+      if (!media) throw new BadRequestError(missingField(API_MEDIA_PROPERTY)+` (metadata ${this[API_METADATA_ID]})`)
       if (media[API_MEDIA_TYPE_PROPERTY] === MediaTypes.File) {
-        if (!utils.isNotEmptyObject(media[API_FILE_CHECKSUM])) {
-          throw new BadRequestError(msg.missingObjectProperty(this, API_FILE_CHECKSUM)+` (metadata ${this[API_METADATA_ID]})`)
+        if (!isNotEmptyObject(media[API_FILE_CHECKSUM])) {
+          throw new BadRequestError(missingObjectProperty(this, API_FILE_CHECKSUM)+` (metadata ${this[API_METADATA_ID]})`)
         }
       } else {
-        log.d(mod, fun, `media: ${utils.beautify(metadata[API_MEDIA_PROPERTY])}`)
-        log.d(mod, fun, `type: ${media[API_MEDIA_TYPE_PROPERTY]}`)
+        logD(mod, fun, `media: ${beautify(metadata[API_MEDIA_PROPERTY])}`)
+        logD(mod, fun, `type: ${media[API_MEDIA_TYPE_PROPERTY]}`)
       }
     } catch (err) {
           throw RudiError.treatError(mod, fun, err)
@@ -735,45 +760,9 @@ async function checkThesaurus(metadata) {
   }
 */
 
-function toDate(dateStr) {
-  try {
-    return new Date(dateStr)
-  } catch (err) {
-    throw new BadRequestError(
-      `This is not a date: '${dateStr}' (metadata ${this[API_METADATA_ID]})`
-    )
-  }
-}
-
-function checkDates(datesObj, firstDateProp, secondDateProp, shouldInitialize) {
-  const fun = 'checkDates'
-  // log.t(mod, fun, ``)
-  try {
-    if (!datesObj) return
-
-    if (!datesObj[secondDateProp]) {
-      if (datesObj[firstDateProp] && shouldInitialize)
-        datesObj[secondDateProp] = datesObj[firstDateProp]
-      return
-    }
-
-    const date1 = toDate(datesObj[firstDateProp])
-    const date2 = toDate(datesObj[secondDateProp])
-
-    if (date1 <= date2) return true
-
-    throw new BadRequestError(
-      `Date '${secondDateProp}' = '${date2.toISOString()}' should be subsequent ` +
-        `to '${firstDateProp}' = '${date1.toISOString()}' `
-    )
-  } catch (err) {
-    throw RudiError.treatError(mod, fun, err)
-  }
-}
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Schema refinements
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // ----- toJSON cleanup
 MetadataSchema.methods.toJSON = function () {
@@ -781,89 +770,133 @@ MetadataSchema.methods.toJSON = function () {
 }
 
 // ----- Virtuals
-MetadataSchema.virtual(
-  `${API_METAINFO_PROPERTY}.${API_METAINFO_DATES_PROPERTY}.${API_DATES_CREATED_PROPERTY}`
-).get(function () {
-  return this[DB_CREATED_AT]
-})
-MetadataSchema.virtual(
-  `${API_METAINFO_PROPERTY}.${API_METAINFO_DATES_PROPERTY}.${API_DATES_EDITED_PROPERTY}`
-).get(function () {
-  return this[DB_UPDATED_AT]
-})
-MetadataSchema.virtual(
-  `${API_METAINFO_PROPERTY}.${API_METAINFO_DATES_PROPERTY}.${API_DATES_PUBLISHED_PROPERTY}`
-).get(function () {
-  return this[DB_PUBLISHED_AT]
+MetadataSchema.virtual(`${API_METAINFO_PROPERTY}.${API_METAINFO_DATES}.${API_DATES_CREATED}`).get(
+  function () {
+    return this[DB_CREATED_AT]
+  }
+)
+MetadataSchema.virtual(`${API_METAINFO_PROPERTY}.${API_METAINFO_DATES}.${API_DATES_EDITED}`).get(
+  function () {
+    return this[DB_UPDATED_AT]
+  }
+)
+MetadataSchema.virtual(`${API_METAINFO_PROPERTY}.${API_METAINFO_DATES}.${API_DATES_PUBLISHED}`).get(
+  function () {
+    return this[DB_PUBLISHED_AT]
+  }
+)
+MetadataSchema.virtual(API_STATUS_PROPERTY).get(function () {
+  return
+  this[API_COLLECTION_TAG]
+    ? MetadataStatus.Local
+    : this[API_STORAGE_STATUS] === StorageStatus.Pending
+    ? MetadataStatus.Incomplete
+    : this[API_INTEGRATION_ERROR_ID]
+    ? MetadataStatus.Refused
+    : this[DB_PUBLISHED_AT]
+    ? MetadataStatus.Published
+    : objectPath.get(this, API_METAINFO_PROPERTY, API_METAINFO_DATES, API_DATES_DELETED)
+    ? MetadataStatus.Deleted
+    : MetadataStatus.Unset
 })
 
+MetadataSchema.virtual(API_RESTRICTED_ACCESS).get(function () {
+  objectPath.get(this, [API_ACCESS_CONDITION, API_CONFIDENTIALITY, API_RESTRICTED_ACCESS])
+})
+
+MetadataSchema.virtual(API_RESTRICTED_ACCESS).set(function (isRestricted) {
+  objectPath.set(
+    this,
+    [API_ACCESS_CONDITION, API_CONFIDENTIALITY, API_RESTRICTED_ACCESS],
+    !!isRestricted
+  )
+})
+
+// -------------------------------------------------------------------------------------------------
+// Hooks
+// -------------------------------------------------------------------------------------------------
 MetadataSchema.pre('save', async function (next) {
-  // const fun = 'pre save hook'
-  // log.t(mod, fun, ``)
-  const metadata = this
+  const fun = 'pre save hook'
 
   try {
+    logT(mod, fun, ``)
+    const metadata = this
+    // logD(mod, fun, metadata[API_GEOGRAPHY])
     // If 'geography' field is defined, the field 'geography.bbox' is required
-    if (json.requireSubProperty(metadata, API_GEOGRAPHY_PROPERTY, API_GEO_BBOX_PROPERTY)) {
-      if (utils.isNothing(metadata[API_GEOGRAPHY_PROPERTY][API_GEO_PROJECTION_PROPERTY])) {
+    if (requireSubProperty(metadata, API_GEOGRAPHY, API_GEO_BBOX_PROPERTY)) {
+      if (isNothing(metadata[API_GEOGRAPHY][API_GEO_PROJECTION_PROPERTY])) {
         // If 'geography' field is defined, but 'geography.projection' is not, it is initialized to the defaul value.
-        metadata[API_GEOGRAPHY_PROPERTY][API_GEO_PROJECTION_PROPERTY] = 'WGS 84'
+        metadata[API_GEOGRAPHY][API_GEO_PROJECTION_PROPERTY] = 'WGS 84 (EPSG:4326)'
       }
     }
 
     // If 'temporal_spread' is defined, the field 'start_date' should be defined
-    json.requireSubProperty(metadata, API_PERIOD_PROPERTY, API_START_DATE_PROPERTY)
+    requireSubProperty(metadata, API_PERIOD_PROPERTY, API_START_DATE_PROPERTY)
 
     try {
       checkDates(metadata[API_PERIOD_PROPERTY], API_START_DATE_PROPERTY, API_END_DATE_PROPERTY)
-    } catch (err) {
-      metadata[API_PERIOD_PROPERTY][API_START_DATE_PROPERTY] =
-        metadata[API_PERIOD_PROPERTY][API_END_DATE_PROPERTY]
+    } catch (e) {
+      throw new BadRequestError(e.message, mod, fun, [API_PERIOD_PROPERTY, API_END_DATE_PROPERTY])
+    }
+    checkDates(
+      metadata[API_DATA_DATES_PROPERTY],
+      API_DATES_CREATED,
+      API_DATES_EDITED,
+      true // If 'dataset_dates.updated' is not defined, it is initialized with 'dataset_dates.created'
+    )
+
+    try {
+      checkDates(metadata[API_DATA_DATES_PROPERTY], API_DATES_CREATED, API_DATES_PUBLISHED)
+    } catch (e) {
+      throw new BadRequestError(e.message, mod, fun, [API_DATA_DATES_PROPERTY, API_DATES_PUBLISHED])
+    }
+    try {
+      checkDates(metadata[API_DATA_DATES_PROPERTY], API_DATES_CREATED, API_DATES_VALIDATED)
+    } catch (e) {
+      throw new BadRequestError(e.message, mod, fun, [API_DATA_DATES_PROPERTY, API_DATES_VALIDATED])
+    }
+    try {
+      checkDates(metadata[API_DATA_DATES_PROPERTY], API_DATES_CREATED, API_DATES_EXPIRES)
+    } catch (e) {
+      throw new BadRequestError(e.message, mod, fun, [API_DATA_DATES_PROPERTY, API_DATES_EXPIRES])
     }
     try {
       checkDates(
-        metadata[API_DATA_DATES_PROPERTY],
-        API_DATES_CREATED_PROPERTY,
-        API_DATES_EDITED_PROPERTY,
-        true // If 'dataset_dates.updated' is not defined, it is initialized with 'dataset_dates.created'
+        metadata[API_METAINFO_PROPERTY][API_METAINFO_DATES],
+        API_DATES_CREATED,
+        API_DATES_EXPIRES
       )
-    } catch (err) {
-      metadata[API_DATA_DATES_PROPERTY][API_DATES_CREATED_PROPERTY] =
-        metadata[API_DATA_DATES_PROPERTY][API_DATES_EDITED_PROPERTY]
+    } catch (e) {
+      throw new BadRequestError(e.message, mod, fun, [API_METAINFO_DATES, API_DATES_EXPIRES])
     }
-    try {
-      checkDates(
-        metadata[API_DATA_DATES_PROPERTY],
-        API_DATES_CREATED_PROPERTY,
-        API_DATES_PUBLISHED_PROPERTY
-      )
-    } catch (err) {
-      metadata[API_DATA_DATES_PROPERTY][API_DATES_PUBLISHED_PROPERTY] =
-        metadata[API_DATA_DATES_PROPERTY][API_DATES_CREATED_PROPERTY]
-    }
+
     // Checking 'licence' field
     await checkLicence(metadata)
-
     await checkThesaurus(metadata)
+    await checkFileTypes(metadata)
 
+    // await checkMetadataSource(metadata)
     // await checkMedia(metadata)
+    logT(mod, fun, `pre save checks OK`)
   } catch (err) {
-    err.message = err.message + ` (metadata ${this[API_METADATA_ID]})`
-    next(err)
+    logV(mod, fun, `pre save checks KO: ${err}`)
+    err.message = `${err.message} (metadata ${this[API_METADATA_ID]})`
+    // next(err)
+    throw RudiError.treatError(mod, fun, err)
   }
-
   // next()
 })
 
 MetadataSchema.post('save', async function (doc, next) {
   const fun = 'post save hook'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
 
   try {
     await this.populate(POPULATE_OPTS) //.execPopulate()
     next()
   } catch (err) {
-    next(err)
+    // next(err)
+    throw RudiError.treatError(mod, fun, err)
   }
   // next()
 })
@@ -871,7 +904,7 @@ MetadataSchema.post('save', async function (doc, next) {
 /*
 MetadataSchema.post('find', async function (docs, next) {
   const fun = 'post find hook'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
 
   try {
     for (let doc of docs) {
@@ -885,10 +918,10 @@ MetadataSchema.post('find', async function (docs, next) {
 })
  */
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Models definition
-// ------------------------------------------------------------------------------------------------
-const Metadata = mongoose.model('Metadata', MetadataSchema)
+// -------------------------------------------------------------------------------------------------
+export const Metadata = mongoose.model('Metadata', MetadataSchema)
 
 // Making fields searchable
 
@@ -896,28 +929,17 @@ Metadata.getSearchableFields = () => [
   API_METADATA_ID,
   API_METADATA_LOCAL_ID,
   API_DATA_NAME_PROPERTY,
-  `${API_DATA_DETAILS_PROPERTY}.text`,
-  `${API_DATA_DESCRIPTION_PROPERTY}.text`,
+  `${API_DATA_DETAILS_PROPERTY}.${DICT_TEXT}`,
+  `${API_DATA_DESCRIPTION_PROPERTY}.${DICT_TEXT}`,
+  API_STATUS_PROPERTY,
 ]
 
-const fun = 'createSearchIndexes'
-Metadata.createSearchIndexes = async () => {
+Metadata.initialize = async () => {
+  const fun = 'initMetadata'
   try {
     await makeSearchable(Metadata)
+    return `Metadata indexes created`
   } catch (err) {
-    RudiError.treatError(mod, fun, err)
+    throw RudiError.treatError(mod, fun, err)
   }
-}
-Metadata.createSearchIndexes()
-  .catch((err) => {
-    throw RudiError.treatError(mod, fun, `Failed to create search indexes: ${err}`)
-  })
-  .then(log.t(mod, fun, 'done'))
-
-// ------------------------------------------------------------------------------------------------
-// Exports
-// ------------------------------------------------------------------------------------------------
-module.exports = {
-  Metadata,
-  METADATA_FIELDS_TO_POPULATE,
 }

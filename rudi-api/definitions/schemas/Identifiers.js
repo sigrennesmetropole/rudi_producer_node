@@ -1,17 +1,12 @@
-'use strict'
-
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-// const uuid = require('uuid')
-
-const validation = require('../schemaValidators')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+import { VALID_DOI, VALID_UUID } from '../schemaValidators.js'
 
-exports.UUIDv4 = {
+// -------------------------------------------------------------------------------------------------
+// Custom schema definition
+// -------------------------------------------------------------------------------------------------
+export const UuidV4Schema = {
   type: String,
   // default: _ => uuid.v4(),
   trim: true,
@@ -19,23 +14,23 @@ exports.UUIDv4 = {
   unique: true,
   index: true,
   lowercase: true,
-  match: validation.VALID_UUID,
+  match: VALID_UUID,
 }
 
-exports.UUID = {
+export const UuidSchema = {
   type: String,
   // default: _ => uuid.v4(),
   trim: true,
   lowercase: true,
-  match: validation.VALID_UUID,
+  match: VALID_UUID,
 }
 
-exports.DOI = {
+export const DoiSchema = {
   type: String,
   trim: true,
   unique: true,
   sparse: true, // accept empty values as non-duplicates
   lowercase: true,
-  match: validation.VALID_DOI,
+  match: VALID_DOI,
   default: undefined,
 }

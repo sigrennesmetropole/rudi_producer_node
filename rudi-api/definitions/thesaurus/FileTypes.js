@@ -1,24 +1,23 @@
-'use strict'
+const mod = 'fTypThes'
 
-const mod = 'ftypThes'
-
-const { BadRequestError, RudiError } = require('../../utils/errors')
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const { parameterExpected } = require('../../utils/msg')
+// -------------------------------------------------------------------------------------------------
+import { logW } from '../../utils/logging.js'
+import { parameterExpected } from '../../utils/msg.js'
+import { BadRequestError, RudiError } from '../../utils/errors.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // Common MIME types: https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
 // Complete list: https://www.iana.org/assignments/media-types/media-types.xhtml
 
-exports.MIME_YAML = 'application/x-yaml'
+export const MIME_YAML = 'text/x-yaml'
+export const MIME_YAML_ALT = 'application/x-yaml'
 
-exports.FileTypes = [
+export const FileTypes = [
   'application/epub+zip', // (.epub)
   'application/geo+json', // (.geojson)
   'application/graphql',
@@ -46,7 +45,7 @@ exports.FileTypes = [
   'application/x-tar', //(.tar)
   'application/x-www-form-urlencoded',
   'application/xml', // (.xml)
-  this.MIME_YAML, // (.yaml, .yml)
+  MIME_YAML, // (.yaml, .yml)
   'application/zip', // (.zip)
   'application/zstd', // (.zst)
   'audio/aac', // (.aac)
@@ -63,7 +62,7 @@ exports.FileTypes = [
   'image/gif', // (.gif)
   'image/jpeg', // (.jpg, .jpeg)
   'image/png', // (.png)
-  'image/tiff', // (.tif, .tiff)
+  'image/tiff', // (.tif | .tiff)
   'image/vnd.microsoft.icon', // (.ico)
   'image/webp', // (.webp)
   'image/x-mng', // (.mng)
@@ -85,7 +84,10 @@ exports.FileTypes = [
   'video/x-msvideo', // (.avi)
 ]
 
-exports.Extensions = {
+const FileTypesAndEncrypted = FileTypes
+FileTypes.map((mime) => FileTypesAndEncrypted.push(`${mime}+crypt`))
+
+export const Extensions = {
   '3gp': 'video/3gpp',
   '3gpp': 'video/3gpp',
   '7z': 'application/x-7z-compressed',
@@ -153,35 +155,39 @@ exports.Extensions = {
   xls: 'application/vnd.ms-excel',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   xml: 'text/xml',
-  yaml: this.MIME_YAML,
-  yml: this.MIME_YAML,
+  yaml: MIME_YAML,
+  yml: MIME_YAML,
   zip: 'application/zip',
   zst: 'application/zstd',
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Getter / setter
-// ------------------------------------------------------------------------------------------------
-let Thesaurus = this.FileTypes
+// -------------------------------------------------------------------------------------------------
+let Thesaurus = FileTypes
 
-exports.initialize = (arg) => {
+export const initialize = (arg) => {
   if (arg) Thesaurus = []
 }
 
-exports.get = () => {
-  return Thesaurus
+export const get = (prop) => {
+  return prop ? Thesaurus[prop] : Thesaurus
 }
 
-exports.getExtensions = () => {
-  return this.Extensions
+export const getFileTypesWithCrypt = (prop) => {
+  return prop ? FileTypesAndEncrypted[prop] : FileTypesAndEncrypted
 }
 
-exports.set = (newValue) => {
+export const getExtensions = () => {
+  return Extensions
+}
+
+export const set = (newValue) => {
   const fun = 'set'
   try {
     if (!newValue) {
       const errMsg = parameterExpected(fun, 'newValue')
-      log.w(mod, fun, errMsg)
+      logW(mod, fun, errMsg)
       throw new BadRequestError(errMsg)
     }
     newValue = `${newValue}`.trim()
@@ -191,15 +197,15 @@ exports.set = (newValue) => {
   }
 }
 
-exports.isValid = (value, shouldInit) => {
+export const isValid = (value, shouldInit) => {
   const fun = 'isValid'
   if (!value) {
-    log.w(mod, fun, parameterExpected(fun, 'value'))
+    logW(mod, fun, parameterExpected(fun, 'value'))
     return false
   }
-  const isIn = Thesaurus.indexOf(value) > -1
+  const isIn = get().indexOf(value) > -1
   if (!isIn && shouldInit) {
-    this.set(value)
+    set(value)
     return true
   }
   return isIn

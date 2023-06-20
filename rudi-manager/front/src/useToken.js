@@ -1,33 +1,22 @@
-import { useState } from 'react';
+import { useState } from 'react'
+
+export const getCookie = (name) =>
+  document.cookie
+    ?.split('; ')
+    ?.find((row) => row.startsWith(`${name}`))
+    ?.split('=')[1]
 
 /**
  * Token hooks
- * @return {*} Token hooks
+ * @return {object} Token hooks
  */
 export default function useToken() {
-  const getCookie = (name) => {
-    try {
-      return document.cookie
-        .split('; ')
-        .find((row) => row.startsWith(name))
-        .split('=')[1];
-    } catch (error) {
-      // console.log(error)
-      return null;
-    }
-  };
-  const getToken = () => {
-    return getCookie('publicToken');
-  };
+  // console.log('-- useToken');
 
-  const [token, setToken] = useState(getToken());
+  const getToken = () => getCookie('pmFrontToken')
 
-  const saveToken = () => {
-    setToken(getCookie('publicToken'));
-  };
+  const [token, setToken] = useState(getToken())
+  const updateToken = () => setToken(getToken())
 
-  return {
-    updateToken: saveToken,
-    token,
-  };
+  return { token, updateToken }
 }

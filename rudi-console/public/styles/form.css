@@ -1,89 +1,143 @@
 /*
  * CSS for auto generated form
- * @author Florian Desmortreux 
+ * @author Florian Desmortreux
 */
 
 /* ---- Titles ---- */
 
 form-header h1 {
-    margin: 0;
-    font-weight: 400;
+  margin: 0;
+  font-weight: 400;
 }
 
 form-body h1,
 form-body h2 {
-    color: gray;
-    margin-top : 1em;
-    margin-bottom : 0;
-    width: 100%;
+  color: gray;
+  margin-top: 1em;
+  margin-bottom: 0;
+  width: 100%;
 }
 
 form-body h1 {
-    font-size: 1.3em;
-    font-weight: lighter;
+  font-size: 1.3em;
+  font-weight: lighter;
 }
 
 form-body h2 {
-    font-style: italic;
-    font-weight: normal;
-    font-size: 1em;
+  font-style: italic;
+  font-weight: normal;
+  font-size: 1em;
 }
 
 /* ---- Header ---- */
 
 form-header {
-    display: flex;
-    margin: 0;
-    align-items: center;
-    justify-content: space-between;
+  display: flex;
+  margin: 0;
+  align-items: center;
+  justify-content: space-between;
 }
 
 form-header > h1 {
-    margin:  0.7rem 0;
-    font-size: 3.5em;
-    font-family: sans-serif;
-} 
+  margin: 0.7rem 0;
+  font-size: 3.5em;
+  font-family: sans-serif;
+  overflow-wrap: anywhere;
+}
 
 form-header div {
-    display: flex;
-    align-self: flex-end;
+  display: flex;
+  align-self: flex-end;
 }
 
 /* ---- Form Body ---- */
 
 form-body {
-    margin-bottom: 1em;
+  margin-bottom: 1em;
+}
+
+form-section {
+  margin-bottom: 1em;
 }
 
 /* ---- Footer ---- */
 
 form-footer {
-    display: flex;
-    justify-content: flex-end;
-    margin: 1em;
+  display: flex;
+  justify-content: flex-end;
+  margin: 1em;
 }
 
 form-footer > button {
-    font-size: 1.5em;
-    padding: 0.5em 1em;
+  font-size: 1.5em;
+  padding: 0.5em 1em;
 }
 
 form-footer > button[readonly] {
-    display: none;
-    pointer-events: none;
+  display: none;
+  pointer-events: none;
 }
 
 /* ---- Required Only ---- */
 
-custom-form[reduced] form-body *:not(h1):not(h2):not([required]),
+custom-form[reduced] form-body *:not(h1):not(h2):not(div[required] *):not([required]),
 custom-form[reduced]:not([showdisabled]) form-section:not([required]),
 custom-form[reduced][showdisabled] form-section:not([required]):not([disabled]) {
-    display: none;
+  display: none;
 }
 
 /* --- Display only ---- */
 
-custom-form:not([showdisabled]) form-body *[disabled],
-custom-form:not([showdisabled]) form-section[disabled] {
-    display: none;
+custom-form:not([showdisabled]):not([readonly]) form-body *[disabled],
+custom-form[readonly]:not([showdisabled]) form-body *[disabled]:not([readonly]) {
+  display: none;
+}
+
+/* ---- Banner message ---- */
+.banner {
+  position: fixed;
+  font-weight: normal;
+  font-size: 1em;
+  background-color: white;
+  height: 2em;
+  width: 100%;
+  z-index: 100;
+  padding: 0.3em;
+}
+
+.banner-error {
+  color: red;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.banner-warning {
+  color: red;
+  font-style: italic;
+  font-weight: lighter;
+  font-size: 0.9em;
+}
+
+.banner-normal {
+  color: grey;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.banner-light {
+  color: #f0f0f0;
+  font-style: italic;
+  font-size: 0.9em;
+}
+
+.banner-bold {
+  color: #050505;
+  font-weight: bold;
+  font-size: 1;
+}
+
+.banner-end {
+  color: #050505;
+  font-weight: bold;
+  font-size: 1;
 }

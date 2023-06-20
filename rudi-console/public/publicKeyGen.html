@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="./images/logo.png" />
+    <link rel="stylesheet" href="styles/style.css" />
+    <link rel="stylesheet" href="styles/rudi.css" />
+    <link rel="stylesheet" href="styles/form.css" />
+    <link rel="stylesheet" href="styles/material_layout.css" />
+    <link rel="stylesheet" href="styles/material_icons.css" />
+    <title>Rudi Public Key</title>
+
+    <script type="module" src="./lib/MaterialInputs.js"></script>
+    <script type="module" src="./lib/HtmlFormTemplate.js"></script>
+    <script type="module" src="./lib/HtmlJsonTemplate.js"></script>
+  </head>
+  <body>
+    <style>
+      .pem {
+        width: 100%;
+        margin: 2.5em 0 1em 0;
+      }
+
+      .pem::part(textarea) {
+        min-height: 10em;
+        resize: none;
+        padding-top: 1rem;
+        font-size: 1.2em;
+        font-family: monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+    </style>
+    <div class="banner" id="MessageBanner"></div>
+    <div class="section">
+      <div class="wide-container">
+        <div class="row">
+          <div class="col s2 m2 l2" hidden>
+            <button class="icon-flat" disabled>
+              Go back<i class="material-icons left">navigate_before</i>
+            </button>
+          </div>
+          <textarea id="dev_paste" class="col s2 m6 l10"></textarea>
+        </div>
+      </div>
+      <div class="container">
+        <custom-form id="custom_form"></custom-form>
+        <div class="empty_display">
+          <h1>Loading...</h1>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./js/publicKeyGen.js"></script>
+  </body>
+</html>

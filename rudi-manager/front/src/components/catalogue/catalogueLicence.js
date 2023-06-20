@@ -1,75 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import InfiniteScroll from 'react-infinite-scroll-component';
-import PropTypes from 'prop-types';
-import LicenceCard from './licenceCard';
-import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler';
+import axios from 'axios'
+
+import React, { useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
+import InfiniteScroll from 'react-infinite-scroll-component'
+
+import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
+import LicenceCard from './licenceCard'
+
+CatalogueLicence.propTypes = {
+  editMode: PropTypes.bool,
+  logout: PropTypes.func,
+}
 
 /**
  * Composant : CatalogueLicence
  * @return {ReactNode}
  */
-export default function CatalogueLicence({ display, specialSearch, editMode }) {
-  const { defaultErrorHandler } = useDefaultErrorHandler();
+export default function CatalogueLicence({ editMode, logout }) {
+  const { defaultErrorHandler } = useDefaultErrorHandler()
 
-  const [metadatas, setMetadatas] = useState([]);
-  const [formUrl, setFormUrl] = useState('');
-  const [hasMore] = useState(false);
+  const [isEdit, setEdit] = useState(!!editMode)
+  useEffect(() => setEdit(!!editMode), [editMode])
 
-  useEffect(() => {
-    axios
-      .get(`${process.env.PUBLIC_URL}/api/v1/formUrl`)
-      .then((res) => {
-        setFormUrl(res.data);
-      })
-      .catch((e) => {
-        defaultErrorHandler(e);
-      });
-    getInitialData();
-  }, []);
+  const [licences, setLicences] = useState([])
+  const [hasMore] = useState(false)
+
+  useEffect(() => getInitialData(), [])
   /**
    * recup la 1er page des métadonnéees
    */
   function getInitialData() {
     axios
-      .get(`${process.env.PUBLIC_URL}/api/admin/licences`)
-      .then((res) => {
-        setMetadatas(res.data);
-      })
-      .catch((e) => {
-        defaultErrorHandler(e);
-      });
+      .get(`api/data/licences`)
+      .then((res) => setLicences(res.data))
+      .catch((err) => (err.response?.status == 401 ? logout() : defaultErrorHandler(err)))
   }
 
   return (
     <div className="tempPaddingTop">
-      <div className="row">
+      <div className="row catalogue">
         <div className="col-9">
           <div className="row">
-            <InfiniteScroll
-              dataLength={metadatas.length}
-              hasMore={hasMore}
-              loader={<h4>Loading...</h4>}
-            >
-              {metadatas.map((metadata, i) => {
-                return (
-                  <LicenceCard
-                    metadata={metadata}
-                    formUrl={formUrl}
-                    display={display}
-                    key={metadata.concept_id}
-                  ></LicenceCard>
-                );
-              })}
-            </InfiniteScroll>
+            {licences.length ? (
+              <InfiniteScroll
+                dataLength={licences.length}
+                hasMore={hasMore}
+                loader={<h4>Loading...</h4>}
+              >
+                {licences.map((licence) => {
+                  return (
+                    <LicenceCard
+                      obj={licence}
+                      editMode={isEdit}
+                      key={licence.concept_id}
+                    ></LicenceCard>
+                  )
+                })}
+              </InfiniteScroll>
+            ) : (
+              'Aucune donnée trouvée'
+            )}
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
-CatalogueLicence.propTypes = {
-  display: PropTypes.object,
-  specialSearch: PropTypes.object,
-  editMode: PropTypes.object,
-};

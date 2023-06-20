@@ -1,7 +1,7 @@
-exports.HEADERS = 'headers'
+export const HEADERS = 'headers'
 
-exports.HD_METHOD = 'method'
-exports.HD_URL = 'url'
+export const HD_METHOD = 'method'
+export const HD_URL = 'url'
 
-exports.HD_AUTH = 'Authorization'
-exports.HD_AUTH_LOWER = 'authorization'
+export const HD_AUTH = 'Authorization'
+export const HD_AUTH_LOWER = 'authorization'

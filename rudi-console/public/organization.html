@@ -11,17 +11,12 @@
     <link rel="stylesheet" href="styles/material_icons.css">
     <title>Rudi Producer</title>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.1.0/uuidv4.min.js"></script>
+    <script type="module" src="./lib/MaterialInputs.js"></script>
+    <script type="module" src="./lib/HtmlFormTemplate.js"></script>
+    <script type="module" src="./lib/HtmlJsonTemplate.js"></script>
 </head>
 <body>
-    <nav hidden>
-        <img src="./images/logo_blanc_orange.svg" alt="logo">
-        <span class="brand-logo center">Formulaire</span>
-        <select id="lang_select" class="browser-default">
-            <option value="fr">Français</option>
-        </select>
-    </nav>
-
+    <div class="banner" id="MessageBanner"></div>
     <div class="section">
         <div class="wide-container">
             <div class="row">

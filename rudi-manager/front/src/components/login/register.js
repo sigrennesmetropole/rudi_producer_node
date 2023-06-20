@@ -1,10 +1,32 @@
-import React, { useState } from 'react';
-import Form from 'react-bootstrap/Form';
-import Button from 'react-bootstrap/Button';
-import './login.css';
-import PropTypes from 'prop-types';
-import axios from 'axios';
-import GenericModal, { useGenericModal, useGenericModalOptions } from '../modals/genericModal';
+import axios from 'axios'
+
+import React, { useState } from 'react'
+import PropTypes from 'prop-types'
+
+import Form from 'react-bootstrap/Form'
+import Button from 'react-bootstrap/Button'
+import InputGroup from 'react-bootstrap/InputGroup'
+import { Eye, EyeSlash } from 'react-bootstrap-icons'
+
+import './login.css'
+import GenericModal, { useGenericModal, useGenericModalOptions } from '../modals/genericModal'
+import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
+
+export const btnColor = 'warning'
+export const btnText = 'Créer un compte'
+
+export const showPill = (condition, showState) =>
+  condition ? (
+    <div className={'login-pill text-bg-' + btnColor} onClick={showState}>
+      {btnText}
+    </div>
+  ) : (
+    ''
+  )
+
+Register.propTypes = {
+  backToLogin: PropTypes.func.isRequired,
+}
 
 /**
  * Register component
@@ -12,40 +34,44 @@ import GenericModal, { useGenericModal, useGenericModalOptions } from '../modals
  * @return {ReactNode} Register html component
  */
 export default function Register({ backToLogin }) {
-  const [username, setUserName] = useState('');
-  const [password, setPassword] = useState('');
-  const [email, setEmail] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const { defaultErrorHandler } = useDefaultErrorHandler()
 
-  const { toggle, visible } = useGenericModal();
-  const { options, changeOptions } = useGenericModalOptions();
+  const [username, setUserName] = useState('')
+  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const [isPwdShown, setPasswordShown] = useState(false)
+  const togglePwdVisibility = () => setPasswordShown(!isPwdShown)
+  const stateType = () => (isPwdShown ? 'text' : 'password')
+
+  const { toggle, visible } = useGenericModal()
+  const { options, changeOptions } = useGenericModalOptions()
 
   /**
    * is form valid?
    * @return {Boolean} return true is the form is valid
    */
-  function validateForm() {
-    return username.length > 0 && password.length > 0;
-  }
+  const isFormValid = () => username.length > 0 && password.length > 0
+
   /**
    * call server to Register user
    * @param {*} credentials
    * @return {Promise} Register promise
    */
-  function registerUser(credentials) {
-    return axios.post(`${process.env.PUBLIC_URL}/api/v1/register`, JSON.stringify(credentials), {
+  const registerUser = (credentials) =>
+    axios.post(`api/front/register`, JSON.stringify(credentials), {
       headers: {
         'Content-Type': 'application/json',
       },
-    });
-  }
+    })
 
   /**
    * handle submit Register form
    * @param {*} event
    */
   function handleSubmit(event) {
-    event.preventDefault();
+    event.preventDefault()
     registerUser({
       username,
       email,
@@ -54,81 +80,81 @@ export default function Register({ backToLogin }) {
     })
       .then((res) => {
         changeOptions({
-          text: [`L'utilisateur '${res.data.username}' a bien été créé.`],
+          text: [`L'utilisateur '${username}' a bien été créé.`],
           title: 'Action Validée',
           type: 'success',
           buttons: [
             {
               text: 'Connexion',
-              action: () => {
-                backToLogin();
-              },
+              action: () => backToLogin(),
             },
           ],
-        });
-        toggle();
+        })
+        toggle()
       })
-      .catch((error) => {
-        changeOptions({
-          text: ['' + error.response.data],
-          title: 'Une erreur est survenue',
-          type: 'error',
-          buttons: [
-            {
-              text: 'Ok',
-              action: () => {},
-            },
-          ],
-        });
-        toggle();
-      });
+      .catch((err) => {
+        toggle()
+        defaultErrorHandler(err)
+      })
+  }
+
+  const formGroup = (id, label, val, type, onChangeMethod, autoCompl, hasFocus) => {
+    return (
+      <div className="login-form">
+        <Form.Group size="lg" controlId={id}>
+          <Form.Label>{label}</Form.Label>
+          <Form.Control
+            autoFocus={hasFocus}
+            type={type}
+            value={val}
+            autoComplete={autoCompl}
+            onChange={(e) => onChangeMethod(e.target.value)}
+          />
+        </Form.Group>
+      </div>
+    )
+  }
+
+  const inputPassword = (id, label, password, setPassword) => {
+    return (
+      <div className="login-form">
+        <Form.Group size="lg" controlId={id}>
+          <Form.Label>{label}</Form.Label>
+          <InputGroup className="login-pwd">
+            <Form.Control
+              type={stateType()}
+              value={password}
+              autoComplete="current-password"
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button variant="warning" id={`button-${id}`} onClick={togglePwdVisibility}>
+              {isPwdShown ? <Eye></Eye> : <EyeSlash></EyeSlash>}
+            </Button>
+          </InputGroup>
+        </Form.Group>
+      </div>
+    )
   }
 
   return (
     <div className="Login">
-      <GenericModal visible={visible} toggle={toggle} options={options}></GenericModal>
+      <GenericModal
+        visible={visible}
+        toggle={toggle}
+        options={options}
+        animation={false}
+      ></GenericModal>
       <Form onSubmit={handleSubmit}>
-        <Form.Group size="lg" controlId="username">
-          <Form.Label>User</Form.Label>
-          <Form.Control
-            autoFocus
-            type="text"
-            value={username}
-            onChange={(e) => setUserName(e.target.value)}
-          />
-        </Form.Group>
-        <Form.Group size="lg" controlId="email">
-          <Form.Label>Email</Form.Label>
-          <Form.Control
-            autoFocus
-            type="text"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Form.Group>
-        <Form.Group size="lg" controlId="password">
-          <Form.Label>Password</Form.Label>
-          <Form.Control
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Form.Group>
-        <Form.Group size="lg" controlId="confirmPassword">
-          <Form.Label>Password</Form.Label>
-          <Form.Control
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </Form.Group>
-        <Button block size="lg" type="submit" disabled={!validateForm()}>
-          Register
-        </Button>
+        {formGroup('username', 'Nom', username, 'text', setUserName, 'username', true)}
+        {formGroup('email', 'E-mail', email, 'text', setEmail, 'email')}
+        {inputPassword('pwd', 'Mot de passe', password, setPassword)}
+        {inputPassword('pwd2', 'Confirmation du mot de passe', confirmPassword, setConfirmPassword)}
+        <div className="login-button">
+          <Button type="submit" variant={btnColor} disabled={!isFormValid()}>
+            {btnText}
+          </Button>
+        </div>
       </Form>
     </div>
-  );
+  )
 }
-Register.propTypes = {
-  backToLogin: PropTypes.func.isRequired,
-};

@@ -1,25 +1,24 @@
-'use strict'
-
 const mod = 'msg'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../utils/logging')
-const utils = require('../utils/jsUtils')
-const { getLanguage } = require('../utils/lang')
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { beautify } from './jsUtils.js'
+import { logE } from './logging.js'
 
-// ------------------------------------------------------------------------------------------------
+import { getLanguage } from './lang.js'
+
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const DEFAULT_MSG = 'Language not found'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Generic
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // TODO: store all this in a db
 
-exports.missingRequestParameter = (req, param) => {
+export const missingRequestParameter = (req, param) => {
   const fun = 'missingRequestParameter'
   try {
     switch (getLanguage()) {
@@ -35,12 +34,12 @@ exports.missingRequestParameter = (req, param) => {
         return `${DEFAULT_MSG}: ${getLanguage()}`
     }
   } catch (err) {
-    log.e(mod, fun, err)
+    logE(mod, fun, err)
     throw err
   }
 }
 
-exports.parameterExpected = (fun, param) => {
+export const parameterExpected = (fun, param) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -55,7 +54,7 @@ exports.parameterExpected = (fun, param) => {
   }
 }
 
-exports.parameterTypeExpected = (fun, expected, obj) => {
+export const parameterTypeExpected = (fun, expected, obj) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -70,7 +69,7 @@ exports.parameterTypeExpected = (fun, expected, obj) => {
   }
 }
 
-exports.subPropNeededWhenPropSet = (prop, subProp) => {
+export const subPropNeededWhenPropSet = (prop, subProp) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -91,7 +90,7 @@ exports.subPropNeededWhenPropSet = (prop, subProp) => {
   }
 }
 
-exports.subPropNeededWhenPropSetToEnum = (prop, subProp, enumProp, enumVal) => {
+export const subPropNeededWhenPropSetToEnum = (prop, subProp, enumProp, enumVal) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -112,7 +111,7 @@ exports.subPropNeededWhenPropSetToEnum = (prop, subProp, enumProp, enumVal) => {
   }
 }
 
-exports.incorrectValueForEnum = (property, incorrectValue) => {
+export const incorrectValueForEnum = (property, incorrectValue) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -127,18 +126,18 @@ exports.incorrectValueForEnum = (property, incorrectValue) => {
   }
 }
 
-exports.missingObjectProperty = (jsonObject, property) => {
+export const missingObjectProperty = (jsonObject, property) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `The property '${property}' must be defined for object: ${utils.beautify(
+      return `The property '${property}' must be defined for object: ${beautify(
         jsonObject
       )} `.replace(/\\"/g, `'`)
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `La propriété '${property}' doit être définie pour l'object : ${utils.beautify(
+      return `La propriété '${property}' doit être définie pour l'object : ${beautify(
         jsonObject
       )} `.replace(/\\"/g, `'`)
     default:
@@ -146,7 +145,7 @@ exports.missingObjectProperty = (jsonObject, property) => {
   }
 }
 
-exports.parametersMismatch = (paramUrl, paramBody) => {
+export const parametersMismatch = (paramUrl, paramBody) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -167,7 +166,7 @@ exports.parametersMismatch = (paramUrl, paramBody) => {
   }
 }
 
-exports.missingField = (fieldName) => {
+export const missingField = (fieldName) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -181,11 +180,11 @@ exports.missingField = (fieldName) => {
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Generic
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-exports.objectTypeNotFound = (objectType) => {
+export const objectTypeNotFound = (objectType) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -200,7 +199,7 @@ exports.objectTypeNotFound = (objectType) => {
   }
 }
 
-exports.objectNotFound = (objectType, objectId) => {
+export const objectNotFound = (objectType, objectId) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -215,145 +214,145 @@ exports.objectNotFound = (objectType, objectId) => {
   }
 }
 
-exports.objectAlreadyExists = (objectType, id) => {
+export const objectAlreadyExists = (objectType, id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `An object of type '${objectType}' already exists for id: ${id} `
+      return `An object of type '${objectType}' already exists for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Un objet de type '${objectType}' existe déjà pour l'identifiant : ${id} `
+      return `Un objet de type '${objectType}' existe déjà pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.objectAdded = (objectType, id) => {
+export const objectAdded = (objectType, id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `New object of type '${objectType}' added with id: ${id} `
+      return `New object of type '${objectType}' added with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Objet de type '${objectType}' créé avec l'identifiant : ${id} `
+      return `Objet de type '${objectType}' créé avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.objectNotDeletedBecauseUsed = (objectType, id) => {
+export const objectNotDeletedBecauseUsed = (objectType, id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `The object of type '${objectType}' couldn't be deleted. Its identifier is referenced in a metadata: ${id} `
+      return `The object of type '${objectType}' couldn't be deleted. Its identifier is referenced in a metadata: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `L'objet de type '${objectType}' n'a pas pu être supprimé. Son identifiant est référencé dans une métadonnée : ${id} `
+      return `L'objet de type '${objectType}' n'a pas pu être supprimé. Son identifiant est référencé dans une métadonnée : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Metadata
-// ------------------------------------------------------------------------------------------------
-exports.metadataAlreadyExists = (id) => {
+// -------------------------------------------------------------------------------------------------
+export const metadataAlreadyExists = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `A metadata already exists for id: ${id} `
+      return `A metadata already exists for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Une metadonnée existe déjà pour l'identifiant : ${id} `
+      return `Une metadonnée existe déjà pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.metadataAdded = (id) => {
+export const metadataAdded = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `New metadata added with id: ${id} `
+      return `New metadata added with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Metadonnée ajoutée avec l'identifiant : ${id} `
+      return `Metadonnée ajoutée avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.metadataUpdated = (id) => {
+export const metadataUpdated = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `Metadata updated for id: ${id} `
+      return `Metadata updated for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Metadonée mise à jour pour l'identifiant : ${id} `
+      return `Metadonée mise à jour pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.metadataFound = (id) => {
+export const metadataFound = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `A metadata was found with id: ${id} `
+      return `A metadata was found with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Une metadonnée a été trouvée avec l'identifiant : ${id} `
+      return `Une metadonnée a été trouvée avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.metadataNotFound = (id) => {
+export const metadataNotFound = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `No metadata was found with id: ${id} `
+      return `No metadata was found with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Aucune metadonnée trouvée avec l'identifiant : ${id} `
+      return `Aucune metadonnée trouvée avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.metadataDeleted = (id) => {
+export const metadataDeleted = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `Metadata deleted for id: ${id} `
+      return `Metadata deleted for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Métadonnée supprimée pour l'identifiant : ${id} `
+      return `Métadonnée supprimée pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.metadataDeletedWithCondition = (condition) => {
+export const metadataDeletedWithCondition = (condition) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -368,10 +367,10 @@ exports.metadataDeletedWithCondition = (condition) => {
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Thesaurus
-// ------------------------------------------------------------------------------------------------
-exports.incorrectVal = (field, val) => {
+// -------------------------------------------------------------------------------------------------
+export const incorrectVal = (field, val) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
@@ -386,237 +385,237 @@ exports.incorrectVal = (field, val) => {
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Organization
-// ------------------------------------------------------------------------------------------------
-exports.organizationAdded = (id) => {
+// -------------------------------------------------------------------------------------------------
+export const organizationAdded = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `New organization added with id: ${id} `
+      return `New organization added with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Organisation créée avec l'identifiant : ${id} `
+      return `Organisation créée avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
-exports.organizationAlreadyExists = (id) => {
+export const organizationAlreadyExists = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `An organization already exists for id: ${id} `
+      return `An organization already exists for id: ${id}`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Une organisation existe déjà pour l'identifiant : ${id} `
-    default:
-      return `${DEFAULT_MSG}: ${getLanguage()}`
-  }
-}
-
-exports.organizationUpdated = (id) => {
-  switch (getLanguage()) {
-    case 'en':
-    case 'en-GB':
-    case 'en-US':
-      return `Organization updated for id: ${id} `
-    case 'fr':
-    case 'fr-FR':
-    case 'fr-BE':
-      return `Organisation mise à jour pour l'identifiant : ${id} `
+      return `Une organisation existe déjà pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.organizationDeleted = (id) => {
+export const organizationUpdated = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `Organization deleted for id: ${id} `
+      return `Organization updated for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Organisation supprimée pour l'identifiant : ${id} `
+      return `Organisation mise à jour pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.organizationNotFound = (id) => {
+export const organizationDeleted = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `No organization was found with id: ${id} `
+      return `Organization deleted for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Aucune organisation trouvée avec l'identifiant : ${id} `
+      return `Organisation supprimée pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+export const organizationNotFound = (id) => {
+  switch (getLanguage()) {
+    case 'en':
+    case 'en-GB':
+    case 'en-US':
+      return `No organization was found with id: '${id}'`
+    case 'fr':
+    case 'fr-FR':
+    case 'fr-BE':
+      return `Aucune organisation trouvée avec l'identifiant : '${id}'`
+    default:
+      return `${DEFAULT_MSG}: ${getLanguage()}`
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
 // Contact
-// ------------------------------------------------------------------------------------------------
-exports.contactAdded = (id) => {
+// -------------------------------------------------------------------------------------------------
+export const contactAdded = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `New contact added with id: ${id} `
+      return `New contact added with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Contact créé avec l'identifiant : ${id} `
+      return `Contact créé avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.contactAlreadyExists = (id) => {
+export const contactAlreadyExists = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `A contact already exists for id: ${id} `
+      return `A contact already exists for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Un contact existe déjà pour l'identifiant : ${id} `
+      return `Un contact existe déjà pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.contactUpdated = (id) => {
+export const contactUpdated = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `Contact updated for id: ${id} `
+      return `Contact updated for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Contact mis à jour pour l'identifiant : ${id} `
+      return `Contact mis à jour pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.contactDeleted = (id) => {
+export const contactDeleted = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `Contact deleted for id: ${id} `
+      return `Contact deleted for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Contact supprimé pour l'identifiant : ${id} `
+      return `Contact supprimé pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
-exports.contactNotFound = (id) => {
+export const contactNotFound = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `No contact was found with id: ${id} `
+      return `No contact was found with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Aucun contact trouvé avec l'identifiant : ${id} `
+      return `Aucun contact trouvé avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Report
-// ------------------------------------------------------------------------------------------------
-exports.reportAdded = (id) => {
+// -------------------------------------------------------------------------------------------------
+export const reportAdded = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `New report added with id: ${id} `
+      return `New report added with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Rapport créé avec l'identifiant : ${id} `
+      return `Rapport créé avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.reportAlreadyExists = (id) => {
+export const reportAlreadyExists = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `A report already exists for id: ${id} `
+      return `A report already exists for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Un rapport existe déjà pour l'identifiant : ${id} `
+      return `Un rapport existe déjà pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.reportUpdated = (id) => {
+export const reportUpdated = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `Report updated for id: ${id} `
+      return `Report updated for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Rapport mis à jour pour l'identifiant : ${id} `
+      return `Rapport mis à jour pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
 
-exports.reportDeleted = (id) => {
+export const reportDeleted = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `Report deleted for id: ${id} `
+      return `Report deleted for id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Rapport supprimé pour l'identifiant : ${id} `
+      return `Rapport supprimé pour l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
-exports.reportNotFound = (id) => {
+export const reportNotFound = (id) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':
     case 'en-US':
-      return `No report was found with id: ${id} `
+      return `No report was found with id: '${id}'`
     case 'fr':
     case 'fr-FR':
     case 'fr-BE':
-      return `Aucun rapport trouvé avec l'identifiant : ${id} `
+      return `Aucun rapport trouvé avec l'identifiant : '${id}'`
     default:
       return `${DEFAULT_MSG}: ${getLanguage()}`
   }
 }
-exports.reportMismatch = (reportId, urlObjectId, reportObjectId) => {
+export const reportMismatch = (reportId, urlObjectId, reportObjectId) => {
   switch (getLanguage()) {
     case 'en':
     case 'en-GB':

@@ -1,45 +1,39 @@
-'use strict'
-
 const mod = 'jwtCtrl'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const { readFileSync } = require('fs')
-const { parseKey } = require('sshpk')
-
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-
-const { decodeBase64url, nowEpochS, nowISO, dateEpochSToIso } = require('../utils/jsUtils')
-
-const log = require('../utils/logging')
-const { ROUTE_NAME } = require('../config/confApi')
-const { getProfile } = require('../config/confSystem')
-const { ForbiddenError, UnauthorizedError, RudiError } = require('../utils/errors')
-const { accessProperty } = require('../utils/jsonAccess')
-const {
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import {
   extractJwt,
-  JWT_ALG,
-  JWT_EXP,
-  JWT_SUB,
-  JWT_CLIENT,
-  REQ_MTD,
-  REQ_URL,
-} = require('../utils/crypto')
+  readPublicKeyFile,
+  tokenStringToJwtObject,
+  verifyToken,
+} from '@aqmo.org/jwt_lib'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+
+import { decodeBase64url } from '../utils/jsUtils.js'
+import { accessProperty } from '../utils/jsonAccess.js'
+
+import { logT } from '../utils/logging.js'
+
+import { getProfile } from '../config/confSystem.js'
+import { ForbiddenError, UnauthorizedError, RudiError } from '../utils/errors.js'
+
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-
+// -------------------------------------------------------------------------------------------------
 const PUB_KEY = 'pub_key'
 const SUB_ACL = 'routes'
 const REQ_ROUTE_ALL = 'all'
 
-// ------------------------------------------------------------------------------------------------
+import { JWT_SUB, JWT_CLIENT, REQ_MTD, REQ_URL } from '../utils/crypto.js'
+import { ROUTE_NAME } from '../config/confApi.js'
+// -------------------------------------------------------------------------------------------------
 // Controllers
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 /**
  * Retrieve the string that states which algorithm was used for the
@@ -52,7 +46,7 @@ const REQ_ROUTE_ALL = 'all'
  * @param {String} algo
  * @returns
  */
-exports.getJwtAlgo = (algo) => {
+export const getJwtAlgo = (algo) => {
   const fun = 'getJwtAlgo'
   try {
     switch (algo) {
@@ -81,7 +75,7 @@ exports.getJwtAlgo = (algo) => {
  * @param {String} algo
  * @returns
  */
-exports.getHashAlgo = (algo) => {
+export const getHashAlgo = (algo) => {
   const fun = 'getHashAlgo'
   try {
     switch (algo) {
@@ -105,25 +99,28 @@ exports.getHashAlgo = (algo) => {
   }
 }
 
-exports.checkRudiProdPermission = async (req, reply) => {
+export const checkRudiProdPermission = async (req, isCheckOptional) => {
   const fun = 'checkRudiProdPermission'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
     let token
     try {
+      // logI(mod, fun, `req: ${beautify(req.headers?.authorization)}`)
       token = extractJwt(req)
     } catch (err) {
-      const error = new UnauthorizedError(err)
+      // logE(mod, fun, `err: ${err}`)
+      if (isCheckOptional) throw err
+      const error = new UnauthorizedError(err.message)
       throw RudiError.treatError(mod, fun, error)
     }
-
-    // log.d(mod, fun, `token: ${token}`)
-    const { subject, clientId } = await this.verifyRudiProdToken(token, req.method, req.url)
-    // log.d(mod, fun, `subject: ${subject}, clientId: ${clientId}`)
+    // logD(mod, fun, `token: ${token}`)
+    const { subject, clientId } = await verifyRudiProdToken(token, req.method, req.url)
+    // logD(mod, fun, `subject: ${subject}, clientId: ${clientId}`)
 
     // Check the ACL (= does the subject have permission to enter this route?)
-    // log.d(mod, fun, `req: ${beautify(req.context.config[ROUTE_NAME])}`)
-    const reqRouteName = accessProperty(req.context.config, ROUTE_NAME)
+    // logD(mod, fun, `req: ${beautify(req.context.config[ROUTE_NAME])}`)
+
+    const reqRouteName = accessProperty(req.routeConfig, ROUTE_NAME)
     checkSubjPermission(subject, reqRouteName)
     return { subject, clientId }
     // return 'ok'
@@ -134,7 +131,7 @@ exports.checkRudiProdPermission = async (req, reply) => {
 
 function checkSubjPermission(subject, reqRouteName) {
   const fun = 'checkSubjPermission'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
 
   const subjProfile = getProfile(subject)
   const subjAcl = accessProperty(subjProfile, SUB_ACL)
@@ -145,94 +142,65 @@ function checkSubjPermission(subject, reqRouteName) {
   return true
 }
 
-exports.verifyRudiProdToken = async (token, reqMethod, reqUrl) => {
-  const fun = 'verifyRudiProdToken'
-  // log.d(mod, fun, `token: ${token}`)
-
+const CACHED_PUB_KEYS = {}
+const getPubKey = (subject) => {
+  const fun = 'getPubKey'
   try {
-    const [jwtHeaderBase64url, jwtPayloadBase64url, jwtSignatureBase64url] = token.split('.')
-    // log.d(mod, fun, `JWT header b64: ${jwtHeaderBase64url}`)
+    const subjProfile = getProfile(subject)
+    // logD(mod, fun + ' profile:', beautify(subjProfile))
+    const keyFile = subjProfile[PUB_KEY]
+    if (!keyFile)
+      throw new ForbiddenError(`Wrong configuration, public key path not found for '${subject}'`)
 
-    // Identify the signature hash algorithm from the JWT header alg property
-    const jwtHeader = JSON.parse(decodeBase64url(jwtHeaderBase64url))
-    // log.d(mod, fun, `JWT algo: ${jwtHeader.alg}`)
-    const hashAlgo = this.getHashAlgo(jwtHeader[JWT_ALG])
-    // log.d(mod, fun, `hash algo: ${hashAlgo}`)
+    if (!CACHED_PUB_KEYS[subject]) CACHED_PUB_KEYS[subject] = readPublicKeyFile(keyFile)
+    return CACHED_PUB_KEYS[subject]
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
 
-    // Check if the token is still valid
+export const verifyRudiProdToken = async (token, reqMethod, reqUrl) => {
+  const fun = 'verifyRudiProdToken'
+  try {
+    // logD(mod, fun, ``)
 
-    const jwtPayload = JSON.parse(decodeBase64url(jwtPayloadBase64url))
-    const jwtExp = accessProperty(jwtPayload, JWT_EXP)
-    // log.d(mod, fun, `jwtPayload: ${beautify(jwtPayload)}`)
+    // Retrieve the public key
+    const { payload } = tokenStringToJwtObject(token)
+    // logD(mod, fun, beautify(payload))
 
-    if (nowEpochS() > jwtExp)
-      throw new ForbiddenError(
-        `JWT expired: JWT expires after ${dateEpochSToIso(jwtExp)} (now is ${nowISO()})`
-      )
+    const subject = accessProperty(payload, JWT_SUB)
+    const pubKey = getPubKey(subject)
+    // logV(mod, fun + ' pubKey:', pubKey)
+    try {
+      verifyToken(pubKey, token)
+    } catch (e) {
+      throw new ForbiddenError(e.message)
+    }
 
     // Check the current route
-    const jwtMtd = accessProperty(jwtPayload, REQ_MTD)
+    const jwtMtd = accessProperty(payload, REQ_MTD)
     if (jwtMtd !== reqMethod && jwtMtd !== REQ_ROUTE_ALL)
       throw new ForbiddenError(
         `The http request method '${reqMethod}' doesn't match what has been declared in the JWT: '${jwtMtd}'`
       )
-    const jwtUrl = accessProperty(jwtPayload, REQ_URL)
+    const jwtUrl = accessProperty(payload, REQ_URL)
     if (jwtUrl !== reqUrl && jwtUrl !== REQ_ROUTE_ALL)
       throw new ForbiddenError(
         `The request URL '${reqUrl}' doesn't match what has been declared in the JWT: '${jwtUrl}'`
       )
 
     // Identify the subject (= caller/requester)
-    const subject = accessProperty(jwtPayload, JWT_SUB)
-    const clientId = jwtPayload[JWT_CLIENT]
+    const clientId = payload[JWT_CLIENT]
 
-    // Retrieve the public key
-    // log.d(mod, fun, `Retrieve the public key for '${subject}'`)
-
-    const subjProfile = getProfile(subject)
-    if (!subjProfile)
-      throw new ForbiddenError(`No profile was found for this subject: '${subject}'`)
-
-    let keyFile
-    try {
-      keyFile = accessProperty(subjProfile, PUB_KEY)
-    } catch (err) {
-      throw new Error(`Wrong configuration, public key path not found for '${subject}': ${err}`)
-    }
-    let pubKeyPem
-    try {
-      pubKeyPem = readFileSync(keyFile, 'ascii')
-    } catch (err) {
-      throw new Error(`Wrong configuration, public key cannot be read at '${keyFile}': ${err}`)
-    }
-    let sslKey
-    try {
-      sslKey = parseKey(pubKeyPem)
-    } catch (err) {
-      throw new Error(`Wrong configuration, public key cannot be parsed from '${keyFile}': ${err}`)
-    }
-    // log.d(mod, fun, `sslKey: ${beautify(sslKey)}`)
-
-    // Check the signature
-    // log.d(mod, fun, `Check the signature: ${beautify(sslKey)}`)
-
-    const verifier = sslKey.createVerify(hashAlgo)
-    verifier.update(`${jwtHeaderBase64url}.${jwtPayloadBase64url}`)
-    const signatureIsValid = verifier.verify(jwtSignatureBase64url, 'base64url')
-    if (!signatureIsValid) throw new ForbiddenError('Signature is not valid')
-    // Check the ACL (= does the subject have permission to enter this route?)
-    // const subjAcl = accessProperty(subjProfile, SUB_ACL)
-
-    // log.d(mod, fun, `subject: ${subject}, clientId: ${clientId}`)
     return { subject, clientId }
   } catch (err) {
-    // log.w(mod, fun, err)
+    // logW(mod, fun, err)
     const error = new ForbiddenError(`JWT is not a valid RUDI Producer JWT: ${err.message}`)
     throw RudiError.treatError(mod, fun, error)
   }
 }
 
-exports.isRudiProducerToken = (token) => {
+export const isRudiProducerToken = (token) => {
   const fun = 'isRudiProducerToken'
   try {
     const jwtPayloadBase64url = token.split('.')[1]

@@ -49,6 +49,7 @@ interface LocalLogConfig  {
     console: boolean;	    // Whether if we should log over the console.
     consoleData: boolean;   // Whether if we should log JSON data to the console.
     logRotationSec: number; // The rotation time.
+    level: number;	    // The log level, the value over wich logs are ignored (by default 'debug')
 };
 
 /**
@@ -106,7 +107,8 @@ export class LocalLogger {
             prefix: 'RudiLogger-',
             console: true,
             consoleData: true,
-            logRotationSec: 8 * 60 * 60 // 8 hours.
+            logRotationSec: 8 * 60 * 60, // 8 hours.
+            level: Severity.Debug
         };
         if ((typeof config.log_local) !== 'undefined') {
             const cfg = config.log_local;
@@ -115,6 +117,7 @@ export class LocalLogger {
             if ((typeof cfg.logRotationSec) == 'number') this.config.logRotationSec = cfg.logRotationSec;
             if ((typeof cfg.console) == 'boolean')       this.config.console        = cfg.console;
             if ((typeof cfg.consoleData) == 'boolean')   this.config.consoleData    = cfg.consoleData;
+            if ((typeof cfg.level) == 'number')          this.config.level          = cfg.level;
         }
         return this.config;
     }

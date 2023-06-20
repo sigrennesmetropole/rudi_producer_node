@@ -1,22 +1,33 @@
 {
-  "name": "rudi_metadata_updater",
-  "version": "1.0.0",
   "description": "Web service to update metadata for rudi project",
+  "name": "rudi_metadata_updater",
+  "version": "2.3.1",
+  "author": "Florian Desmortreux",
+  "license": "EUPL-1.2",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "cypress:open": "cypress open",
-    "dev": "./node_modules/nodemon/bin/nodemon.js index.js"
+    "start": "nodemon index.js -- --config ./dev/config.json",
+    "dev": "nodemon index.js -- --config ./dev/config.json --dev"
   },
-  "author": "Florian Desmortreux",
-  "license": "ISC",
   "dependencies": {
-    "body-parser": "^1.19.0",
-    "express": "^4.17.1",
-    "uuid": "^8.3.2"
+    "@aqmo.org/custom-material-inputs": "^1.0.8",
+    "@aqmo.org/html-form-template": "^1.0.5",
+    "@aqmo.org/html-json-template": "^1.0.1",
+    "axios": "^1.3.4",
+    "body-parser": "^1.20.2",
+    "crypto-js": "^4.1.1",
+    "express": "^4.18.2",
+    "leaflet": "^1.9.3",
+    "leaflet-draw": "^1.0.4",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "cypress": "^7.0.0",
-    "nodemon": "^2.0.15"
+    "cypress": "^12.6.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-cypress": "^2.12.1",
+    "nodemon": "^2.0.20",
+    "prettier": "^2.8.4"
   }
 }

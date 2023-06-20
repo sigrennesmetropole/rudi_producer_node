@@ -1,17 +1,15 @@
-'use strict'
-
 const mod = 'langThes'
 
-const { BadRequestError, RudiError } = require('../../utils/errors')
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const { parameterExpected } = require('../../utils/msg')
+// -------------------------------------------------------------------------------------------------
+import { logW } from '../../utils/logging.js'
+import { BadRequestError, RudiError } from '../../utils/errors.js'
+import { parameterExpected } from '../../utils/msg.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // documentation: https://www.rfc-editor.org/rfc/bcp/bcp47.txt
 const Languages = [
@@ -50,25 +48,25 @@ const Languages = [
   'sk-SK',
 ]
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Getter / setter
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 let Thesaurus = Languages
 
-exports.initialize = (arg) => {
+export const initialize = (arg) => {
   if (arg) Thesaurus = []
 }
 
-exports.get = () => {
-  return Thesaurus
+export const get = (lang) => {
+  return lang ? Thesaurus[lang] : Thesaurus
 }
 
-exports.set = (newValue) => {
+export const set = (newValue) => {
   const fun = 'set'
   try {
     if (!newValue) {
       const errMsg = parameterExpected(fun, 'newValue')
-      log.w(mod, fun, errMsg)
+      logW(mod, fun, errMsg)
       throw new BadRequestError(errMsg)
     }
     newValue = `${newValue}`.trim()
@@ -78,13 +76,13 @@ exports.set = (newValue) => {
   }
 }
 
-exports.isValid = (value, shouldInit) => {
+export const isValid = (value, shouldInit) => {
   const fun = 'isValid'
   if (!value) {
-    log.w(mod, fun, parameterExpected(fun, 'value'))
+    logW(mod, fun, parameterExpected(fun, 'value'))
     return false
   }
-  const isIn = Thesaurus.indexOf(value) > -1
+  const isIn = get().indexOf(value) > -1
   if (!isIn && shouldInit) {
     this.set(value)
     return true

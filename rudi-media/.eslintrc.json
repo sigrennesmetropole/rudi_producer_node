@@ -66,7 +66,7 @@
         // "consistent-return": 0
         // TODO(philipwalton): add an option to enforce braces with the
         // exception of simple, single-line if statements.
-        "curly": [1, "multi-line"],
+        "curly": [0, "multi"],
         // "default-case": 0,
         // "dot-location": 0,
         // "dot-notation": 0,
@@ -169,13 +169,13 @@
         // http://eslint.org/docs/rules/#stylistic-issues
         // ----------------------------------------------
         "array-bracket-newline": 0, // eslint:recommended
-        "array-bracket-spacing": [1, "never"],
+        "array-bracket-spacing": [1, "always", { "objectsInArrays": false, "arraysInArrays":false }],
         "array-element-newline": 0, // eslint:recommended
-        "block-spacing": [1, "never"],
+        "block-spacing": [1, "always"],
         "brace-style": [ 1, "stroustrup", { "allowSingleLine": true } ],
         "camelcase": [1, {"properties": "never"}],
         // "capitalized-comments": 0,
-        "comma-dangle": [1, "always-multiline"],
+        "comma-dangle": [1, "never"],
         "comma-spacing": 1,
         "comma-style": 2,
         "computed-property-spacing": 2,
@@ -200,7 +200,7 @@
             }
         ],        
         // "jsx-quotes": 0,
-        "key-spacing": 1,
+        "key-spacing": 0,
         "keyword-spacing": 1,
         // "line-comment-position": 0,
         "linebreak-style": 2,
@@ -245,9 +245,10 @@
         // "no-whitespace-before-property": 0,
         // "nonblock-statement-body-position": 0,
         // "object-curly-newline": 0,
-        "object-curly-spacing": 1,
+        "object-curly-spacing": 0,
         // "object-property-newline": 0,
-        "one-var": [1, {
+        "one-var": [0
+        , {
             "var": "never",
             "let": "never",
             "const": "never"
@@ -272,7 +273,7 @@
         // "sort-keys": 0,
         // "sort-vars": 0,
         "space-before-blocks": 1,
-        "space-before-function-paren": [1, {
+        "space-before-function-paren": [0, {
             "asyncArrow": "always",
             "anonymous": "never",
             "named": "never"

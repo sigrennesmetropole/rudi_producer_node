@@ -1,186 +1,226 @@
-'use strict'
-
 const mod = 'http'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // External dependecies
-// ------------------------------------------------------------------------------------------------
-// const https = require('https')
-// const http = require('http')
-const axios = require('axios')
+// -------------------------------------------------------------------------------------------------
+import axios from 'axios'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Debug axios
+// -------------------------------------------------------------------------------------------------
+// if (getEnvironment() === ENV_LOCAL) {
+//   const AxiosCurlirize = await import('axios-curlirize')
+//   AxiosCurlirize(axios)
+// }
+// -------------------------------------------------------------------------------------------------
 // Internal dependecies
-// ------------------------------------------------------------------------------------------------
-const log = require('./logging')
-const utils = require('./jsUtils')
-const { RudiError } = require('./errors')
+// -------------------------------------------------------------------------------------------------
+import { USER_AGENT } from '../config/confApi.js'
+// import { ENV_LOCAL } from '../config/appOptions.js'
+import { beautify } from './jsUtils.js'
+// import { getEnvironment } from '../controllers/sysController.js'
+import { logD, logHttpAnswer, logT } from './logging.js'
+import { RudiError, BadRequestError } from './errors.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Functions: header treatments
-// ------------------------------------------------------------------------------------------------
-exports.getHeaderRedirectUrls = (req) => {
+// -------------------------------------------------------------------------------------------------
+export const getHeaderRedirectUrls = (req) => {
   if (!req.headers) return
   return req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For']
 }
 
-// ------------------------------------------------------------------------------------------------
-// Functions: http requests
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Functions: extracting URL parameters (after the quote sign)
+// -------------------------------------------------------------------------------------------------
+export const getUrlParameters = (reqUrl) => {
+  const fun = 'getUrlParameters'
+  try {
+    logT(mod, fun, ``)
+    const splitUrl = reqUrl.split('?')
+    if ((splitUrl.length = 1 || !splitUrl[1])) return // No parameters found
+    if (splitUrl.length > 2)
+      throw new BadRequestError('Wrong URL, quote character used several times')
 
-exports.httpGet = async (destUrl, authorizationToken) => {
+    const extractedUrlParameters = []
+    const urlParameterSections = splitUrl[1].split('&')
+    urlParameterSections.map((paramSection) => {
+      const keyVal = paramSection.split('=')
+      if (keyVal.length === 0) return // Empty section
+      if (keyVal.length === 1 && !!keyVal[0]) extractedUrlParameters.push(keyVal)
+      if (keyVal.length === 2) extractedUrlParameters.push({ [keyVal[0]]: keyVal[1] })
+      if (keyVal.length === 3) return // Badly formed section
+    })
+    return extractedUrlParameters
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Functions: http requests
+// -------------------------------------------------------------------------------------------------
+
+export const httpGet = async (destUrl, authorizationToken) => {
   const fun = 'httpGet'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
     const reqOpts = {
       headers: {
-        'User-Agent': 'Rudi-Producer',
+        'User-Agent': USER_AGENT,
         'Content-Type': 'application/json',
       },
     }
     if (authorizationToken) reqOpts.headers.Authorization = `Bearer ${authorizationToken}`
 
-    const answer = await this.directGet(destUrl, reqOpts)
-    // log.d(mod, fun, `answer: ${utils.beautify(answer.data)}`)
+    const answer = await directGet(destUrl, reqOpts)
+    // logD(mod, fun, `answer: ${beautify(answer.data)}`)
     return answer.data
   } catch (err) {
     throw RudiError.treatCommunicationError(mod, fun, err)
   }
 }
 
-exports.httpDelete = async (destUrl, authorizationToken) => {
+export const httpDelete = async (destUrl, authorizationToken) => {
   const fun = 'httpDelete'
   try {
-    log.t(mod, fun, ``)
+    logT(mod, fun, ``)
 
     const reqOpts = {
       headers: {
-        'User-Agent': 'Rudi-Producer',
+        'User-Agent': USER_AGENT,
         'Content-Type': 'application/json',
       },
     }
     if (authorizationToken) reqOpts.headers.Authorization = `Bearer ${authorizationToken}`
 
     const answer = await axios.delete(destUrl, reqOpts)
-    log.d(mod, fun, `answer: ${utils.beautify(answer.data)}`)
+    logD(mod, fun, `answer: ${beautify(answer.data)}`)
     return answer.data
   } catch (err) {
     throw RudiError.treatCommunicationError(mod, fun, err)
   }
 }
 
-exports.getWithOpts = async (options, authorizationToken) => {
+export const getWithOpts = async (options, authorizationToken) => {
   const fun = 'getWithOpts'
-  log.t(mod, fun, ``)
+  logT(mod, fun, ``)
   try {
     const destUrl = `${options.protocol}://${options.hostname}/${options.path}`
-    const answer = await this.httpGet(destUrl, authorizationToken)
+    const answer = await httpGet(destUrl, authorizationToken)
     return answer.data
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.httpPost = async (destUrl, dataToSend, authorizationToken) => {
+export const httpPost = async (destUrl, dataToSend, authorizationToken) => {
   const fun = 'httpPost'
   try {
-    log.t(mod, fun, ``)
+    logT(mod, fun, ``)
     const reqOpts = {
       headers: {
-        'User-Agent': 'Rudi-Producer',
+        'User-Agent': USER_AGENT,
         'Content-Type': 'application/json',
       },
     }
     if (authorizationToken) reqOpts.headers.Authorization = `Bearer ${authorizationToken}`
 
-    const answer = await this.directPost(destUrl, dataToSend, reqOpts)
+    const answer = await directPost(destUrl, dataToSend, reqOpts)
 
-    log.d(mod, fun, `answer: ${utils.beautify(answer.data)}`)
+    logD(mod, fun, `answer: ${beautify(answer.data)}`)
     return answer.data
   } catch (err) {
-    throw RudiError.treatCommunicationError(mod, fun, err)
+    throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.httpPut = async (destUrl, dataToSend, authorizationToken) => {
+export const httpPut = async (destUrl, dataToSend, authorizationToken) => {
   const fun = 'httpPut'
   try {
-    log.t(mod, fun, ``)
+    logT(mod, fun, ``)
     const reqOpts = {
       headers: {
-        'User-Agent': 'Rudi-Producer',
+        'User-Agent': USER_AGENT,
         'Content-Type': 'application/json',
       },
     }
     if (authorizationToken) reqOpts.headers.Authorization = `Bearer ${authorizationToken}`
 
-    const answer = await this.directPut(destUrl, dataToSend, reqOpts)
+    const answer = await directPut(destUrl, dataToSend, reqOpts)
 
-    log.d(mod, fun, `answer: ${utils.beautify(answer.data)}`)
+    logD(mod, fun, `answer: ${beautify(answer.data)}`)
     return answer.data
   } catch (err) {
-    throw RudiError.treatCommunicationError(mod, fun, err)
+    throw RudiError.treatError(mod, fun, err)
   }
 }
 
-exports.directGet = async (destUrl, reqOpts) => {
+// AxiosCurlirize(axios, (result, err) => {
+//   const fun = 'AxiosCurlirize'
+//   const { command } = result
+//   if (err) {
+//     logE(mod, fun, err)
+//     throw RudiError.treatCommunicationError(mod, fun, err)
+//   } else {
+//     logT(mod, fun, command)
+//     return result
+//     // use your logger here
+//   }
+// })
+
+export const directGet = async (destUrl, reqOpts) => {
   const fun = 'directGet'
-  log.t(mod, fun, ``)
-  // log.d(mod, fun, `destUrl: ${destUrl}`)
-  // if (reqOpts) reqOpts.httpsAgent = sslAgent
-  // else reqOpts = { httpsAgent: sslAgent }
   try {
+    logT(mod, fun, ``)
+
     const answer = await axios.get(destUrl, reqOpts)
-    log.logHttpAnswer(mod, fun, answer)
+
+    logHttpAnswer(mod, fun, answer)
     return answer
   } catch (err) {
     throw RudiError.treatCommunicationError(mod, fun, err)
   }
 }
 
-exports.directPost = async (destUrl, dataToSend, reqOpts) => {
+export const directPost = async (destUrl, dataToSend, reqOpts) => {
   const fun = 'directPost'
-  log.t(mod, fun, ``)
-  // log.d(mod, fun, `${destUrl}`)
-  // if (reqOpts) reqOpts.httpsAgent = sslAgent
-  // else reqOpts = { httpsAgent: sslAgent }
+  logT(mod, fun, ``)
+
   try {
     const answer = await axios.post(destUrl, dataToSend, reqOpts)
-    log.logHttpAnswer(mod, fun, answer)
+    logHttpAnswer(mod, fun, answer)
     return answer
   } catch (err) {
-    // log.w(mod, fun, utils.beautify(err) || err)
+    // logW(mod, fun, beautify(err) || err)
     throw RudiError.treatCommunicationError(mod, fun, err)
   }
 }
 
-exports.directPut = async (destUrl, dataToSend, reqOpts) => {
+export const directPut = async (destUrl, dataToSend, reqOpts) => {
   const fun = 'directPut'
-  log.t(mod, fun, ``)
-  // log.d(mod, fun, `${destUrl}`)
-  // if (reqOpts) reqOpts.httpsAgent = sslAgent
-  // else reqOpts = { httpsAgent: sslAgent }
+  logT(mod, fun, ``)
   try {
     const answer = await axios.put(destUrl, dataToSend, reqOpts)
-    log.logHttpAnswer(mod, fun, answer)
+    logHttpAnswer(mod, fun, answer)
     return answer
   } catch (err) {
-    // log.w(mod, fun, utils.beautify(err) || err)
+    // logW(mod, fun, beautify(err) || err)
     throw RudiError.treatCommunicationError(mod, fun, err)
   }
 }
 
 /* function doHttpRequest(options, protocol, data) {
   const fun = 'doHttpRequest'
-  // log.t(mod, fun, ``)
+  // logT(mod, fun, ``)
 
   const httpProtocol = protocol === PROTOCOL.HTTP ? http : https
   // options.agent = new httpProtocol.Agent({rejectUnauthorized: false})
-  log.d(mod, fun, `options: ${utils.beautify(options)}`)
+  logD(mod, fun, `options: ${beautify(options)}`)
 
   return new Promise((resolve, reject) => {
     const req = httpProtocol.request(options, (res) => {
-      log.d(mod, fun, `statusCode: ${res.statusCode}`)
+      logD(mod, fun, `statusCode: ${res.statusCode}`)
       if (res.statusCode < 200 || res.statusCode >= 300) {
         return reject(new Error(`statusCode: ${res.statusCode}`))
       }
@@ -188,7 +228,7 @@ exports.directPut = async (destUrl, dataToSend, reqOpts) => {
       let body = []
 
       res.on('data', (chunk) => {
-        // log.d(mod, fun, `chunk: ${utils.beautify(chunk)}`)
+        // logD(mod, fun, `chunk: ${beautify(chunk)}`)
         body.push(chunk)
       })
 
@@ -196,7 +236,7 @@ exports.directPut = async (destUrl, dataToSend, reqOpts) => {
         try {
           body = JSON.parse(Buffer.concat(body).toString())
         } catch (e) {
-          log.w(mod, fun, e)
+          logW(mod, fun, e)
           // reject(e)
         }
         resolve(body)
@@ -204,7 +244,7 @@ exports.directPut = async (destUrl, dataToSend, reqOpts) => {
     })
 
     req.on('error', (err) => {
-      log.w(mod, fun, `${err.stack} - ${utils.beautify(err)}`)
+      logW(mod, fun, `${err.stack} - ${beautify(err)}`)
       reject(err)
     })
 

@@ -179,14 +179,14 @@ exports.createRudiApiToken = (jwtPayload) => {
     // ==> Replacing with Crypto lib!
     const cryptoSignVerifier = crypto.createSign(hashAlgo)
     if (!cryptoSignVerifier) throw UnauthorizedError('Failed to create crypto verifier')
-    
+
     // prvKey
 
     // <== Replacing with Crypto lib!
 
-    const sign_buffer = prvKey.createSign(hashAlgo)
-    sign_buffer.update(data)
-    const signatureBase64 = sign_buffer.sign()
+    const signBuffer = prvKey.createSign(hashAlgo)
+    signBuffer.update(data)
+    const signatureBase64 = signBuffer.sign()
     const signatureBase64url = convertEncoding(signatureBase64.toString(), 'base64', 'base64url')
     // log.d(mod, fun, `base64url signature: ${signatureBase64url}`)
 
@@ -255,7 +255,7 @@ exports.checkToken = async (req, reply) => {
   const fun = 'checkToken'
   log.d(mod, fun, ``)
   try {
-    const method = req.context.config.method
+    const method = req.routeConfig.method
     log.d(mod, fun, method)
     let token
     if (method.toUpperCase() == 'POST') token = req.body
@@ -283,7 +283,7 @@ exports.checkToken = async (req, reply) => {
 
 exports.verifyToken = async (token) => {
   const fun = 'verifyToken'
-  log.d(mod, fun, ``)
+  log.d(mod, fun, `${token}`)
 
   try {
     const [jwtHeaderBase64url, jwtPayloadBase64url, jwtSignatureBase64url] = token.split('.')
@@ -296,6 +296,7 @@ exports.verifyToken = async (token) => {
 
     // Check if the token is still valid
     const jwtPayload = JSON.parse(decodeBase64url(jwtPayloadBase64url))
+    log.d(mod, fun , beautify(jwtPayload))
     const jwtExp = jwtPayload[this.JWT_EXP]
     if (!jwtExp) throw new BadRequestError(`JWT payload requires the property '${this.JWT_EXP}'`)
     if (nowEpochS() > jwtExp)

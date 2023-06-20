@@ -1,33 +1,40 @@
-'use strict'
-
 const mod = 'dbAct'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
+const { connection } = mongoose
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const { beautify } = require('../utils/jsUtils')
-const log = require('../utils/logging')
-const { RudiError } = require('../utils/errors')
-
-const { LogEntry } = require('../definitions/models/LogEntry')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const { PARAM_THESAURUS_LANG } = require('../config/confApi')
+// -------------------------------------------------------------------------------------------------
+import { DICT_LANG } from './dbFields.js'
 
-// ------------------------------------------------------------------------------------------------
-// Actions on DB tables
-// ------------------------------------------------------------------------------------------------
-exports.getCollections = async () => {
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { beautify } from '../utils/jsUtils.js'
+import { LogEntry } from '../definitions/models/LogEntry.js'
+import { logD, logT, logV, logW } from '../utils/logging.js'
+import { RudiError } from '../utils/errors.js'
+
+// -------------------------------------------------------------------------------------------------
+// Actions on MongoDB tables from mongoose
+// -------------------------------------------------------------------------------------------------
+export const daDropModelCollection = (Model) =>
+  Model?.collection
+    ?.drop()
+    .then(() => logD(mod, 'dropModelCollection', `done`))
+    .catch((err) => logW(mod, 'dropModelCollection', err))
+
+// -------------------------------------------------------------------------------------------------
+// Actions on MongoDB tables
+// -------------------------------------------------------------------------------------------------
+export const daGetCollections = async () => {
   const fun = `getCollections`
   try {
-    const collections = await mongoose.connection.db.listCollections().toArray()
+    const collections = await connection.db.listCollections().toArray()
     collections.map((collection) => collection.name)
     return collections
   } catch (err) {
@@ -35,30 +42,32 @@ exports.getCollections = async () => {
   }
 }
 
-exports.dropDB = async (req, reply) => {
-  const fun = `dropDB`
+export const daDropDB = async (req, reply) => {
+  const fun = `daDropDB`
   try {
-    log.t(mod, fun, ``)
+    logT(mod, fun, ``)
     /* Drop the whole DB !!! */
-    // const dbActionResult = await mongoose.connection.db.dropDatabase()
-    // log.d(mod, fun, 'DB dropped')
+    // const dbActionResult = await connection.db.dropDatabase()
+    // logD(mod, fun, 'DB dropped')
 
-    const logsCollection =
-      LogEntry && LogEntry.collection && LogEntry.collection.name
-        ? LogEntry.collection.name
-        : 'logentries'
+    const logsCollection = LogEntry?.collection?.name || 'logentries'
 
-    const listCollections = await mongoose.connection.db.listCollections().toArray()
-    // log.d(mod, fun, `listCollections: ${utils.beautify(listCollections)}`)
-    log.d(mod, fun, `listCollections: ${beautify(listCollections)}`)
+    const listCollections = await connection.db.listCollections().toArray()
+    // logD(mod, fun, `listCollections: ${beautify(listCollections)}`)
 
     const collectionDropped = {}
     await Promise.all(
       listCollections.map(async (collection) => {
-        if (!collection) log.d(mod, fun, `Weird: ${beautify(collection)}`)
+        if (!collection) logD(mod, fun, `Weird: ${beautify(collection)}`)
         if (collection.name !== logsCollection) {
-          log.d(mod, fun, `dropping '${collection.name}'`)
-          mongoose.connection.db.dropCollection(collection.name)
+          logD(mod, fun, `Dropping '${collection.name}'`)
+          connection.db.dropCollection(collection.name, (err, res) => {
+            if (err) {
+              logW(mod, fun, `Coudn't drop '${collection.name}': ERR ${err}`)
+            } else {
+              logD(mod, fun, `Dropped '${collection.name}': ${res}`)
+            }
+          })
           collectionDropped[collection.name] = true
         }
       })
@@ -69,16 +78,22 @@ exports.dropDB = async (req, reply) => {
   }
 }
 
-exports.dropCollection = async (collectionName) => {
-  const fun = `dropCollection`
+export const daDropCollection = async (collectionName) => {
+  const fun = `daDropCollection`
   try {
-    const listCollections = await mongoose.connection.db.listCollections().toArray()
-    // log.d(mod, fun, `listCollections: ${utils.beautify(listCollections)}`)
+    const listCollections = await connection.db.listCollections().toArray()
+    // logD(mod, fun, `listCollections: ${utils.beautify(listCollections)}`)
     let isCollectionDropped = false
     await Promise.all(
       listCollections.map(async (collection) => {
         if (collection.name === collectionName) {
-          mongoose.connection.db.dropCollection(collectionName)
+          connection.db.dropCollection(collectionName, (err, res) => {
+            if (err) {
+              logW(mod, fun, `Coudn't drop '${collection.name}': ERR ${err}`)
+            } else {
+              logD(mod, fun, `Dropped '${collection.name}': ${res}`)
+            }
+          })
           isCollectionDropped = true
           return isCollectionDropped
         }
@@ -86,14 +101,14 @@ exports.dropCollection = async (collectionName) => {
       })
     )
     if (isCollectionDropped) {
-      log.d(mod, fun, `Dropped collection '${collectionName}'`)
+      logD(mod, fun, `Dropped collection '${collectionName}'`)
       return true
     } else {
-      log.d(mod, fun, `Collection '${collectionName}' was not found`)
+      logD(mod, fun, `Collection '${collectionName}' was not found`)
       return false
     }
   } catch (err) {
-    // log.w(mod, fun, err)
+    // logW(mod, fun, err)
     throw RudiError.treatError(mod, fun, err)
   }
 }
@@ -101,57 +116,83 @@ exports.dropCollection = async (collectionName) => {
 // const MDB_SEARCH_INDEXES = { _fts: 'text', _ftsx: 1 }
 const SEARCH_INDEX = 'searchIndex'
 
-exports.makeSearchable = async (Model) => {
+export const makeSearchable = async (Model) => {
   const fun = 'makeSearchable'
   try {
-    log.t(mod, fun, ``)
+    // logT(mod, fun, ``)
     let collection
     try {
       collection = Model.collection
     } catch (err) {
-      log.d(mod, fun, `No collection for '${Model.name}: ${err}`)
-    }
-    if (!collection) {
-      log.d(mod, fun, `No collection for '${Model.name}`)
+      logW(mod, fun, `No collection for '${Model.name}': ${err}`)
       return
     }
-    const listFields = Model.getSearchableFields()
-    if (!listFields) {
-      log.d(mod, fun, `No searchable fields for '${Model.name}`)
-    }
-    // Preparing the 'text' (=== searchable) indexes
-    const searchIndexes = {}
-    listFields.map((field) => (searchIndexes[field] = 'text'))
-
-    const indexOpts = {
-      name: SEARCH_INDEX,
-      default_language: 'french',
-      language_override: PARAM_THESAURUS_LANG,
+    if (!collection) {
+      logW(mod, fun, `No collection for '${Model.name}'`)
+      return
     }
 
-    // log.d(mod, fun, utils.beautify(searchIndexes))
+    let searchableFields
+    try {
+      searchableFields = Model.getSearchableFields()
+      if (!searchableFields)
+        throw Error(`Can't find any searchable field for Model '${collection.name}'`)
+    } catch (err) {
+      // => searchableFields is undefined or method Model.getSearchableFields() doesn't exist
+      logD(mod, fun, `No searchable fields for '${collection.name}'`)
+      return
+    }
+
+    logD(mod, fun, `Searchable fields for ${collection.name}: ${searchableFields}`)
 
     // Dropping current text indexes if they exist
     try {
       const indexes = await collection.getIndexes()
-      await Promise.all(
-        Object.entries(indexes).map(async (key) => {
-          // log.d(mod, fun, `${collection.name} - ${index}: ${key}`)
-          if (key === `${SEARCH_INDEX},_fts,text,_ftsx,1`) {
-            log.t(mod, fun, `Dropping search indexes for '${collection.name}'`)
-            collection.dropIndex(SEARCH_INDEX)
-          }
-        })
-      )
+      if (!!indexes[SEARCH_INDEX]) {
+        // const val = indexes[SEARCH_INDEX]
+        logD(mod, fun, `Search indexes already exist: ${collection.name}`)
+        // logT(mod, fun, `Dropping search indexes for '${collection.name}'`)
+        // await collection.dropIndex(SEARCH_INDEX)
+      }
     } catch (er) {
-      if (er.codeName === 'NamespaceNotFound') log.v(mod, fun, 'Not dropping inexistant indexes')
-      else log.w(mod, fun, er) // throw er?
+      if (er.codeName === 'NamespaceNotFound') {
+        logV(mod, fun, 'Not dropping inexistant indexes')
+      } else {
+        logW(mod, fun, er) // throw er?
+      }
     }
+    // Preparing the 'text' (=== searchable) indexes
+    const searchIndexes = {}
+    searchableFields.map((field) => (searchIndexes[field] = 'text'))
+
+    const indexOpts = {
+      name: SEARCH_INDEX,
+      default_language: 'french',
+      language_override: DICT_LANG,
+    }
+
     // (Re)creating the indexes
-    log.t(mod, fun, `Creating search indexes for collection '${collection.name}'`)
-    await collection.createIndex(searchIndexes, indexOpts)
+    // logT(mod, fun, `Creating search indexes for collection '${collection.name}'}`)
+    try {
+      try {
+        await collection.createIndex(searchIndexes, indexOpts)
+      } catch (e) {
+        logT(mod, fun, `Need for droping ${collection.name} indexes`)
+        await collection.dropIndex(SEARCH_INDEX)
+        await collection.createIndex(searchIndexes, indexOpts)
+      }
+      const indexes = await collection.getIndexes()
+      const msg = `Indexes creation for ${collection.name}: ${
+        indexes[SEARCH_INDEX] ? 'ok' : 'KO!!'
+      }`
+      logT(mod, fun, msg)
+    } catch (e) {
+      logW(mod, fun, `Indexes not created for '${Model.collection.name}': ${e}`)
+      throw RudiError.treatError(mod, fun, e)
+    }
+    return `${collection.name} indexes created`
   } catch (err) {
-    log.w(mod, fun, `Couldn't create indexes for '${Model.collection.name}': ${err}`)
+    logW(mod, fun, `Couldn't create indexes for '${Model.collection.name}': ${err}`)
     throw RudiError.treatError(mod, fun, err)
   }
 }

@@ -1,40 +1,41 @@
-'use strict'
-
 const mod = 'dbCtrl'
 /*
  * In this file are made the different steps followed for each
  * action on the contacts (producer or publisher)
  */
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const { map } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import _ from 'lodash'
+const { map } = _
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../utils/logging')
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
 
-const { URL_PV_DB_ACCESS, PARAM_OBJECT, MONGO_ERROR } = require('../config/confApi')
+import { URL_PV_DB_ACCESS, PARAM_OBJECT, MONGO_ERROR } from '../config/confApi.js'
 
-const { NotFoundError, BadRequestError, RudiError } = require('../utils/errors')
-const { dropDB, getCollections, dropCollection } = require('../db/dbActions')
-const { accessReqParam } = require('../utils/jsonAccess')
+import { NotFoundError, BadRequestError, RudiError } from '../utils/errors.js'
 
-// ------------------------------------------------------------------------------------------------
+import { daDropDB, daGetCollections, daDropCollection } from '../db/dbActions.js'
+
+import { accessReqParam } from '../utils/jsonAccess.js'
+import { logT } from '../utils/logging.js'
+
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Controllers
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-exports.getCollections = async (req, reply) => {
+export const getCollections = async (req, reply) => {
   const fun = 'getCollections'
-  log.t(mod, fun, `< GET ${URL_PV_DB_ACCESS}`)
+  logT(mod, fun, `< GET ${URL_PV_DB_ACCESS}`)
   try {
-    const dbActionResult = await getCollections()
+    const dbActionResult = await daGetCollections()
     return map(dbActionResult, 'name').sort()
   } catch (err) {
     const error = err.name === MONGO_ERROR ? new BadRequestError(err) : new NotFoundError(err)
@@ -42,12 +43,12 @@ exports.getCollections = async (req, reply) => {
   }
 }
 
-exports.dropCollection = async (req, reply) => {
-  const fun = 'dropDB'
-  log.t(mod, fun, `< DELETE ${URL_PV_DB_ACCESS}/:${PARAM_OBJECT}`)
+export const dropCollection = async (req, reply) => {
+  const fun = 'dropCollection'
+  logT(mod, fun, `< DELETE ${URL_PV_DB_ACCESS}/:${PARAM_OBJECT}`)
   try {
     const collectionName = accessReqParam(req, PARAM_OBJECT)
-    const dbActionResult = await dropCollection(collectionName)
+    const dbActionResult = await daDropCollection(collectionName)
     return dbActionResult
   } catch (err) {
     const error = err.name === MONGO_ERROR ? new BadRequestError(err) : new NotFoundError(err)
@@ -55,11 +56,11 @@ exports.dropCollection = async (req, reply) => {
   }
 }
 
-exports.dropDB = async (req, reply) => {
+export const dropDB = async (req, reply) => {
   const fun = 'dropDB'
-  log.t(mod, fun, `< DELETE ${URL_PV_DB_ACCESS}`)
+  logT(mod, fun, `< DELETE ${URL_PV_DB_ACCESS}`)
   try {
-    const dbActionResult = await dropDB()
+    const dbActionResult = await daDropDB()
     return dbActionResult
   } catch (err) {
     const error = err.name === MONGO_ERROR ? new BadRequestError(err) : new NotFoundError(err)

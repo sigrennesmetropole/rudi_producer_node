@@ -1,15 +1,14 @@
-'use strict'
-
 const mod = 'logCtrl'
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // External dependencies
-// ------------------------------------------------------------------------------------------------
-const { pick } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+import _ from 'lodash'
+const { pick } = _
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const {
+// -------------------------------------------------------------------------------------------------
+import {
   URL_PV_LOGS_ACCESS,
   QUERY_LIMIT,
   QUERY_OFFSET,
@@ -20,31 +19,31 @@ const {
   QUERY_SEARCH_TERMS,
   QUERY_COUNT_BY,
   ACT_SEARCH,
-} = require('../config/confApi')
+} from '../config/confApi.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../utils/logging')
-const { RudiError } = require('../utils/errors')
-const { isEmptyArray } = require('../utils/jsUtils')
+// -------------------------------------------------------------------------------------------------
+import { logD, logT, logW } from '../utils/logging.js'
+import { RudiError } from '../utils/errors.js'
+import { isEmptyArray } from '../utils/jsUtils.js'
 
-const { getLogEntries, searchObjects } = require('../db/dbQueries')
-const { parseQueryParameters } = require('./genericController')
+import { getLogEntries, searchDbObjects } from '../db/dbQueries.js'
+import { parseQueryParameters } from '../utils/parseRequest.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Logs API access
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-exports.getLogs = async (req, reply) => {
+export const getLogs = async (req, reply) => {
   const fun = 'getLogs'
   try {
-    log.d(mod, fun, `GET ${URL_PV_LOGS_ACCESS}`)
+    logD(mod, fun, `GET ${URL_PV_LOGS_ACCESS}`)
     let parsedParameters
     try {
       parsedParameters = await parseQueryParameters(OBJ_LOGS, req.url)
     } catch (err) {
-      log.w(mod, fun, err)
+      logW(mod, fun, err)
       return []
     }
     const options = pick(parsedParameters, [QUERY_LIMIT, QUERY_OFFSET, QUERY_FILTER, QUERY_FIELDS])
@@ -57,9 +56,9 @@ exports.getLogs = async (req, reply) => {
   }
 }
 
-exports.searchLogs = async (req, reply) => {
+export const searchLogs = async (req, reply) => {
   const fun = 'searchObjects'
-  log.t(mod, fun, `< GET ${URL_PV_LOGS_ACCESS}/${ACT_SEARCH}`)
+  logT(mod, fun, `< GET ${URL_PV_LOGS_ACCESS}/${ACT_SEARCH}`)
   try {
     // retrieve url parameters: object type, object id
     const objectType = OBJ_LOGS
@@ -68,16 +67,16 @@ exports.searchLogs = async (req, reply) => {
     try {
       parsedParameters = await parseQueryParameters(objectType, req.url)
     } catch (err) {
-      log.w(mod, fun, err)
+      logW(mod, fun, err)
       return []
     }
 
     // If there w
     if (isEmptyArray(parsedParameters)) {
-      log.w(mod, fun, 'No search parameters given')
+      logW(mod, fun, 'No search parameters given')
       return []
     } else {
-      // log.w(mod, fun, `Parsed parameters: ${beautify(parsedParameters)}`)
+      // logW(mod, fun, `Parsed parameters: ${beautify(parsedParameters)}`)
     }
 
     const options = pick(parsedParameters, [
@@ -89,7 +88,7 @@ exports.searchLogs = async (req, reply) => {
       QUERY_SEARCH_TERMS,
       QUERY_COUNT_BY,
     ])
-    const objectList = await searchObjects(objectType, options)
+    const objectList = await searchDbObjects(objectType, options)
 
     return objectList
   } catch (err) {

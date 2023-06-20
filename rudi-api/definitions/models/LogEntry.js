@@ -1,22 +1,18 @@
-'use strict'
-
 const mod = 'logDb'
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const { Schema, model } = require('mongoose')
-const datetime = require('date-and-time')
-const { v4 } = require('uuid')
-// const { omit } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const { LOG_DATE_FORMAT, consoleErr } = require('../../utils/jsUtils')
-const { LOG_EXP } = require('../../config/confLogs')
-const { VALID_UUID, VALID_EPOCH_MS } = require('../schemaValidators')
+import mongoose from 'mongoose'
+const { Schema, model } = mongoose
 
-const {
+import datetime from 'date-and-time'
+import { v4 } from 'uuid'
+
+// -------------------------------------------------------------------------------------------------
+// Constants
+// -------------------------------------------------------------------------------------------------
+import {
   DB_CREATED_AT,
   LOG_ID,
   LOG_TIME,
@@ -26,19 +22,23 @@ const {
   LOG_FUN,
   LOG_MOD,
   DB_UPDATED_AT,
-} = require('../../db/dbFields')
+  DICT_LANG,
+} from '../../db/dbFields.js'
 
-const { PARAM_THESAURUS_LANG } = require('../../config/confApi')
+import { VALID_UUID, VALID_EPOCH_MS } from '../schemaValidators.js'
 
-// ------------------------------------------------------------------------------------------------
-// Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { LOG_DATE_FORMAT, consoleErr } from '../../utils/jsUtils.js'
+import { LOG_EXP } from '../../config/confLogs.js'
+
 // const dayS = 60 * 60 * 24
 // const logExpirationTime = 100 // 7 * dayS
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const LogEntrySchema = new Schema(
   {
     /** Unique and permanent identifier for the log entry (required) */
@@ -109,16 +109,13 @@ const LogEntrySchema = new Schema(
 
 LogEntrySchema.index({ [DB_UPDATED_AT]: 1 }, { expires: LOG_EXP })
 
-// LogEntrySchema.virtual('time').get(() => this.createdAt.getTime())
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Schema refinements
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // ----- toJSON cleanup
 LogEntrySchema.methods.toJSON = function () {
   return logLineToString(this)
-
   // return omit(this.toObject(), [DB_ID, DB_V, DB_UPDATED_AT])
 }
 
@@ -126,10 +123,10 @@ LogEntrySchema.methods.toString = function () {
   return logLineToString(this)
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Helper function
-// ------------------------------------------------------------------------------------------------
-function makeLogInfo(logLvl, mod, fun, msg) {
+// -------------------------------------------------------------------------------------------------
+export function makeLogInfo(logLvl, mod, fun, msg) {
   if (!msg) msg = ''
   return {
     message: msg, // .replace(/\"/g, "'"),
@@ -139,29 +136,21 @@ function makeLogInfo(logLvl, mod, fun, msg) {
   }
 }
 
-function logLineToString(logLine) {
-  // const fun = 'logLineToString'
-  // log.d(mod, fun , `logLine: ${beautify(logLine)}`)
-  // const dateStr = `${format(logLine[DB_CREATED_AT], LOG_DATE_FORMAT)} ${logLine[
-  //   DB_CREATED_AT
-  // ].getTime()}`
-  return (
-    `${datetime.format(logLine[DB_CREATED_AT], LOG_DATE_FORMAT)} ${logLine.time} ${
-      logLine.log_level
-    } ` + `[ ${logLine.location_module} . ${logLine.location_function} ] ${logLine.message}`
-  )
-}
+export const logLineToString = (logLine) =>
+  `${datetime.format(logLine[DB_CREATED_AT], LOG_DATE_FORMAT)} ${logLine.time} ${
+    logLine.log_level
+  } ` + `[ ${logLine.location_module} . ${logLine.location_function} ] ${logLine.message}`
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Exports
-// ------------------------------------------------------------------------------------------------
-const LogEntry = model('LogEntry', LogEntrySchema)
+// -------------------------------------------------------------------------------------------------
+export const LogEntry = model('LogEntry', LogEntrySchema)
 
 LogEntry.getSearchableFields = () => [LOG_MSG, LOG_LVL, LOG_USR]
 const SEARCH_INDEX = 'searchIndex'
 
-const fun = 'createSearchIndexes'
-LogEntry.createSearchIndexes = async () => {
+LogEntry.initialize = async () => {
+  const fun = 'initLogEntry'
   try {
     const collection = LogEntry.collection
     const listFields = LogEntry.getSearchableFields()
@@ -172,7 +161,7 @@ LogEntry.createSearchIndexes = async () => {
     const indexOpts = {
       name: SEARCH_INDEX,
       default_language: 'french',
-      language_override: PARAM_THESAURUS_LANG,
+      language_override: DICT_LANG,
     }
 
     // Dropping current text indexes if they exist
@@ -184,13 +173,8 @@ LogEntry.createSearchIndexes = async () => {
     )
     // (Re)creating the indexes
     await collection.createIndex(searchIndexes, indexOpts)
+    return `LogEntry indexes created`
   } catch (err) {
     consoleErr(mod, fun, err)
   }
 }
-LogEntry.createSearchIndexes().catch((err) => {
-  throw new Error(`[mod, fun] Failed to create search indexes: ${err}`)
-})
-LogEntry.collection.dropIndex({ [DB_UPDATED_AT]: 1 }).catch(() => 'nevermind')
-
-module.exports = { LogEntry, makeLogInfo, logLineToString }

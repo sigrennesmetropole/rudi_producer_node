@@ -1,0 +1,27 @@
+{
+  "root": true,
+  "ignorePatterns": ["**/*.spec.js", "**/*.test.js", "./node_modules/*", "./build/*"],
+  "extends": ["google", "prettier", "plugin:react/recommended", "../.eslintrc"],
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "unused-imports/no-unused-imports": "warn",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^(_|req|res|reply|next)$",
+        "args": "after-used",
+        "argsIgnorePattern": "^(_|req|res|reply|next)$"
+      }
+    ]
+  },
+  "plugins": ["react", "only-warn", "unused-imports"],
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}

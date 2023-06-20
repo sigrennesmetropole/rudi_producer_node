@@ -1,0 +1,208 @@
+export default {
+  scheme_id: '6ab102e7-98e3-4d01-aa5d-d39105eebf34',
+  scheme_code: 'scheme-licence',
+  scheme_label: [
+    {
+      lang: 'en',
+      text: 'software licences',
+    },
+    {
+      lang: 'fr',
+      text: 'licences logicielles',
+    },
+  ],
+  scheme_uri: 'https://fr.wikipedia.org/wiki/Licence_de_logiciel',
+  scheme_role: 'licence-hierarchy',
+  top_concepts: [
+    {
+      concept_id: '1333b361-69ec-4c9b-8a00-1692ab9a74ae',
+      concept_code: 'free-software-licence',
+      concept_role: 'licence-hierarchy',
+      concept_uri: 'https://www.gnu.org/philosophy/free-sw.html',
+      pref_label: [
+        {
+          lang: 'fr',
+          text: 'Logiciel Libre',
+        },
+        {
+          lang: 'en',
+          text: 'Free-software license',
+        },
+      ],
+      narrower_concepts: [
+        {
+          concept_id: 'c04e5bb4-2d72-49cb-9fe2-d46781c30096',
+          concept_code: 'public-domain-cc0',
+          concept_role: 'licence',
+          concept_uri: 'https://creativecommons.org/share-your-work/public-domain/cc0/',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'Domaine Public',
+            },
+            {
+              lang: 'en',
+              text: 'Public Domain',
+            },
+          ],
+        },
+        {
+          concept_id: '25f4bf8d-78bb-449d-bc8b-d270df58f661',
+          concept_code: 'gpl-3.0',
+          concept_role: 'licence',
+          concept_uri: 'https://www.gnu.org/licenses/gpl-3.0.en.html',
+          concept_icon: 'icon3',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'GNU General Public License v3',
+            },
+            {
+              lang: 'en',
+              text: 'GNU General Public License v3',
+            },
+          ],
+          alt_labels: [
+            {
+              lang: 'fr',
+              text: [
+                'GNU GPL v3',
+                'GPL',
+                'GPL v3',
+                'GPL 3',
+                'GPL3',
+                'GNU General Public License v3',
+              ],
+            },
+            {
+              lang: 'en',
+              text: [
+                'GPL',
+                'GPL v3',
+                'GPL 3',
+                'GPL3',
+                'GNU GPL v3',
+                'GNU General Public License v3',
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      concept_id: '237eb90b-36b2-4fef-bd40-a5b7a23dcd4d',
+      concept_code: 'open-source-licence',
+      concept_role: 'licence-hierarchy',
+      concept_uri: 'https://opensource.org/licenses',
+      pref_label: [
+        {
+          lang: 'fr',
+          text: 'Licence Open-Source',
+        },
+        {
+          lang: 'en',
+          text: 'Open-Source Licence',
+        },
+      ],
+      narrower_concepts: [
+        {
+          concept_id: 'bc625422-eee5-4709-aed1-96820333e769',
+          concept_code: 'mit',
+          concept_role: 'licence',
+          concept_uri: 'https://opensource.org/licenses/MIT',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'Licence MIT',
+            },
+            {
+              lang: 'en',
+              text: 'MIT License',
+            },
+          ],
+        },
+        {
+          concept_id: '60a30585-dbb8-4e40-968f-a23e2c5e3aa3',
+          concept_code: 'apache-2.0',
+          concept_role: 'licence',
+          concept_uri: 'https://opensource.org/licenses/Apache-2.0',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'Licence Apache v2',
+            },
+            {
+              lang: 'en',
+              text: 'Apache License v2',
+            },
+          ],
+        },
+        {
+          concept_id: '5b342efb-1709-49ff-aca0-5eb4393435bd',
+          concept_code: 'odbl-1.0',
+          concept_role: 'licence',
+          concept_uri: 'https://opendatacommons.org/licenses/odbl/1-0',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'Licence ODbL 1.0',
+            },
+            {
+              lang: 'en',
+              text: 'Open Data Commons Open Database License 1.0',
+            },
+          ],
+        },
+        {
+          concept_id: '1d5bb2d7-983a-4254-9fb3-d69ca020227c',
+          concept_code: 'etalab-1.0',
+          concept_role: 'licence',
+          concept_uri: 'https://www.etalab.gouv.fr/wp-content/uploads/2014/05/Licence_Ouverte.pdf',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'Licence Ouverte Etalab v1.0',
+            },
+            {
+              lang: 'en',
+              text: 'Etalab Open License 1.0',
+            },
+          ],
+        },
+        {
+          concept_id: 'eec75afd-fcd4-4b95-9abd-ff8095f6a302',
+          concept_code: 'etalab-2.0',
+          concept_role: 'licence',
+          concept_uri:
+            'https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'Licence Ouverte Etalab v2.0',
+            },
+            {
+              lang: 'en',
+              text: 'Etalab Open License 2.0',
+            },
+          ],
+        },
+        {
+          concept_id: '163c2e15-b79c-409b-87b4-b076d1231ba4',
+          concept_code: 'cc-by-nd-4.0',
+          concept_role: 'licence',
+          concept_uri: 'https://creativecommons.org/licenses/by-nd/4.0/',
+          pref_label: [
+            {
+              lang: 'fr',
+              text: 'Attribution - Pas de Modification 4.0 International (CC BY-ND 4.0)',
+            },
+            {
+              lang: 'en',
+              text: 'Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0)',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}

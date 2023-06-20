@@ -1,29 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import './App.scss';
-import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
-import DropdownButton from 'react-bootstrap/DropdownButton';
-import Dropdown from 'react-bootstrap/Dropdown';
-import Catalogue from './components/catalogue/catalogue';
-import CatalogueLicence from './components/catalogue/catalogueLicence';
-import CatalogueUser from './components/users/catalogueUser';
-import CatalogueProducer from './components/producer/catalogueProducer';
-import CatalogueContact from './components/contact/catalogueContact';
-import Visualisation from './components/visualisation/visualisation';
-import { createBrowserHistory } from 'history';
-import Login from './components/login/login';
-import Register from './components/login/register';
-import useToken from './useToken';
-import { ModalProvider } from './components/modals/ModalContext';
-import { GeneralContext } from './generalContext';
-import axios from 'axios';
-import Monitoring from './components/monitoring/monitoring';
+import './styles/App.scss'
 
-console.log('process.env.PUBLIC_URL : ', process.env.PUBLIC_URL);
-// TODO : move to util.js
-export const PUBLIC_URL = process.env.PUBLIC_URL;
-export const history = createBrowserHistory({
-  basename: PUBLIC_URL,
-});
+import axios from 'axios'
+
+import React, { useEffect, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
+import DropdownButton from 'react-bootstrap/DropdownButton'
+import Dropdown from 'react-bootstrap/Dropdown'
+
+import { getApiFront, getBackUrl } from './utils/frontOptions'
+import { createBrowserHistory } from 'history'
+import useToken from './useToken'
+import { defaultFrontContext, PMFrontContextProvider, usePMFrontContext } from './generalContext'
+
+import Login, { showPill as showPillLogin } from './components/login/login'
+import ChangePwd, { showPill as showPillChgPwd } from './components/login/changePwd'
+import Register, { showPill as showPillRegister } from './components/login/register'
+
+import CatalogueMetadata from './components/catalogue/catalogueMetadata'
+import CatalogueLicence from './components/catalogue/catalogueLicence'
+import CatalogueProducer from './components/generic/catalogueProducer'
+import CatalogueContact from './components/generic/catalogueContact'
+import CataloguePubKeys from './components/generic/cataloguePubKeys'
+import CatalogueUser from './components/users/catalogueUser'
+import Visualisation from './components/visualisation/visualisation'
+import ModalProvider from './components/modals/genericModalContext'
+import Monitoring from './components/monitoring/monitoring'
+import CatalogueReports from './components/generic/catalogueReports'
+
+export const history = createBrowserHistory({ basename: getBackUrl() })
+
 /*
 TODO :
 - sticky filtre
@@ -37,81 +42,129 @@ TODO :
  * @return {ReactNode} main html or login component
  */
 export default function App() {
-  const { token, updateToken } = useToken();
-  const [isLoginOpen, setIsLoginOpen] = useState(true);
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [generalConf, setGeneralConf] = useState({});
+  return (
+    <PMFrontContextProvider>
+      <Main />
+    </PMFrontContextProvider>
+  )
+}
+const Main = () => {
+  const { token, updateToken } = useToken()
+
+  // ---------------- Loading context
+  const { appInfo, setUserInfo } = usePMFrontContext()
+
+  // ---------------- Login modals
+  const [isLoginOpen, setIsLoginOpen] = useState(true)
+  const [isChgPwdOpen, setIsChgPwdOpen] = useState(false)
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false)
 
   const showLoginBox = () => {
-    setIsRegisterOpen(false);
-    setIsLoginOpen(true);
-  };
+    setIsLoginOpen(true)
+    setIsChgPwdOpen(false)
+    setIsRegisterOpen(false)
+  }
+
+  const showChgPwdBox = () => {
+    setIsLoginOpen(false)
+    setIsChgPwdOpen(true)
+    setIsRegisterOpen(false)
+  }
 
   const showRegisterBox = () => {
-    setIsLoginOpen(false);
-    setIsRegisterOpen(true);
-  };
+    setIsLoginOpen(false)
+    setIsChgPwdOpen(false)
+    setIsRegisterOpen(true)
+  }
 
-  useEffect(() => {
-    if (!!token && !generalConf.formUrl) {
-      Promise.all([
-        axios.get(`${process.env.PUBLIC_URL}/api/v1/formUrl`).catch((e) => {
-          return { data: '' };
-        }),
-        axios.get(`${process.env.PUBLIC_URL}/api/admin/enum/themes/fr`).catch((e) => {
-          return { data: {} };
-        }),
-      ]).then((values) => {
-        setGeneralConf({ formUrl: `${values[0].data}`, themeLabel: values[1].data });
-      });
-    }
-  }, [token]);
+  // ---------------- Tags
+  /**
+   * Returns the code to display the version tag (if defined)
+   * @param {string} appTag the tag for the app (ex: 2.3.1)
+   * @param {string} gitHash the abbreviated git hash
+   * @return {ReactNode} the code to display the version tag (if defined)
+   */
+  const displayVersion = () => (
+    <div id="displayTags">
+      <div className="appTag">{appInfo.appTag}</div>
+      <div className="gitTag">{appInfo.gitHash}</div>
+    </div>
+  )
+
+  const [displayTags, setDisplayTags] = useState(displayVersion())
+
+  useEffect(() => setDisplayTags(displayVersion()), [appInfo])
+  // useEffect(() => console.log('T (displayAppInfo) appInfo', appInfo), [appInfo])
+
+  /**
+   *
+   * @param {*} destUrl
+   * @param {*} buttonText
+   * @param {*} show
+   * @return {ReactNode}
+   */
+  const navItem = (destUrl, buttonText, show = true) => (
+    <li className={show ? 'nav-item' : 'nav-item hide-wip'}>
+      <Link to={getBackUrl(destUrl)}>
+        <button type="button" className="btn btn-primary">
+          {buttonText}
+        </button>
+      </Link>
+    </li>
+  )
+
+  const exit = () => {
+    updateToken()
+    setUserInfo(defaultFrontContext)
+  }
 
   /**
    * logout
+   * @return {void}
    */
-  function logout() {
-    axios.get(`${process.env.PUBLIC_URL}/api/v1/logout`).then((res) => {
-      updateToken();
-    });
+  const logout = () => {
+    axios
+      .get(getBackUrl(getApiFront('logout')))
+      .then((res) => {
+        // console.debug('T (logout.ok)')
+        exit()
+      })
+      .catch((err) => {
+        console.error('T (logout.ko)', err)
+        exit()
+      })
   }
 
   if (!token) {
     return (
       <div>
-        {isLoginOpen && <Login setToken={updateToken} />}
+        {isLoginOpen && <Login setToken={updateToken} setUserInfo={setUserInfo} />}
+        {isChgPwdOpen && <ChangePwd backToLogin={showLoginBox} />}
         {isRegisterOpen && <Register backToLogin={showLoginBox} />}
         <div className="login-switch">
-          {!isLoginOpen && (
-            <span className="badge badge-success badge-pill" onClick={showLoginBox}>
-              Login
-            </span>
-          )}
-          {!isRegisterOpen && (
-            <span className="badge badge-success badge-pill" onClick={showRegisterBox}>
-              Register
-            </span>
-          )}
+          {showPillLogin(!isLoginOpen, showLoginBox)}
+          {showPillChgPwd(!isChgPwdOpen, showChgPwdBox)}
+          {showPillRegister(!isRegisterOpen, showRegisterBox)}
         </div>
       </div>
-    );
+    )
   }
   return (
-    <Router basename={PUBLIC_URL}>
-      <ModalProvider>
-        <GeneralContext.Provider value={generalConf}>
+    <PMFrontContextProvider>
+      <Router>
+        <ModalProvider>
           <noscript>You need to enable JavaScript to run this app.</noscript>
           <div id="modal-test"></div>
           <header>
             <nav className="navbar navbar-expand-md navbar-dark fixed-top bg-navbar">
               <div className="container-fluid">
                 <img
-                  className="icon-navbar"
-                  src={`${process.env.PUBLIC_URL}/logo_blanc_orange.png`}
+                  className="icon-navbar logo-margin"
+                  src={`logo_blanc_orange.png`}
                   alt="Rudi logo"
                 />
                 <button
-                  className="navbar-toggler"
+                  className="navbar-toggler align-right"
                   type="button"
                   data-bs-toggle="collapse"
                   data-bs-target="#navbarCollapse"
@@ -123,65 +176,43 @@ export default function App() {
                 </button>
                 <div className="collapse navbar-collapse" id="navbarCollapse">
                   <ul className="navbar-nav me-auto mb-2 mb-md-0">
-                    <li className="nav-item">
-                      <Link to="/">
-                        <button type="button" className="btn btn-primary button-margin">
-                          Catalogue
-                        </button>
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link to="/licence">
-                        <button type="button" className="btn btn-primary button-margin">
-                          Licence
-                        </button>
-                      </Link>
-                    </li>
-                    <li className="nav-item">
-                      <Link to="/show/">
-                        <button type="button" className="btn btn-primary button-margin">
-                          Visualisation
-                        </button>
-                      </Link>
-                    </li>
-                    <li className="nav-item">
+                    {navItem('', 'Catalogue')}
+                    {navItem('licence', 'Licence')}
+                    {navItem('show', 'Visualisation')}
+                    <li className={appInfo.isEditor ? 'nav-item' : 'nav-item hide-wip'}>
                       <DropdownButton id="dropdown-gestion-button" title="Gestion">
-                        <Dropdown.Item href={`${process.env.PUBLIC_URL}/gestion`}>
-                          Métadonnée
+                        <Dropdown.Item as={Link} to={getBackUrl('metadata')}>
+                          Métadonnées
                         </Dropdown.Item>
-                        <Dropdown.Item href={`${process.env.PUBLIC_URL}/producer`}>
-                          Producteur
+                        <Dropdown.Item as={Link} to={getBackUrl('producer')}>
+                          Producteurs
                         </Dropdown.Item>
-                        <Dropdown.Item href={`${process.env.PUBLIC_URL}/contact`}>
+                        <Dropdown.Item as={Link} to={getBackUrl('contact')}>
                           Contacts
                         </Dropdown.Item>
                       </DropdownButton>
                     </li>
-                    <li className="nav-item hideWIP">
-                      <Link to="/monitoring">
-                        <button type="button" className="btn btn-primary button-margin">
-                          Monitoring
-                        </button>
-                      </Link>
+                    <li className={appInfo.isAdmin ? 'nav-item' : 'nav-item hide-wip'}>
+                      <DropdownButton id="dropdown-gestion-button" title="Admin">
+                        <Dropdown.Item as={Link} to={getBackUrl('pub_key')}>
+                          Clés
+                        </Dropdown.Item>
+                        <Dropdown.Item as={Link} to={getBackUrl('user')}>
+                          Utilisateurs
+                        </Dropdown.Item>
+                        <Dropdown.Item as={Link} to={getBackUrl('report')}>
+                          Rapports portail
+                        </Dropdown.Item>
+                      </DropdownButton>
                     </li>
-                    <li className="nav-item">
-                      <Link to="/user">
-                        <button type="button" className="btn btn-primary button-margin">
-                          Utilisateur
-                        </button>
-                      </Link>
-                    </li>
-                    <li className="nav-item hideWIP">
-                      <Link to="/conf">
-                        <button type="button" className="btn btn-primary button-margin">
-                          Configuration
-                        </button>
-                      </Link>
-                    </li>
-                    <li className="nav-item">
+
+                    {navItem('monitoring', 'Monitoring', false)}
+                    {navItem('conf', 'Configuration', false)}
+
+                    <li className="nav-item center ">
                       <button
                         type="button"
-                        className="btn btn-secondary button-margin"
+                        className="margin-logout btn btn-secondary"
                         onClick={() => logout()}
                       >
                         Logout
@@ -190,61 +221,47 @@ export default function App() {
                   </ul>
                 </div>
               </div>
+              {displayTags}
             </nav>
           </header>
 
           <div id="root"></div>
 
-          <Switch>
-            <Route exact path="/">
-              <Catalogue
-                display={{ searchbar: true, editJDD: false }}
-                specialSearch={{}}
-                editMode={{}}
-              />
-            </Route>
-            <Route path="/gestion">
-              <Catalogue
-                display={{ searchbar: true, editJDD: true }}
-                specialSearch={{}}
-                editMode={{}}
-              />
-            </Route>
-            <Route path="/producer">
-              <CatalogueProducer
-                display={{ searchbar: true, editJDD: true }}
-                specialSearch={{}}
-                editMode={{}}
-              />
-            </Route>
-            <Route path="/contact">
-              <CatalogueContact
-                display={{ searchbar: true, editJDD: true }}
-                specialSearch={{}}
-                editMode={{}}
-              />
-            </Route>
-            <Route path="/licence">
-              <CatalogueLicence display={{ editJDD: false }} editMode={{}} />
-            </Route>
-            <Route path="/show/:id">
-              <Visualisation />
-            </Route>
-            <Route path="/show">
-              <Visualisation />
-            </Route>
-            <Route path="/monitoring">
-              <Monitoring />
-            </Route>
-            <Route path="/user">
-              <CatalogueUser display={{ searchbar: true, editJDD: true }} editMode={{}} />
-            </Route>
-            <Route path="/conf">
-              <div className="tempPaddingTop">Work in progress</div>
-            </Route>
-          </Switch>
-        </GeneralContext.Provider>
-      </ModalProvider>
-    </Router>
-  );
+          <Routes>
+            <Route path={getBackUrl()} element={<CatalogueMetadata logout={logout} />} />
+            <Route
+              path={getBackUrl('metadata')}
+              element={<CatalogueMetadata editMode={appInfo.isEditor} logout={logout} />}
+            />
+            <Route
+              path={getBackUrl('producer')}
+              element={<CatalogueProducer editMode={appInfo.isEditor} logout={logout} />}
+            />
+            <Route
+              path={getBackUrl('contact')}
+              element={<CatalogueContact editMode={appInfo.isEditor} logout={logout} />}
+            />
+            <Route
+              path={getBackUrl('pub_key')}
+              element={<CataloguePubKeys editMode={appInfo.isAdmin} logout={logout} />}
+            />{' '}
+            <Route
+              path={getBackUrl('report')}
+              element={<CatalogueReports editMode={appInfo.isAdmin} logout={logout} />}
+            />
+            <Route path={getBackUrl('licence')} element={<CatalogueLicence logout={logout} />} />
+            <Route path={getBackUrl('show/:id')} element={<Visualisation logout={logout} />} />
+            <Route path={getBackUrl('show')} element={<Visualisation logout={logout} />} />
+            <Route path={getBackUrl('monitoring')} element={<Monitoring logout={logout} />} />
+            <Route
+              path={getBackUrl('user')}
+              element={<CatalogueUser editMode={appInfo.isAdmin} logout={logout} />}
+            />
+            <Route path={getBackUrl('conf')} element={<div className="tempPaddingTop">WIP</div>} />
+            <Route path="*" element={<CatalogueMetadata logout={logout} />} />
+          </Routes>
+        </ModalProvider>
+      </Router>
+    </PMFrontContextProvider>
+  )
 }

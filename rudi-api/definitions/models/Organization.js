@@ -1,42 +1,45 @@
-'use strict'
-
 const mod = 'orgSch'
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { omit } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const ids = require('../schemas/Identifiers')
-const { RudiError } = require('../../utils/errors')
-const { makeSearchable } = require('../../db/dbActions')
+import _ from 'lodash'
+const { omit } = _
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const {
+// -------------------------------------------------------------------------------------------------
+import {
   FIELDS_TO_SKIP,
   DB_PUBLISHED_AT,
   API_ORGANIZATION_ID,
   API_COLLECTION_TAG,
   API_ORGANIZATION_NAME,
   API_ORGANIZATION_ADDRESS,
-} = require('../../db/dbFields')
+  API_ORGANIZATION_COORDINATES,
+  API_ORGANIZATION_CAPTION,
+  API_ORGANIZATION_SUMMARY,
+} from '../../db/dbFields.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { GpsCoordinatesSchema } from '../schemas/GpsCoordinates.js'
+import { UuidV4Schema } from '../schemas/Identifiers.js'
+import { RudiError } from '../../utils/errors.js'
+import { makeSearchable } from '../../db/dbActions.js'
+
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const OrganizationSchema = new mongoose.Schema(
   {
     /**
      * Unique and permanent identifier for the organization in RUDI
      * system (required)
      */
-    [API_ORGANIZATION_ID]: ids.UUIDv4,
+    [API_ORGANIZATION_ID]: UuidV4Schema,
 
     /** Updated offical name of the organization */
     [API_ORGANIZATION_NAME]: {
@@ -44,20 +47,23 @@ const OrganizationSchema = new mongoose.Schema(
       required: true,
     },
 
+    /** Explicit/complete name for an acronym, or alternative name of the organization */
+    [API_ORGANIZATION_CAPTION]: String,
+
+    /** Description of the organization */
+    [API_ORGANIZATION_SUMMARY]: String,
+
     /** Updated offical postal address of the organization */
-    [API_ORGANIZATION_ADDRESS]: {
-      type: String,
-    },
+    [API_ORGANIZATION_ADDRESS]: String,
+
+    /** 2D GPS coordinates of the organization (EPSG:4326/WGS 84) */
+    [API_ORGANIZATION_COORDINATES]: GpsCoordinatesSchema,
 
     /** Tag for identifying a collection of resources */
-    [API_COLLECTION_TAG]: {
-      type: String,
-    },
+    [API_COLLECTION_TAG]: String,
 
     /** Time when this organization was succesfully published on RUDI portal */
-    [DB_PUBLISHED_AT]: {
-      type: Date,
-    },
+    [DB_PUBLISHED_AT]: Date,
   },
   {
     // Adds mongoose fields 'updatedAt' and 'createdAt'
@@ -75,37 +81,33 @@ const OrganizationSchema = new mongoose.Schema(
   }
 )
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Schema refinements
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // ----- toJSON cleanup
 OrganizationSchema.methods.toJSON = function () {
   return omit(this.toObject(), FIELDS_TO_SKIP)
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Exports
-// ------------------------------------------------------------------------------------------------
-const Organization = mongoose.model('Organization', OrganizationSchema)
+// -------------------------------------------------------------------------------------------------
+export const Organization = mongoose.model('Organization', OrganizationSchema)
 
 Organization.getSearchableFields = () => [API_ORGANIZATION_ID, API_ORGANIZATION_NAME]
 
-const fun = 'createSearchIndexes'
-Organization.createSearchIndexes = async () => {
+Organization.initialize = async () => {
+  const fun = 'initOrganization'
   try {
+    // logT(mod, fun, ``)
     await makeSearchable(Organization)
+    return `Organization indexes created`
   } catch (err) {
     RudiError.treatError(mod, fun, err)
   }
 }
-Organization.createSearchIndexes()
-  .catch((err) => {
-    throw RudiError.treatError(mod, fun, `Failed to create search indexes: ${err}`)
-  })
-  .then(log.t(mod, fun, 'done'))
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Exports
-// ------------------------------------------------------------------------------------------------
-module.exports = { Organization }
+// -------------------------------------------------------------------------------------------------
+export default Organization

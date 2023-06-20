@@ -1,36 +1,41 @@
 /* eslint-disable no-console */
-'use strict'
-
 const mod = 'logging'
-// ------------------------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------------------------
 // External dependencies
-// ------------------------------------------------------------------------------------------------
-const { pick } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+import _ from 'lodash'
+const { pick } = _
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Constants
+// -------------------------------------------------------------------------------------------------
+import { API_METADATA_ID, API_DATA_NAME_PROPERTY } from '../db/dbFields.js'
+import { HEADERS, HD_URL, HD_METHOD, HD_AUTH } from '../config/headers.js'
+
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const { displayStr, logWhere, beautify, shorten, consoleErr } = require('./jsUtils')
+// -------------------------------------------------------------------------------------------------
+import { displayStr, logWhere, beautify, shorten, consoleErr } from './jsUtils.js'
 
-const {
-  logger,
+import {
+  wConsoleLogger as wLogger,
   sysLogger,
   getLogLevel,
   SHOULD_SYSLOG,
   SHOULD_LOG_CONSOLE,
-} = require('../config/confLogs')
-const { API_METADATA_ID, API_DATA_NAME_PROPERTY } = require('../db/dbFields')
-const { makeLogInfo, LogEntry } = require('../definitions/models/LogEntry')
-const { HEADERS, HD_URL, HD_METHOD, HD_AUTH } = require('../config/headers')
+} from '../config/confLogs.js'
 
-// ------------------------------------------------------------------------------------------------
+import { makeLogInfo, LogEntry } from '../definitions/models/LogEntry.js'
+
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const ERR_LEVEL_TRACE = 'trace'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Colors
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 /*
 const Colors = {
   Reset: '\x1b[0m',
@@ -65,9 +70,9 @@ const Colors = {
 // const BgErrorDebug = ''
 // const BgErrorColor = Colors.BgWhite
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Display functions
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // function displayColor(fgColor, bgColor, msg) {
 //   console.log(fgColor, bgColor, msg, Colors.Reset)
@@ -85,37 +90,39 @@ const Colors = {
 // }
 // "indent": ["info", 2, { "SwitchCase": 1 }],
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Logging functions
-// ------------------------------------------------------------------------------------------------
-const log = (logLevel, srcMod, srcFun, msg) => {
+// -------------------------------------------------------------------------------------------------
+export const logLine = (logLevel, srcMod, srcFun, msg) => {
   try {
-    if (SHOULD_LOG_CONSOLE) logger[logLevel](displayStr(srcMod, srcFun, msg))
+    if (SHOULD_LOG_CONSOLE)
+      wLogger.log({ level: logLevel, message: displayStr(srcMod, srcFun, msg) })
     // console.log(displayStr(srcMod, srcFun, msg))
-    this.addLogEntry(logLevel, srcMod, srcFun, msg)
+    if (`${msg}` === '[Object]: Object' || `${msg}` === '[object Object]') msg = JSON.stringify(msg)
+    addLogEntry(logLevel, srcMod, srcFun, msg)
   } catch (e) {
     consoleErr(e)
   }
 }
-exports.e = (srcMod, srcFun, msg) => log('error', srcMod, srcFun, msg)
-exports.w = (srcMod, srcFun, msg) => log('warn', srcMod, srcFun, msg)
-exports.i = (srcMod, srcFun, msg) => log('info', srcMod, srcFun, msg)
-exports.v = (srcMod, srcFun, msg) => log('verbose', srcMod, srcFun, msg)
-exports.d = (srcMod, srcFun, msg) => log('debug', srcMod, srcFun, msg)
+export const logE = (srcMod, srcFun, msg) => logLine('error', srcMod, srcFun, msg)
+export const logW = (srcMod, srcFun, msg) => logLine('warn', srcMod, srcFun, msg)
+export const logI = (srcMod, srcFun, msg) => logLine('info', srcMod, srcFun, msg)
+export const logV = (srcMod, srcFun, msg) => logLine('verbose', srcMod, srcFun, msg)
+export const logD = (srcMod, srcFun, msg) => logLine('debug', srcMod, srcFun, msg)
 
-exports.t = (srcMod, srcFun, msg) =>
-  getLogLevel() === ERR_LEVEL_TRACE ? log('debug', srcMod, srcFun, msg) : () => null
+export const logT = (srcMod, srcFun, msg) =>
+  getLogLevel() === ERR_LEVEL_TRACE ? logLine('debug', srcMod, srcFun, msg) : () => null
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Syslog functions
-// ------------------------------------------------------------------------------------------------
-exports.displaySyslog = (srcMod, srcFun, msg) => {
+// -------------------------------------------------------------------------------------------------
+export const displaySyslog = (srcMod, srcFun, msg) => {
   return `[ ${logWhere(srcMod, srcFun)} ] ${msg !== '' ? msg : '<-'}`
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Syslog functions: system level
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 function sysLog(level, msg, location, context, cid, info) {
   try {
     if (SHOULD_SYSLOG)
@@ -128,66 +135,87 @@ function sysLog(level, msg, location, context, cid, info) {
       )
     else () => null
   } catch (err) {
-    this.e(mod, 'sysLog', err)
+    logE(mod, 'sysLog', err)
   }
 }
 // System-related "panic" conditions
-exports.sysEmerg = (msg, location, context, info, cid) =>
+export const sysEmerg = (msg, location, context, info, cid) =>
   sysLog('emergency', msg, location, context, cid, info)
 
 // Something bad is about to happen, deal with it NOW!
-exports.sysCrit = (msg, location, context, info, cid) =>
+export const sysCrit = (msg, location, context, info, cid) =>
   sysLog('critical', msg, location, context, cid, info)
 
 // Events that are unusual but not error conditions - might be summarized in an email to developers
 // or admins to spot potential problems - no immediate action required.
-exports.sysNotice = (msg, location, context, info, cid) =>
+export const sysNotice = (msg, location, context, info, cid) =>
   sysLog('notice', msg, location, context, cid, info)
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Syslog functions: app level
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // Something bad happened, deal with it NOW!
-exports.sysAlert = (msg, location, context, info, cid) =>
+export const sysAlert = (msg, location, context, info, cid) =>
   sysLog('alert', msg, location, context, cid, info)
 
 // A failure in the system that needs attention.
-exports.sysError = (msg, location, context, info, cid) =>
+export const sysError = (msg, location, context, info, cid) =>
   sysLog('error', msg, location, context, cid, info)
 
 // Something will happen if it is not dealt within a timeframe.
-exports.sysWarn = (msg, location, context, info, cid) =>
+export const sysWarn = (msg, location, context, info, cid) =>
   sysLog('warn', msg, location, context, cid, info)
 
 // Normal operational messages - may be harvested for reporting, measuring throughput, etc.
 // No action required.
-exports.sysInfo = (msg, location, context, info, cid) =>
+export const sysInfo = (msg, location, context, info, cid) =>
   sysLog('info', msg, location, context, cid, info)
 
 // Normal operational messages - may be harvested for reporting, measuring throughput, etc.
 // No action required.
-exports.sysDebug = (mod, fun, msg, context, info, cid) =>
-  sysLog('debug', msg, `${mod.fun}`, context, cid, info)
+export const sysDebug = (msg, location, context, info, cid) =>
+  sysLog('debug', msg, location, context, cid, info)
 
 // Normal operational messages - may be harvested for reporting, measuring throughput, etc.
 // No action required.
-exports.sysTrace = (mod, fun, msg, context, info, cid) =>
+export const sysTrace = (msg, location, context, info, cid) =>
   getLogLevel() === ERR_LEVEL_TRACE
-    ? sysLog('debug', msg, `${mod.fun}`, context, cid, info)
+    ? sysLog('debug', msg, location, context, cid, info)
     : () => null
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Fastify logger
+// -------------------------------------------------------------------------------------------------
+function FFLogger(...args) {
+  this.level = args?.level
+}
+FFLogger.prototype.fatal = (msg) => sysAlert(typeof msg == 'string' ? msg : `${beautify(msg)}`)
+FFLogger.prototype.error = (msg) => sysError(typeof msg == 'string' ? msg : `${beautify(msg)}`)
+FFLogger.prototype.warn = (msg) => sysWarn(typeof msg == 'string' ? msg : `${beautify(msg)}`)
+FFLogger.prototype.info = () => {}
+// FFLogger.prototype.info = (msg) => sysInfo(typeof msg == 'string' ? msg : `${beautify(msg)}`)
+FFLogger.prototype.debug = (msg) => sysDebug(typeof msg == 'string' ? msg : `${beautify(msg)}`)
+FFLogger.prototype.trace = (msg) =>
+  sysTrace(
+    typeof msg == 'string' ? msg : msg?.err ? `ERR ${msg.err.code} ${msg.err.message}` : `${msg}`
+  )
+
+FFLogger.prototype.child = () => new FFLogger()
+
+export const fastifyLogger = (...args) => new FFLogger(args)
+
+// -------------------------------------------------------------------------------------------------
 // Syslog functions: specific macros
-// ------------------------------------------------------------------------------------------------
-// exports.sysOnSend = (request, context, reply) => {}
-exports.sysOnError = (statusCode, errMsg, context, details) => {
+// -------------------------------------------------------------------------------------------------
+// export const sysOnSend = (request, context, reply) => {}
+export const sysOnError = (statusCode, errMsg, context, details) => {
   const fun = 'sysOnError'
   try {
-    this.t(mod, fun, ``)
-    this.e(mod, fun, errMsg) //`Error ${err.statusCode} (${err.name}): ${err.message}`)
-
-    let sysLogErr = parseInt(statusCode) < 500 ? this.sysError : this.sysCrit
+    logT(mod, fun, ``)
+    logE(mod, fun, errMsg) //`Error ${err.statusCode} (${err.name}): ${err.message}`)
+    const errCode = parseInt(statusCode)
+    let sysLogErr = isNaN(errCode) || errCode >= 500 ? sysCrit : sysError
     sysLogErr(errMsg, '', context, details)
     //   `Error ${err.statusCode} (${err.name}): ${err.message}`,
     //   '',
@@ -195,18 +223,18 @@ exports.sysOnError = (statusCode, errMsg, context, details) => {
     //   `errPlace:'${context.errorLocation}', errOnReq:'${context.formatReqDetails()}'`
     // )
   } catch (err) {
-    this.e(mod, fun, err)
+    logE(mod, fun, err)
     throw err
   }
 }
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Http
-// ------------------------------------------------------------------------------------------------
-exports.logHttpAnswer = (loggedMod, loggedFun, httpAnswer) => {
+// -------------------------------------------------------------------------------------------------
+export const logHttpAnswer = (loggedMod, loggedFun, httpAnswer) => {
   const fun = 'logHttpAnswer'
   try {
-    this.t(mod, fun, ``)
-    // this.d(mod, fun, `${loggedMod}.${loggedFun} : ${httpAnswer}`)
+    logT(mod, fun, ``)
+    // d(mod, fun, `${loggedMod}.${loggedFun} : ${httpAnswer}`)
     if (httpAnswer.config) {
       const resExtract = pick(httpAnswer.config, [HD_METHOD, HEADERS, HD_URL])
       resExtract[HD_URL] = resExtract.url ? shorten(resExtract[HD_URL], 70) : undefined
@@ -215,37 +243,38 @@ exports.logHttpAnswer = (loggedMod, loggedFun, httpAnswer) => {
           ? shorten(resExtract[HEADERS][HD_AUTH], 30)
           : undefined
       const redactedRes = `HTTP answer: ${beautify(resExtract)}`
-      this.d(loggedMod, loggedFun, redactedRes)
-      // this.sysInfo(redactedRes) // TODO ?
+      logD(loggedMod, loggedFun, redactedRes)
+      // sysInfo(redactedRes) // TODO ?
     }
   } catch (err) {
-    this.w(mod, fun, err)
+    logW(mod, fun, err)
     throw err
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Metadata
-// ------------------------------------------------------------------------------------------------
-exports.logMetadata = (metadata) => {
+// -------------------------------------------------------------------------------------------------
+export const logMetadata = (metadata) => {
   return `${beautify(pick(metadata, [API_METADATA_ID, API_DATA_NAME_PROPERTY]))}`
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // DB
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-// No log.d / log.e function here or you'll create a loopback !!!
-exports.addLogEntry = async (logLvl, loc_module, loc_function, msg) => {
+// No logD / logE function here or you'll create a loopback !!!
+export const addLogEntry = async (logLvl, loc_module, loc_function, msg) => {
   const fun = 'addLogEntry'
   try {
     if (!msg || msg == '') msg = '<-'
+    else msg = `${msg}`
     // utils.consoleLog(mod, fun, ``)
     const logInfo = makeLogInfo(logLvl, loc_module, loc_function, msg)
-    const logEntry = await new LogEntry(logInfo)
+    const logEntry = new LogEntry(logInfo)
     return await logEntry.save()
   } catch (err) {
-    // No log.d / log.e function here or you'll create a loopback !!!
+    // No logD / logE function here or you'll create a loopback !!!
     consoleErr(
       loc_module,
       `${loc_function} > ${fun}`,
@@ -255,35 +284,35 @@ exports.addLogEntry = async (logLvl, loc_module, loc_function, msg) => {
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Errors
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-// exports.logErrorPile = (error) => {
+// export const logErrorPile = (error) => {
 //   // const fun = 'showErrorPile'
 //   const errContext = error.context
 //   if (!errContext) return
 //   errContext.map((error) => {
-//     this.w(error.mod, error.fun, `${error[TRACE]}`)
+//     logW(error.mod, error.fun, `${error[TRACE]}`)
 //   })
 // }
-// exports.logRequest = (req) => {
+// export const logRequest = (req) => {
 //   const fun = 'apiCall'
-//   this.i('http', fun, `${req.method} ${req.url} <- ${displayIps(req)}`)
+//   i('http', fun, `${req.method} ${req.url} <- ${displayIps(req)}`)
 // }
 // return
-// this.d(mod, fun, `method: ${utils.beautify(req.method)}`)
-// this.d(mod, fun, `url: ${utils.beautify(req.url)}`)
-// this.d(mod, fun, `routerMethod: ${utils.beautify(req.routerMethod)}`)
-// this.d(mod, fun, `routerPath: ${utils.beautify(req.routerPath)}`)
-// this.d(mod, fun, `params: ${utils.beautify(req.params)}`)
-// this.d(mod, fun, `body: ${utils.beautify(req.body)}`)
-// this.d(mod, fun, `query: ${utils.beautify(req.query)}`)
-// this.d(mod, fun, `headers: ${utils.beautify(req.headers)}`)
-// this.d(mod, fun, `id: ${utils.beautify(req.id)}`)
-// this.d(mod, fun, `ip: ${utils.beautify(req.ip)}`)
-// this.d(mod, fun, `ips: ${utils.beautify(req.ips)}`)
-// this.d(mod, fun, `hostname: ${utils.beautify(req.hostname)}`)
-// this.d(mod, fun, `protocol: ${utils.beautify(req.protocol)}`)
-// this.d(mod, fun, `raw: ${utils.beautify(req.req)}`)
-// this.d(mod, fun, `socket: ${util.inspect(req.socket)}`)
+// d(mod, fun, `method: ${utils.beautify(req.method)}`)
+// d(mod, fun, `url: ${utils.beautify(req.url)}`)
+// d(mod, fun, `routerMethod: ${utils.beautify(req.routerMethod)}`)
+// d(mod, fun, `routerPath: ${utils.beautify(req.routerPath)}`)
+// d(mod, fun, `params: ${utils.beautify(req.params)}`)
+// d(mod, fun, `body: ${utils.beautify(req.body)}`)
+// d(mod, fun, `query: ${utils.beautify(req.query)}`)
+// d(mod, fun, `headers: ${utils.beautify(req.headers)}`)
+// d(mod, fun, `id: ${utils.beautify(req.id)}`)
+// d(mod, fun, `ip: ${utils.beautify(req.ip)}`)
+// d(mod, fun, `ips: ${utils.beautify(req.ips)}`)
+// d(mod, fun, `hostname: ${utils.beautify(req.hostname)}`)
+// d(mod, fun, `protocol: ${utils.beautify(req.protocol)}`)
+// d(mod, fun, `raw: ${utils.beautify(req.req)}`)
+// d(mod, fun, `socket: ${util.inspect(req.socket)}`)

@@ -1,37 +1,43 @@
-'use strict'
 // const mod = 'SkosConcept'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { omit } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const utils = require('../../utils/jsUtils')
-const Validation = require('../schemaValidators')
+import _ from 'lodash'
+const { omit } = _
 
-// ------------------------------------------------------------------------------------------------
-// Other custom schema definitions
-// ------------------------------------------------------------------------------------------------
-const ids = require('../schemas/Identifiers')
-const DictionaryEntry = require('../schemas/DictionaryEntry')
-const DictionaryList = require('../schemas/DictionaryList')
-const { FIELDS_TO_SKIP } = require('../../db/dbFields')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+import { FIELDS_TO_SKIP } from '../../db/dbFields.js'
+
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { isNotEmptyArray } from '../../utils/jsUtils.js'
+
+import { UuidV4Schema } from '../schemas/Identifiers.js'
+import { VALID_URI } from '../schemaValidators.js'
+
+// -------------------------------------------------------------------------------------------------
+// Other custom schema definitions
+// -------------------------------------------------------------------------------------------------
+import { DictionaryEntrySchema } from '../schemas/DictionaryEntry.js'
+import { DictionaryListSchema } from '../schemas/DictionaryList.js'
+
+// -------------------------------------------------------------------------------------------------
+// Constants
+// -------------------------------------------------------------------------------------------------
 const validArrayNotNull = {
-  validator: utils.isNotEmptyArray,
+  validator: isNotEmptyArray,
   message: `'{PATH}' property should not be empty`,
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition: SkosConcept
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 /**
  * A SKOS concept is an element in a controlled vocabulary such as a
  * thesaurus. It offers to link concepts in hierarchical (broader/narrower)
@@ -51,7 +57,7 @@ const SkosConceptSchema = new mongoose.Schema(
      * Unique and permanent identifier for the concept in RUDI system (required)
      * === skos:notation
      */
-    concept_id: ids.UUIDv4,
+    concept_id: UuidV4Schema,
 
     /**
      * Short abstract code / simple name for the concept
@@ -72,7 +78,7 @@ const SkosConceptSchema = new mongoose.Schema(
      */
     concept_uri: {
       type: String,
-      match: Validation.VALID_URI,
+      match: VALID_URI,
     },
 
     // ---------------------------
@@ -83,7 +89,7 @@ const SkosConceptSchema = new mongoose.Schema(
      * Preferred lexical label for the resource, one for each language
      */
     pref_label: {
-      type: [DictionaryEntry],
+      type: [DictionaryEntrySchema],
       required: true,
       validate: validArrayNotNull,
     },
@@ -92,13 +98,13 @@ const SkosConceptSchema = new mongoose.Schema(
      * List of alternative labels (in each language)
      */
     alt_labels: {
-      type: [DictionaryList],
+      type: [DictionaryListSchema],
     },
 
     /**
      * List of alternative orthographs (in each language)
      */
-    hidden_labels: [DictionaryList],
+    hidden_labels: [DictionaryListSchema],
 
     // ---------------------------
     // Classification
@@ -185,16 +191,16 @@ const SkosConceptSchema = new mongoose.Schema(
      * Contextual information about the intended meaning of the concept,
      * especially as an indication of how the use of the concept
      */
-    scope_note: [DictionaryEntry],
+    scope_note: [DictionaryEntrySchema],
 
     /**
      * Documentation: complete (internationalized) explanation of the intended
      * meaning of a concept
      */
-    concept_definition: [DictionaryEntry],
+    concept_definition: [DictionaryEntrySchema],
 
     /** Documentation: internationalized example */
-    concept_example: [DictionaryEntry],
+    concept_example: [DictionaryEntrySchema],
 
     /*
   // Documentation: internationalized validation msg
@@ -220,17 +226,17 @@ const SkosConceptSchema = new mongoose.Schema(
   }
 )
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Schema refinements
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // ----- toJSON cleanup
 SkosConceptSchema.methods.toJSON = function () {
   return omit(this.toObject(), FIELDS_TO_SKIP)
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Exports
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const SkosConcept = mongoose.model('SkosConcept', SkosConceptSchema)
-module.exports = SkosConcept
+export default SkosConcept

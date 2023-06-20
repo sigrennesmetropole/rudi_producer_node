@@ -139,6 +139,42 @@ class RudiLogger {
         }
         return u_config;
     }
+    _convertSeverityLevel(inlevel) {
+        let level = Severity.Debug;
+        if ((typeof inlevel) == 'number')
+            level = inlevel;
+        else if ((typeof inlevel) == 'string') {
+            let strlevel = inlevel.toLowerCase();
+            switch (strlevel) {
+                case 'emergency':
+                    level = Severity.Emergency; /**/
+                    break;
+                case 'alert':
+                    level = Severity.Alert; /**/
+                    break;
+                case 'critical':
+                    level = Severity.Critical; /**/
+                    break;
+                case 'error':
+                    level = Severity.Error; /**/
+                    break;
+                case 'warning':
+                    level = Severity.Warning; /**/
+                    break;
+                case 'notice':
+                    level = Severity.Notice; /**/
+                    break;
+                case 'informational':
+                    level = Severity.Informational; /**/
+                    break;
+                case 'debug':
+                default:
+                    level = Severity.Debug; /**/
+                    break;
+            }
+        }
+        return level;
+    }
     /**
      * Analyse and setup configurations.
      *  The local logger is activated and configured if a configuration section is found.
@@ -152,7 +188,9 @@ class RudiLogger {
             transport: Transport.Tcp,
             facility: FACILITY,
             tcpTimeout: 10000,
-            retryTimeout: 0
+            retryTimeout: 0,
+            rfc3164: false,
+            level: Severity.Debug
         };
         var u_config = (config === undefined) ? this._openConfiguration() : config;
         if ((typeof u_config.log_server) !== 'undefined') {
@@ -169,8 +207,12 @@ class RudiLogger {
                 this.config.tcpTimeout = cfg.tcpTimeout;
             if ((typeof cfg.retryTimeout) == 'number')
                 this.config.retryTimeout = cfg.retryTimeout;
+            if ((typeof cfg.rfc3164) == 'boolean')
+                this.config.rfc3164 = cfg.rfc3164;
+            this.config.level = this._convertSeverityLevel(cfg.level);
         }
         if ((typeof u_config.log_local) !== 'undefined') {
+            u_config.log_local.level = this._convertSeverityLevel(u_config.log_local.level);
             this.local = new local_1.LocalLogger(this, u_config);
         }
         return this.config;
@@ -192,13 +234,14 @@ class RudiLogger {
                 'swVersion': this.version,
             } };
         const opts = {
-            rfc3164: false,
             severity: Severity.Notice,
             port: this.config.port,
             transport: this.config.transport,
             facility: this.config.facility,
             tcpTimeout: this.config.tcpTimeout,
             retryTimeout: this.config.retryTimeout,
+            rfc3164: this.config.rfc3164,
+            level: this.config.level,
             appName: this.domain,
             data: data
         };

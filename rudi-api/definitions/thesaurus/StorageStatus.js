@@ -1,38 +1,39 @@
-'use strict'
-
 const mod = 'storStatThes'
 
-const { BadRequestError, RudiError } = require('../../utils/errors')
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const { parameterExpected } = require('../../utils/msg')
+// -------------------------------------------------------------------------------------------------
+import { logW } from '../../utils/logging.js'
+import { parameterExpected } from '../../utils/msg.js'
+import { BadRequestError, RudiError } from '../../utils/errors.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
-const StorageStatus = ['online', 'archived', 'unavailable']
+// -------------------------------------------------------------------------------------------------
+export const StorageStatus = {
+  Pending: 'pending',
+  Online: 'online',
+  Archived: 'archived',
+  Unavailable: 'unavailable',
+}
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Getter / setter
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 let Thesaurus = StorageStatus
 
-exports.initialize = (arg) => {
+export const initialize = (arg) => {
   if (arg) Thesaurus = []
 }
 
-exports.get = () => {
-  return Thesaurus
-}
+export const get = () => Object.values(StorageStatus)
 
-exports.set = (newValue) => {
+export const set = (newValue) => {
   const fun = 'set'
   try {
     if (!newValue) {
       const errMsg = parameterExpected(fun, 'newValue')
-      log.w(mod, fun, errMsg)
+      logW(mod, fun, errMsg)
       throw new BadRequestError(errMsg)
     }
     newValue = `${newValue}`.trim()
@@ -42,13 +43,13 @@ exports.set = (newValue) => {
   }
 }
 
-exports.isValid = (value, shouldInit) => {
+export const isValid = (value, shouldInit) => {
   const fun = 'isValid'
   if (!value) {
-    log.w(mod, fun, parameterExpected(fun, 'value'))
+    logW(mod, fun, parameterExpected(fun, 'value'))
     return false
   }
-  const isIn = Thesaurus.indexOf(value) > -1
+  const isIn = get().indexOf(value) > -1
   if (!isIn && shouldInit) {
     this.set(value)
     return true

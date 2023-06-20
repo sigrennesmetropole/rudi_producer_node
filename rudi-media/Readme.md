@@ -39,8 +39,8 @@ The shared version is under development.
 
 Two user/login couples exist currently:
 
- * With read access:  user=xx pass=xxxxxxxxxxxxxxxx
- * With write access: user=xx  pass=xxxxxxxxxxxxxxxx
+ * With read access:  user=rudiadmin pass=xxxxxxxxxxxxxxxx
+ * With write access: user=rudiprod  pass=xxxxxxxxxxxxxxxx
 
 ### Media Driver API
 
@@ -252,10 +252,6 @@ Test using the [*test-cors.org* scripts](https://github.com/monsur/test-cors.org
 ```python
     python3 -m http.server
 ```
-Preconfigured links :
-[post](http://localhost:8000/corsclient.html#?client_method=POST&client_credentials=false&client_headers=file_metadata%3A%20%7B%22media_name%22%3A%22mon_nom%22%2C%22media_id%22%3A%2237df63aa-1aae-4279-be3b-b07076d36131%22%2C%22file_size%22%3A21660%2C%22file_type%22%3A%22application%2Fjson%22%20%7D%0AAuthorization%3A%20Basic%20cnVkaXByb2Q6c3lzYWRtaW5pc2dyZWF0IQ%3D%3D&client_postdata=%7B%20%22status%22%3A%22done%22%20%20%7D&server_url=https%3A%2F%2Fshared-rudi.aqmo.org%2Fmedia%2Fpost&server_enable=true&server_status=200&server_credentials=false&server_tabs=remote)
-[get](http://localhost:8000/corsclient.html#?client_method=GET&client_credentials=false&client_headers=Authorization%3A%20Basic%20cnVkaXByb2Q6c3lzYWRtaW5pc2dyZWF0IQ%3D%3D&server_url=https%3A%2F%2Fshared-rudi.aqmo.org%2Fmedia%2F14c6c8c5-7e05-4742-a5a3-13660766404d&server_enable=true&server_status=200&server_credentials=false&server_tabs=remote)
-[download](http://localhost:8000/corsclient.html#?client_method=GET&client_credentials=false&client_headers=Authorization%3A%20Basic%20cnVkaXByb2Q6c3lzYWRtaW5pc2dyZWF0IQ%3D%3D%0AMedia-Access-Method%3A%20Direct&server_url=https%3A%2F%2Fshared-rudi.aqmo.org%2Fmedia%2F37df63aa-1aae-4279-be3b-b07076d36131&server_enable=true&server_status=200&server_credentials=false&server_tabs=remote)
 
 ### TODO
 #### Features

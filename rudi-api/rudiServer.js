@@ -1,43 +1,57 @@
-'use strict'
-
 const mod = 'main'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const utils = require('./utils/jsUtils')
-const sys = require('./config/confSystem')
-require('./config/confLogs')
-const log = require('./utils/logging')
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { API_VERSION } from './config/confApi.js'
 
-const api = require('./config/confApi')
-const sysController = require('./controllers/sysController')
+// 1. Utils
+import { beautify, consoleErr, consoleLog, separateLogs } from './utils/jsUtils.js'
 
-// ------------------------------------------------------------------------------------------------
+// 2. Sys conf
+import { getAppName, getDbUrl, getServerAddress, getServerPort } from './config/confSystem.js'
+
+// 3. Log conf
+import './config/confLogs.js'
+
+// 4. Anything, now
+import { getAppHash, getEnvironment } from './controllers/sysController.js'
+import { LogEntry } from './definitions/models/LogEntry.js'
+import { addLogEntry, logE, logI, logT, sysAlert, sysCrit, sysInfo } from './utils/logging.js'
+import { Contact } from './definitions/models/Contact.js'
+import { Organization } from './definitions/models/Organization.js'
+import { Media } from './definitions/models/Media.js'
+import Keywords from './definitions/thesaurus/Keywords.js'
+import Themes from './definitions/thesaurus/Themes.js'
+import { getLicenceCodes } from './controllers/licenceController.js'
+import { Metadata } from './definitions/models/Metadata.js'
+import { fastifyConf, declareRoutes } from './routes/fastify.js'
+
+// -------------------------------------------------------------------------------------------------
 // Prerequisites
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Fixing Regexp display as a string
 RegExp.prototype.toJSON = RegExp.prototype.toString
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies / init
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// External dependencies / init
+// -------------------------------------------------------------------------------------------------
 // Require external modules
-const mongoose = require('mongoose')
-const fastify = require('./routes/fastify')
-const { RudiError } = require('./utils/errors')
+separateLogs('Connecting to DB', true) ///////////////////////////////////////////////////////
+import mongoose from 'mongoose'
+
 // Import Swagger Options
-// const swagger = require('./config/swagger')
+// import swagger from './config/swagger'
 
 // Register Swagger
 // fastify.register(require('fastify-swagger'), swagger.options)
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // DB connection
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // Setting flags to avoid deprecation warnings
-// mongoose.set('useFindAndModify', false)
+mongoose.set('strictQuery', false)
 
 // const mongoConnectOptions = {
 // useUnifiedTopology: true,
@@ -45,87 +59,114 @@ const { RudiError } = require('./utils/errors')
 // useNewUrlParser: true,
 // }
 
-const logSeparatorConf =
-  '---------------------------------------------------------------[Conf OK]--'
-// eslint-disable-next-line no-console
-console.log(utils.nowLocaleFormatted(), logSeparatorConf)
-log
-  .addLogEntry('info', 'app', 'logSeparatorConf', logSeparatorConf)
-  .catch((err) => utils.consoleErr('info', 'app', 'logSeparatorConf: ' + err))
+consoleLog(mod, 'mongo', `Connecting to [${getDbUrl()}]`)
 
-log.i(mod, 'mongo', `Connecting to [${sys.getDbUrl()}]`)
 mongoose
-  .connect(sys.getDbUrl())
+  .connect(getDbUrl())
   .then(() => {
-    log.i(mod, 'mongo', `MongoDB connected`)
-    const appVer = sysController.getAppHash()
-    const curEnv = sysController.getEnvironment()
-    const startMsg =
-      `API v${api.API_VERSION} ` + `| App version: '${appVer}' ` + `| '${curEnv}' env`
-    log.i(mod, 'app', startMsg)
-    log.sysInfo(startMsg, '', '', ' ')
-    const logSeparatorEnd = utils.separateLogs('Init OK')
-    log
-      .addLogEntry('info', 'app', 'logSeparatorEnd', logSeparatorEnd)
-      .catch((err) => utils.consoleErr('info', 'app', 'logSeparatorEnd: ' + err))
+    logI(mod, 'mongo', `MongoDB connected`)
+
+    try {
+      start().catch((err) => {
+        logE(mod, 'server', `Crashed: ${err}`)
+        sysCrit(`Server crashed: ${err}`, 'rudiServer.running', {}, { error: err })
+      })
+    } catch (err) {
+      logE(mod, 'server', `Uncaught error: ${err}`)
+      sysCrit(`Uncaught error: ${err}`, 'rudiServer.uncaughtError', {}, { error: err })
+    }
   })
   .catch((err) => {
-    log.e(mod, 'mongoConnection', err)
-    log.sysAlert(`Mongo connection: ${err}`, 'rudiServer.dbConnect', {}, { error: err })
-    throw RudiError.treatError(mod, 'mongoConnection', err)
+    logE(mod, 'mongoConnection', err)
+    sysCrit(`Mongo connection: ${err}`, 'rudiServer.dbConnect', {}, { error: err })
+    process.exit(1)
+    // throw RudiError.treatError(mod, 'mongoConnection', err)
   })
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // SERVER
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const start = async () => {
+  const fun = 'start'
   try {
-    process.title = sys.getAppName()
-    await fastify
-      .listen(sys.getServerPort(), sys.getServerAddress())
-      .catch((err) => log.e(mod, 'Fastify listen', `${err}`))
+    separateLogs('Handling rejections', true) ////////////////////////////////////////////////
+
+    process.title = getAppName()
+
+    process.on('uncaughtException', (err) => {
+      logE(mod, 'process', `Uncaught exception: ${err}`)
+      sysCrit(`Uncaught exception: ${err}`, 'rudiServer.uncaughtException', {}, { error: err })
+      // console.error('There was an uncaught error', err)
+      // process.exit(1) //mandatory (as per the Node.js docs)
+    })
+
+    process.on('unhandledRejection', (err, promise) => {
+      const fun = 'catching promise rejection'
+      logE(mod, fun, 'DAMN!!! Promise rejection not handled here: ' + beautify(promise))
+      logE(mod, fun, 'The error was: ' + err)
+      sysCrit(
+        `Promise rejection not handled: ${beautify(promise)})`,
+        'rudiServer.promiseUnhandled',
+        {},
+        {
+          promise: beautify(promise),
+        }
+      )
+      sysCrit(`Promise rejection error: ${err}`, 'rudiServer.on', {}, { error: err })
+    })
+
+    import('./config/confPortal.js')
+
+    fastifyConf
+      .listen({ port: getServerPort(), host: getServerAddress() })
+      .catch((err) => logE(mod, 'Fastify listen', `${err}`))
     // fastify.swagger()
-    // fastify.log.info(`Listening on ${fastify.server.address().address}:${fastify.server.address().port}`)
+    // fastify.info(`Listening on ${fastify.server.address().address}:${fastify.server.address().port}`)
+    declareRoutes()
+
+    separateLogs('Models', true) /////////////////////////////////////////////////////////////
+    try {
+      await Promise.all(
+        [LogEntry, Contact, Organization, Media, Metadata].map(
+          (model) =>
+            new Promise((resolve, reject) => {
+              model
+                .initialize()
+                .then((res) => {
+                  logT(mod, `Init model ${model?.collection?.name}`, res)
+                  resolve(res)
+                })
+                .catch((err) => {
+                  logE(mod, `Init model ${model?.collection?.name}`, err)
+                  reject(err)
+                })
+            })
+        )
+      )
+    } catch (e) {
+      throw new Error(`Model index initialization failed: ${e}`)
+    }
+    await Keywords.initialize()
+    await Themes.initialize()
+    await getLicenceCodes()
+
+    const appVer = getAppHash()
+    const curEnv = getEnvironment()
+    separateLogs('Start', true) //////////////////////////////////////////////////////////////
+    const startMsg = `API v${API_VERSION} ` + `| App version: '${appVer}' ` + `| '${curEnv}' env`
+    logI(mod, fun, startMsg)
+    sysInfo(startMsg, '', '', ' ')
+    logI(mod, 'server', 'Ready')
+
+    const logSeparatorEnd = separateLogs('Init OK', true) //////////////////////////////////////////
+
+    addLogEntry('info', 'app', 'logSeparatorEnd', logSeparatorEnd).catch((err) =>
+      consoleErr('info', 'app', 'logSeparatorEnd: ' + err)
+    )
   } catch (err) {
-    // fastify.log.error(err)
-    log.e(mod, 'exitServer', err)
-    log.sysAlert(`Server exited anormally: ${err}`, 'rudiServer.starting', {}, { error: err })
+    // fastify.error(err)
+    logE(mod, 'exitServer', err)
+    sysAlert(`Server exited anormally: ${err}`, 'rudiServer.starting', {}, { error: err })
     process.exit(1)
   }
 }
-
-try {
-  start()
-    .then(() => {
-      log.i(mod, 'server', 'Ready')
-    })
-    .catch((err) => {
-      log.e(mod, 'server', `Crashed: ${err}`)
-      log.sysCrit(`Server crashed: ${err}`, 'rudiServer.running', {}, { error: err })
-    })
-} catch (err) {
-  log.e(mod, 'server', `Uncaught error: ${err}`)
-  log.sysCrit(`Uncaught error: ${err}`, 'rudiServer.uncaughtError', {}, { error: err })
-}
-
-process.on('uncaughtException', (err) => {
-  log.e(mod, 'process', `Uncaught exception: ${err}`)
-  log.sysCrit(`Uncaught exception: ${err}`, 'rudiServer.uncaughtException', {}, { error: err })
-  // console.error('There was an uncaught error', err)
-  // process.exit(1) //mandatory (as per the Node.js docs)
-})
-
-process.on('unhandledRejection', (err, promise) => {
-  const fun = 'catching promise rejection'
-  log.e(mod, fun, 'DAMN!!! Promise rejection not handled here: ' + utils.beautify(promise))
-  log.e(mod, fun, 'The error was: ' + err)
-  log.sysCrit(
-    `Promise rejection not handled: ${utils.beautify(promise)})`,
-    'rudiServer.promiseUnhandled',
-    {},
-    {
-      promise: utils.beautify(promise),
-    }
-  )
-  log.sysCrit(`Promise rejection error: ${err}`, 'rudiServer.on', {}, { error: err })
-})

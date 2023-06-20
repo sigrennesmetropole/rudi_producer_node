@@ -35,10 +35,9 @@
 #   - added property ReferenceDates.deleted
 #   - languages are now described either by <2-letter language>-<2-letter country>
 #     for specific language variations such as 'en-GB'.
-#     Simply <2-letter language> is also accepted 
+#     Simply <2-letter language> is also accepted
 #   (cf. '#/components/schemas/Language')
 #   - added proprety 'encryption' with id to retrieve the encryption parameters
-
 
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 openapi: 3.0.0
@@ -46,10 +45,10 @@ info:
   version: 1.0.3
   title: rudi-catalog-api
   description: "API pour l'accès aux données au niveau du nœud producteur RUDI"
-  termsOfService: "no"
+  termsOfService: 'no'
   contact:
     name: Olivier Martineau
-    email: 'olivier.martineau@irisa.fr'
+    email: 'community@rudi-univ-rennes1.fr'
   license:
     name: GPLv3
     url: 'https://www.gnu.org/licenses/gpl-3.0.html'
@@ -69,34 +68,33 @@ info:
 
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 tags:
-- name: Create
-- name: Update
-- name: Access
-- name: Delete
-- name: Report
+  - name: Create
+  - name: Update
+  - name: Access
+  - name: Delete
+  - name: Report
 
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 paths:
-
   #=============================================================================
   '/{lang}/resources/{id}':
     summary: Access the metadata for one identified resource
     parameters:
-    - name: 'lang'
-      description: Language chosen by the user for the interface
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Language'
-    - name: 'id'
-      description: Unique id of the resource
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/RudiID'
+      - name: 'lang'
+        description: Language chosen by the user for the interface
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Language'
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/RudiID'
     'get':
       tags:
-      - Access
+        - Access
       description: Returns the metadata for the identified resource
       # - links for downloading the resource?
       # - can we access a metadata but not the resource?
@@ -110,35 +108,35 @@ paths:
                 $ref: '#/components/schemas/Metadata'
         # These errors are the standard error responses for every query
         '400':
-          $ref: "#/components/responses/Error400BadRequest"
+          $ref: '#/components/responses/Error400BadRequest'
         '401':
-          $ref: "#/components/responses/Error401Unauthorized"
+          $ref: '#/components/responses/Error401Unauthorized'
         '403':
-          $ref: "#/components/responses/Error403Forbidden"
+          $ref: '#/components/responses/Error403Forbidden'
         '404':
-          $ref: "#/components/responses/Error404NotFound"
+          $ref: '#/components/responses/Error404NotFound'
         '405':
-          $ref: "#/components/responses/Error405MethodNotAllowed"
+          $ref: '#/components/responses/Error405MethodNotAllowed'
         '406':
-          $ref: "#/components/responses/Error406NotAcceptable"
+          $ref: '#/components/responses/Error406NotAcceptable'
         '408':
-          $ref: "#/components/responses/Error408RequestTimeout"
+          $ref: '#/components/responses/Error408RequestTimeout'
         '410':
-          $ref: "#/components/responses/Error410Gone"
+          $ref: '#/components/responses/Error410Gone'
         '423':
-          $ref: "#/components/responses/Error423Locked"
+          $ref: '#/components/responses/Error423Locked'
         '429':
-          $ref: "#/components/responses/Error429TooManyRequests"
+          $ref: '#/components/responses/Error429TooManyRequests'
         '500':
-          $ref: "#/components/responses/Error500InternalServerError"
+          $ref: '#/components/responses/Error500InternalServerError'
         '503':
-          $ref: "#/components/responses/Error503ServiceUnavailable"
+          $ref: '#/components/responses/Error503ServiceUnavailable'
 
-  #=============================================================================
-  #'/{lang}/resources/{id}':
+    #=============================================================================
+    #'/{lang}/resources/{id}':
     'delete':
       tags:
-      - Delete
+        - Delete
       description: Deletes one identified resource
       # - should we keep the metadata for some time?
       # - see above: can we access a metadata but not the resource?
@@ -151,17 +149,17 @@ paths:
               schema:
                 # The deleted resource
                 $ref: '#/components/schemas/Metadata'
-        
+
   #=============================================================================
   '/{lang}/resources':
     summary: Access the metadata for a set of resources
     parameters:
-    - name: 'lang'
-      description: Language chosen by the user for the interface
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Language'
+      - name: 'lang'
+        description: Language chosen by the user for the interface
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Language'
     'get':
       summary: Access the metadata for every resource
       description: Returns an array of the metadata of every resource
@@ -171,26 +169,26 @@ paths:
       # - links for downloading every resource?
       # - can we access a metadata but not the resource?
       tags:
-      - Access
+        - Access
       operationId: getMetadataList
       parameters:
-      - name: 'limit'
-        description: Max number of resource to return
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 500 #default MAX to limit the server overload
-        example: 100
-      - name: 'offset'
-        description: Index of the first line of resources to display
-        in: query
-        schema:
-          type: integer
-          format: int32
-          minimum: 0
-          example: 1
+        - name: 'limit'
+          description: Max number of resource to return
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 500 #default MAX to limit the server overload
+          example: 100
+        - name: 'offset'
+          description: Index of the first line of resources to display
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            example: 1
 
       responses:
         '200':
@@ -205,15 +203,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MetadataList'
-        
-  #=============================================================================
-  #'/{lang}/resources':
+
+    #=============================================================================
+    #'/{lang}/resources':
     'post':
       tags:
-      - Create
-      description:
-        Create one new resource
-      operationId: addResource
+        - Create
+      description: Create one new resource
+      operationId:
+        addResource
         # NOTES:
         # - the request implies global_id is present in the body, so
         #   '/resources/{id}' is redundant
@@ -232,16 +230,16 @@ paths:
       responses:
         '202':
           description: The creation of the resource has been initiated.
-        
-  #=============================================================================
-  #'/{lang}/resources':
+
+    #=============================================================================
+    #'/{lang}/resources':
     'put':
       tags:
-      - Update
-      description:
-        Update data and metadata on the Proxi/Producer node for one identified
+        - Update
+      description: Update data and metadata on the Proxi/Producer node for one identified
         resource
-      operationId: updateResource
+      operationId:
+        updateResource
         # NOTES:
         # - the request implies global_id is present in the body, so
         #   '/resources/{id}' is redundant
@@ -257,19 +255,19 @@ paths:
       responses:
         '202':
           description: The update of the resource has been initiated
-        
+
   #=============================================================================
   '/{lang}/resources/deletion':
     parameters:
-    - name: 'lang'
-      description: Language chosen by the user for the interface
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Language'
+      - name: 'lang'
+        description: Language chosen by the user for the interface
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Language'
     'post':
       tags:
-      - Delete
+        - Delete
       description:
         Delete data on the Proxi/Producer node for several identified resources
         #TODO: and metadata? After e.g. a year?
@@ -280,29 +278,29 @@ paths:
             schema:
               type: array
               items:
-                $ref: "#/components/schemas/RudiID"
+                $ref: '#/components/schemas/RudiID'
       responses:
         '202':
           description: The deletion of the resources has been initiated.
-        
+
   #=============================================================================
   '/{lang}/resources/{id}/report':
     parameters:
-    - name: 'lang'
-      description: Language chosen by the user for the interface
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Language'
-    - name: 'id'
-      description: Unique id of the resource
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/RudiID'
+      - name: 'lang'
+        description: Language chosen by the user for the interface
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Language'
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/RudiID'
     'post':
       tags:
-      - Report
+        - Report
       description: >
         Action called when receiving an ackowledgement for an integration
         operation from the Portal
@@ -312,27 +310,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: A new report was created.
     'put':
       tags:
-      - Report
-      description:
-        Report from the Portal on the result of a previous operation request
+        - Report
+      description: Report from the Portal on the result of a previous operation request
       operationId: updateIntegrationReport
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IntegrationReport"
+              $ref: '#/components/schemas/IntegrationReport'
       responses:
         '202':
           description: The report has been received.
         #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 components:
-
   #=============================================================================
   securitySchemes:
     authentInRudi:
@@ -343,7 +339,7 @@ components:
 
       flows:
         implicit:
-        # <---- OAuth flow(authorizationCode, implicit, password or clientCredentials)
+          # <---- OAuth flow(authorizationCode, implicit, password or clientCredentials)
           authorizationUrl: https://api.example.com/oauth2/authorize
           scopes:
             access: Read resources
@@ -351,7 +347,6 @@ components:
 
   #=============================================================================
   responses:
-
     #---------------------------------------------------------------------------
     'Error400BadRequest':
       description: The JSON is not valid.
@@ -382,16 +377,14 @@ components:
             $ref: 'https://raw.githubusercontent.com/zit0un/HttpErrorsOAS3/main/schemas/HttpError404_NotFound.yaml'
     #---------------------------------------------------------------------------
     'Error405MethodNotAllowed':
-      description:
-        Request method is not supported for the requested resource.
+      description: Request method is not supported for the requested resource.
       content:
         application/json:
           schema:
             $ref: 'https://raw.githubusercontent.com/zit0un/HttpErrorsOAS3/main/schemas/HttpError405_MethodNotAllowed.yaml'
     #---------------------------------------------------------------------------
     'Error406NotAcceptable':
-      description:
-        Headers sent in the request are not compatible with the service.
+      description: Headers sent in the request are not compatible with the service.
       content:
         application/json:
           schema:
@@ -446,12 +439,11 @@ components:
 
   #=============================================================================
   schemas:
-
     #---------------------------------------------------------------------------
     'IntegrationError':
       required:
-      - error_code
-      - error_message
+        - error_code
+        - error_message
       properties:
         'error_code':
           type: integer
@@ -463,15 +455,14 @@ components:
     #---------------------------------------------------------------------------
     'IntegrationReport':
       required:
-      - report_id
-      - global_id
+        - report_id
+        - global_id
       properties:
         'report_id':
           allOf:
-          - $ref: '#/components/schemas/UUIDv4'
-          - type: string
-            description:
-              Unique identifier of the integration report
+            - $ref: '#/components/schemas/UUIDv4'
+            - type: string
+              description: Unique identifier of the integration report
         'global_id':
           $ref: '#/components/schemas/RudiID'
         'resource_title':
@@ -479,32 +470,28 @@ components:
           description: Simple name of the resource
         'submission_date':
           allOf:
-          - $ref: '#/components/schemas/Date'
-          - type: string
-            description: >
-              Date when the integration request was submitted by the
-              Producer
+            - $ref: '#/components/schemas/Date'
+            - type: string
+              description: >
+                Date when the integration request was submitted by the
+                Producer
         'treatment_date':
           allOf:
-          - $ref: '#/components/schemas/Date'
-          - type: string
-            description:
-              Date when the integration request was processed by the Portal
-        'method' :
-          description:
-            Method used for the integration request by the Producer
+            - $ref: '#/components/schemas/Date'
+            - type: string
+              description: Date when the integration request was processed by the Portal
+        'method':
+          description: Method used for the integration request by the Producer
           type: string
-          enum: [ POST, PUT, DELETE ]
-        'version' :
-          description:
-            Version number of the integration contract used for the file
+          enum: [POST, PUT, DELETE]
+        'version':
+          description: Version number of the integration contract used for the file
           type: integer
-          minimum: 0            
+          minimum: 0
         'integration_status':
-          description:
-            State of the integration of the resource in the Portal
+          description: State of the integration of the resource in the Portal
           type: string
-          enum: [ OK, KO ]
+          enum: [OK, KO]
         'comment':
           description: >
             Comment on the state of the integration of the resource in the
@@ -520,23 +507,20 @@ components:
 
     #---------------------------------------------------------------------------
     'RudiID':
-      description:
-        Universally unique identifier for the resource
+      description: Universally unique identifier for the resource
       type: string
       oneOf:
-      -  $ref: '#/components/schemas/UUIDv4'
+        - $ref: '#/components/schemas/UUIDv4'
 
     #---------------------------------------------------------------------------
     'UUIDv4':
-      description:
-        Universally unique identifier v4 format
+      description: Universally unique identifier v4 format
       type: string
       pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
 
     #---------------------------------------------------------------------------
     'DOI':
-      description:
-        Digital object identifier (modern Crossref DOIs version)
+      description: Digital object identifier (modern Crossref DOIs version)
       type: string
       pattern: '^10.\d{4,9}/[-.;()/:\w]+$'
       # \d : digit character == [0-9]
@@ -555,19 +539,19 @@ components:
     'Metadata':
       type: object
       required:
-      - global_id
-      - resource_title
-      - summary
-      - theme
-      - producer
-      - contact
-        - format
-        - dataset_size
-      - reference_date
-      - storage_status
-      - connector
-      - available_format
-      - transmission_mode
+        - global_id
+        - resource_title
+        - summary
+        - theme
+        - producer
+        - contact
+          - format
+          - dataset_size
+        - reference_date
+        - storage_status
+        - connector
+        - available_format
+        - transmission_mode
 
       properties:
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
@@ -582,8 +566,7 @@ components:
           type: string
           #TODO: Do we restrain this to a certain pattern, avoiding spaces and
           #      unusal characters?
-          example:
-            "2020.11-Laennec-AQMO-air quality sensors measures"
+          example: '2020.11-Laennec-AQMO-air quality sensors measures'
 
         #——————————————————————————
         'doi':
@@ -595,8 +578,7 @@ components:
         'resource_title':
           description: Simple name for the resource
           type: string
-          example:
-            "Données de capteurs de la qualité de l'air, novembre 2020, Laënnec"
+          example: "Données de capteurs de la qualité de l'air, novembre 2020, Laënnec"
         # !DICO!
 
         #——————————————————————————
@@ -619,7 +601,7 @@ components:
         'resource_language':
           description: Language used in the dataset, if relevant
           oneOf:
-          - $ref: '#/components/schemas/Language'
+            - $ref: '#/components/schemas/Language'
         # !SKOS!
 
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
@@ -647,11 +629,11 @@ components:
         #——————————————————————————
         'encryption':
           allOf:
-          - $ref: '#/components/schemas/UUIDv4'
-          - type: string
-            description: >
-              This field is empty if the data are not encrypted.
-              Contains a mean to retrieve the encryption method otherwise.
+            - $ref: '#/components/schemas/UUIDv4'
+            - type: string
+              description: >
+                This field is empty if the data are not encrypted.
+                Contains a mean to retrieve the encryption method otherwise.
 
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
         # SPACE & TIME
@@ -661,22 +643,22 @@ components:
           type: array
           items:
             oneOf:
-            - $ref: '#/components/schemas/Date'
-            - $ref: '#/components/schemas/PosixTimeSeconds'
-            - $ref: '#/components/schemas/PosixTimeMilli'
-            - $ref: '#/components/schemas/PosixTimeMicro'
-            - $ref: '#/components/schemas/PosixTimeNano'
+              - $ref: '#/components/schemas/Date'
+              - $ref: '#/components/schemas/PosixTimeSeconds'
+              - $ref: '#/components/schemas/PosixTimeMilli'
+              - $ref: '#/components/schemas/PosixTimeMicro'
+              - $ref: '#/components/schemas/PosixTimeNano'
           minItems: 2
           maxItems: 2
 
         #——————————————————————————
         'bounding_box':
           allOf:
-          - type: object
-            description: >
-              Geographic distribution of the data.
-              Particularly relevant in the case of located sensors.
-          - $ref: 'https://raw.githubusercontent.com/zit0un/GeoJSON-OAS3/main/schemas/GeoJsonObject.yaml'
+            - type: object
+              description: >
+                Geographic distribution of the data.
+                Particularly relevant in the case of located sensors.
+            - $ref: 'https://raw.githubusercontent.com/zit0un/GeoJSON-OAS3/main/schemas/GeoJsonObject.yaml'
 
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
         # REFERENCE FRAME
@@ -686,8 +668,8 @@ components:
             Spatial resolution, i.e. geographic or geometric precision
             used to describe the resource
           oneOf:
-          - $ref: '#/components/schemas/MapScale'
-          - $ref: '#/components/schemas/Resolution'
+            - $ref: '#/components/schemas/MapScale'
+            - $ref: '#/components/schemas/Resolution'
 
         #——————————————————————————
         'projection':
@@ -734,20 +716,22 @@ components:
             # !DICO!
             'licence':
               type: object
-              properties: 
+              properties:
                 'licence_label':
                   $ref: '#/components/schemas/SkosEntry'
                 'licence_custom':
                   type: string
-                'licence_uri': 
+                'licence_uri':
                   type: string
                   format: URI
             'usage_constraint':
               type: array
               items:
                 $ref: '#/components/schemas/DictionaryEntry'
-              example: 
-                {"fr-FR": "Usage libre sous réserve des mentions obligatoires sur tout document de diffusion"}
+              example:
+                {
+                  'fr-FR': 'Usage libre sous réserve des mentions obligatoires sur tout document de diffusion',
+                }
             'mandatory_mention':
               description: >
                 Mention that must be cited verbatim in every publication that
@@ -755,8 +739,7 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/DictionaryEntry'
-              example: 
-                {"fr-FR": "Source: Région Bretagne"}
+              example: { 'fr-FR': 'Source: Région Bretagne' }
             'access_constraint':
               type: array
               items:
@@ -770,8 +753,8 @@ components:
               mandatory_mention: 'Source : Région Bretagne',
               licence_label: 'Licence ouverte v2.0',
               licence_url: 'https://www.etalab.gouv.fr/wp-content/uploads/2017/04/ETALAB-Licence-Ouverte-v2.0.pdf',
-              usage_constraint: "Licence",
-              access_constraint: "Autres restrictions",
+              usage_constraint: 'Licence',
+              access_constraint: 'Autres restrictions',
               other_constraints: "Pas de restriction d'accès public",
             }
 
@@ -785,7 +768,7 @@ components:
             - organization_id
             - organization_name
           properties:
-            'organization_id': 
+            'organization_id':
               type: string
               format: '#/components/schemas/UUIDv4'
             'organization_name':
@@ -801,11 +784,11 @@ components:
         'contact':
           type: object
           required:
-          - contact_id
-          - contact_name
-          - email
+            - contact_id
+            - contact_name
+            - email
           properties:
-            'contact_id': 
+            'contact_id':
               type: string
               format: '#/components/schemas/UUIDv4'
             'organization_name':
@@ -829,13 +812,13 @@ components:
         #——————————————————————————
         'sensor':
           allOf:
-          - description: Sensor used to produce the data
-            type: object
+            - description: Sensor used to produce the data
+              type: object
           #- $ref: 'https://github.com/mariotoffia/OpenAPI-SenML/blob/master/spec/protocol/senml/senml-entry.yaml'
           #'RFC 8428 / SenML - https://tools.ietf.org/html/rfc8428'
           #TODO: see OpenAPI implementation 'https://github.com/mariotoffia/OpenAPI-SenML'
           # https://www.iana.org/assignments/senml/senml.xml#senml-units
-          
+
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
         # STORAGE
         #——————————————————————————
@@ -872,8 +855,8 @@ components:
           #TODO: how do we take into account the different variations?
           type: object
           required:
-          - size
-          - unit
+            - size
+            - unit
           properties:
             'size':
               type: number
@@ -881,7 +864,7 @@ components:
               #TODO: on the specifications, we said 'integer', but isn't decimal number more appropriate?
             'unit':
               $ref: '#/components/schemas/FileSizeUnit'
-            'numbers_of_records':            
+            'numbers_of_records':
               type: integer
               minimum: 0
             'number_of_fields':
@@ -892,8 +875,8 @@ components:
         'reference_date':
           type: object
           required:
-          - data
-          - metadata
+            - data
+            - metadata
           properties:
             'data':
               $ref: '#/components/schemas/ReferenceDates'
@@ -909,18 +892,16 @@ components:
           type: object
           properties:
             'parents':
-              description:
-                Resources that were used as sources by the present resource
+              description: Resources that were used as sources by the present resource
               type: array
-              items: 
+              items:
                 $ref: '#/components/schemas/RudiID'
-            'children': 
-              description:
-                Resources that use the present resource as a source
+            'children':
+              description: Resources that use the present resource as a source
               type: array
-              items: 
+              items:
                 $ref: '#/components/schemas/RudiID'
-          #TODO: unite with data_genealogy that would explain 
+          #TODO: unite with data_genealogy that would explain
           #      how the sources were used
 
         #——————————————————————————
@@ -989,8 +970,8 @@ components:
         'checksum':
           type: object
           required:
-          - algo
-          - hash
+            - algo
+            - hash
           properties:
             'algo':
               $ref: '#/components/schemas/HashAlgorithm'
@@ -1075,8 +1056,8 @@ components:
       description: 'Dates of the actions on the file'
       type: object
       required:
-      - created
-      - published
+        - created
+        - published
       properties:
         'created':
           $ref: '#/components/schemas/Date'
@@ -1131,39 +1112,35 @@ components:
           enum: [mm, m, km]
           #TODO: 'Resolution' SKOS
 
-
     #---------------------------------------------------------------------------
     'SkosEntry':
       type: object
       required:
-      - skos_value
-      - skos_uri
+        - skos_value
+        - skos_uri
       properties:
         'skos_value':
-          description: 
-            Term used in RUDI system (eg in metadata files), most likely english one
+          description: Term used in RUDI system (eg in metadata files), most likely english one
           type: string
         'skos_uri':
-          description: 
-            URI of the thesaurus that hosts the traduction of this term
+          description: URI of the thesaurus that hosts the traduction of this term
           type: string
           format: URI
         'skos_context':
-          description:  
-            Meaning, explaination of the context of use of this entry
+          description: Meaning, explaination of the context of use of this entry
           type: string
       example:
         {
           value: 'transport',
-          skos_uri: 'https://publications.europa.eu/resource/authority/eurovoc/100237'
+          skos_uri: 'https://publications.europa.eu/resource/authority/eurovoc/100237',
         }
 
     #---------------------------------------------------------------------------
     'DictionaryEntry':
       type: object
       required:
-      - lang
-      - text
+        - lang
+        - text
       discriminator:
         propertyName: lang
       properties:
@@ -1175,7 +1152,7 @@ components:
       example:
         {
           lang: 'fr-FR',
-          text: "Données de capteurs de la qualité de l'air, nov. 2020, Laënnec, Rennes, France"
+          text: "Données de capteurs de la qualité de l'air, nov. 2020, Laënnec, Rennes, France",
         }
 
     #---------------------------------------------------------------------------
@@ -1187,16 +1164,45 @@ components:
         lowercase ISO-639 language code alone
       type: string
       pattern: '^[a-z]{2}(-[A-Z]{2})?$'
-      enum: ['cs-CZ', 'da-DK', 'de-CH', 'de-DE', 'en-GB', 'en-US', 'el-GR', 
-        'es-ES', 'fr-FR', 'hu-HU', 'it-IT', 'no-NO', 'pl-PL', 'pt-PT', 'ro-RO', 
-        'ru-RU', 'sk-SK', 'cs', 'da', 'de', 'en', 'el', 'es', 'fr', 'hu', 'it', 
-        'no', 'pl', 'pt', 'ro', 'ru', 'sk']
-      
+      enum:
+        [
+          'cs-CZ',
+          'da-DK',
+          'de-CH',
+          'de-DE',
+          'en-GB',
+          'en-US',
+          'el-GR',
+          'es-ES',
+          'fr-FR',
+          'hu-HU',
+          'it-IT',
+          'no-NO',
+          'pl-PL',
+          'pt-PT',
+          'ro-RO',
+          'ru-RU',
+          'sk-SK',
+          'cs',
+          'da',
+          'de',
+          'en',
+          'el',
+          'es',
+          'fr',
+          'hu',
+          'it',
+          'no',
+          'pl',
+          'pt',
+          'ro',
+          'ru',
+          'sk',
+        ]
+
       #url: 'https://app.swaggerhub.com/apis/nologo/thesaurus/1.0.0#/default/get_thesaurus_v1'
 
       # !SKOS!
-
-
 #TODO : thesaurus : tableau de valeurs simples ou couples {label: "Texte à
 #       afficher pour l'utilisateur", "valeur": "ValeurAssociee"}
 

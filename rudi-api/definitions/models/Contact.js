@@ -1,26 +1,16 @@
-'use strict'
-
 const mod = 'contSch'
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { omit } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const ids = require('../schemas/Identifiers')
-const valid = require('../schemaValidators')
+import _ from 'lodash'
+const { omit } = _
 
-const { RudiError } = require('../../utils/errors')
-const { makeSearchable } = require('../../db/dbActions')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const {
+// -------------------------------------------------------------------------------------------------
+import {
   FIELDS_TO_SKIP,
   DB_PUBLISHED_AT,
   API_COLLECTION_TAG,
@@ -30,21 +20,30 @@ const {
   API_CONTACT_NAME,
   API_ORGANIZATION_NAME,
   DB_CREATED_AT,
-} = require('../../db/dbFields')
+  API_CONTACT_SUMMARY,
+} from '../../db/dbFields.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { VALID_EMAIL } from '../schemaValidators.js'
+import { UuidV4Schema } from '../schemas/Identifiers.js'
+
+import { logW } from '../../utils/logging.js'
+import { RudiError } from '../../utils/errors.js'
+import { makeSearchable } from '../../db/dbActions.js'
+
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const ContactSchema = new mongoose.Schema(
   {
     // Unique and permanent identifier for the contact in RUDI
     // system (required)
-    [API_CONTACT_ID]: ids.UUIDv4,
+    [API_CONTACT_ID]: UuidV4Schema,
 
     /** Updated offical name of the contact's organization */
-    [API_ORGANIZATION_NAME]: {
-      type: String,
-    },
+    [API_ORGANIZATION_NAME]: String,
 
     /** Updated name of the service, or possibly the person */
     [API_CONTACT_NAME]: {
@@ -53,9 +52,10 @@ const ContactSchema = new mongoose.Schema(
     },
 
     /** Updated status of the contact person */
-    [API_CONTACT_ROLE]: {
-      type: String,
-    },
+    [API_CONTACT_ROLE]: String,
+
+    /** Description of the contact person */
+    [API_CONTACT_SUMMARY]: String,
 
     /** Updated offical postal address of the organization */
     [API_CONTACT_MAIL]: {
@@ -66,7 +66,7 @@ const ContactSchema = new mongoose.Schema(
       index: true,
       lowercase: true,
       dropDups: true,
-      match: valid.VALID_EMAIL,
+      match: VALID_EMAIL,
     },
 
     /** Tag for identifying a collection of resources */
@@ -75,9 +75,8 @@ const ContactSchema = new mongoose.Schema(
     },
 
     /** Time when this contact was successfully published on RUDI portal  */
-    [DB_PUBLISHED_AT]: {
-      type: Date,
-    },
+    [DB_PUBLISHED_AT]: Date,
+
     /** Creation date, made immutable  */
     [DB_CREATED_AT]: {
       type: Date,
@@ -91,9 +90,9 @@ const ContactSchema = new mongoose.Schema(
   }
 )
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Schema refinements
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // ----- toJSON cleanup
 ContactSchema.methods.toJSON = function () {
@@ -101,10 +100,10 @@ ContactSchema.methods.toJSON = function () {
   return omit(this.toObject(), FIELDS_TO_SKIP)
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Exports
-// ------------------------------------------------------------------------------------------------
-const Contact = mongoose.model('Contact', ContactSchema)
+// -------------------------------------------------------------------------------------------------
+export const Contact = mongoose.model('Contact', ContactSchema)
 
 Contact.getSearchableFields = () => [
   API_CONTACT_ID,
@@ -113,18 +112,19 @@ Contact.getSearchableFields = () => [
   API_CONTACT_MAIL,
 ]
 
-const fun = 'createSearchIndexes'
-Contact.createSearchIndexes = async () => {
+Contact.initialize = async () => {
+  const fun = 'initContact'
   try {
+    // logT(mod, fun, ``)
     await makeSearchable(Contact)
+    return `Contact indexes created`
   } catch (err) {
+    logW(mod, fun, err)
     RudiError.treatError(mod, fun, err)
   }
 }
-Contact.createSearchIndexes()
-  .catch((err) => {
-    throw RudiError.treatError(mod, fun, `Failed to create search indexes: ${err}`)
-  })
-  .then(log.t(mod, fun, 'done'))
 
-module.exports = { Contact }
+// -------------------------------------------------------------------------------------------------
+// Exports
+// -------------------------------------------------------------------------------------------------
+export default Contact

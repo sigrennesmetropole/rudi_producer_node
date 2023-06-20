@@ -1,0 +1,58 @@
+{
+    "htmlJsonTemplate": [
+        { "tag": "form-header", "children": [
+            { "id": "title",          "tag": "h1" },
+            { "id": "@header_actions", "tag": "div" }
+        ]},
+        { "tag": "hr" },
+        { "id": "warning_rsa", "tag": "p", "class": ["warning_rsa"] },
+        { "tag": "form-body", "children": [
+            { "tag":"form-section", "class":["row"], "children": [
+                { "id": "global",                     "tag": "h1"           },
+                { "id": "@switch", "tag": "select-input",   "class": ["col","s4","m4","l6"],  "attr": { "required": true }, "init": { "setOptions": [["URL","PEM"], true]} },
+                {                  "tag": "div",            "class": ["col","s4","m4","l6"]   },
+                { "id": "@name",   "tag": "text-input",     "class": ["col","s4","m4","l6"],  "attr": { "required": true } },
+                { "id": "@url",    "tag": "text-input",     "class": ["col","s4","m4","l6"],  "attr": { "required": true } },
+                { "id": "@prop",   "tag": "text-input",     "class": ["col","s4","m4","l6"],  "attr": { "hidden": true } }
+            ]},
+            { "tag": "form-section", "class": ["row"], "children": [
+                { "id": "@pem",   "tag": "textarea-input",  "class": ["pem"]   }
+            ]},
+            { "tag": "form-section", "class": ["row"], "children": [
+                { "id": "@key",   "tag": "text-input",  "class": ["col","s4","m4","l6"],  "attr": { "readonly": true, "disabled": true } },
+                { "id": "@type",  "tag": "text-input",  "class": ["col","s4","m4","l6"],  "attr": { "readonly": true, "disabled": true } }
+            ]}
+        ]},
+        { "tag": "form-footer", "children": [
+            { "id": "@submit_btn", "tag": "button" }
+        ]}
+    ],
+    "formBindings": {
+        "switch": {
+            "url":          { "URL": { "required": true, "hidden": false } },
+            "pem":          { "PEM": { "required": true, "readonly": false } }
+        }
+    },
+    "submitTemplate": {
+        "name": "name",
+        "url": "url",
+        "prop": "prop",
+        "pem": "pem",
+        "key": "key",
+        "type": "type"
+    },
+    "fragmentSet": {
+        "fr": {
+            "title":          { "textContent": "Clé d'accès restreint" },
+            "global":         { "textContent": "Général"       },
+            "submit_btn":     { "textContent": "Valider"       },
+            "warning_rsa":    { "textContent": "Attention, seules les clés RSA peuvent être utiisées pour le chiffrement des jeux de données" },
+            "name":           { "attr": { "label": "Nom de la clé",                 "helper": "Identifiant unique"                                                  } },
+            "url":            { "attr": { "label": "URL de la clé",                 "helper": "URL accessible où l'on peut trouver la clé"                          } },
+            "prop":           { "attr": { "label": "Propriété",                     "helper": "Si l'URL renvoie un objet, nom de la propiété où trouver la clé"     } },
+            "pem":            { "attr": { "label": "PEM (Clé publique)",            "helper": "Clé publique écrite en PEM"                                          } },
+            "key":            { "attr": { "label": "Clé",                           "helper": "Clé"                                                                 } },
+            "type":           { "attr": { "label": "Type de clé",                   "helper": "Type de la clé"                                                      } }
+        }
+    }
+}

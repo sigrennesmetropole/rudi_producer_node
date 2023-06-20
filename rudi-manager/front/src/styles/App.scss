@@ -1,0 +1,309 @@
+//----- Fonts
+@import './fonts.scss';
+
+//----- Colors
+$primary: #004680;
+$secondary: #ff8d6d;
+$success: #53dd6c;
+$warning: #fec10b;
+$danger: #a3333d;
+$navbar: #004680;
+$restricted: #ffd3cd;
+$header-bkg: #282c34;
+$header-font: white;
+$app-link: #61dafb;
+
+// change the theme
+$custom-colors: (
+  restricted: $restricted,
+);
+
+//----- Import Bootstrap and its default variables
+@import '~bootstrap/scss/bootstrap';
+
+// Merge the maps
+$theme-colors: map-merge($theme-colors, $custom-colors);
+
+// Additionally; The function that handles the theme colors
+@function theme-color($key: 'primary') {
+  @return map-get($theme-colors, $key);
+}
+
+$marginSides: 20px;
+
+//----- CSS
+body {
+  font-family: 'Montserrat', $font-family-sans-serif;
+  height: 100%;
+  font-size: 14px;
+  color: $primary;
+}
+
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: $header-bkg;
+  color: $header-font;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(1rem + 2vmin);
+}
+
+.App-link {
+  color: $app-link;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+a {
+  background-color: initial;
+  color: #004680;
+  text-decoration: none;
+}
+
+.smallPaddingTop {
+  padding-top: 60px;
+  padding-bottom: 60px;
+  margin-left: $marginSides;
+  margin-right: $marginSides;
+}
+
+.tempPaddingTop {
+  padding-top: 75px;
+  padding-bottom: 60px;
+  margin-left: $marginSides;
+  margin-right: $marginSides;
+}
+.margin-right {
+  margin-right: 0.8em;
+}
+.bg-navbar {
+  background-color: $navbar;
+}
+
+.icon-navbar {
+  height: 40px;
+  margin: 0px 40px 0px 15px;
+}
+.hide-wip {
+  display: none;
+}
+
+// ¨
+.temp-min-height {
+  min-height: 150px;
+}
+
+.align-right {
+  margin-right: 0px;
+  margin-left: auto;
+}
+
+.valign-middle {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.temp-align {
+  align-self: flex-start;
+}
+
+.card-margin {
+  margin-bottom: 4px;
+}
+
+.edit-card-margin {
+  margin-bottom: 18px;
+}
+
+.no-row-margin {
+  margin: 0 -11px;
+}
+.no-border {
+  border-width: 0px;
+}
+
+.temp-pad {
+  padding: 5px 10px;
+}
+
+.on-right {
+  float: right;
+}
+
+.checkbox {
+  margin: 0 0 0 20px;
+}
+
+.margin-down {
+  margin: 1rem 0 0 0;
+}
+
+.margin-logout {
+  margin: 0 0 0 1em;
+}
+
+.inline {
+  display: inline;
+}
+
+.inline-block {
+  display: inline-block;
+}
+
+.spaced {
+  margin: 5px;
+  padding: 5px;
+}
+
+.restricted {
+  background-color: $restricted;
+}
+
+.image70 {
+  width: 70%;
+}
+.image100 {
+  width: 100%;
+}
+.image90 {
+  margin: 3%;
+  max-height: 500px;
+  max-width: 500px;
+  height: auto;
+  width: auto;
+}
+.center {
+  margin: auto;
+}
+.appTag {
+  color: $header-font;
+  font-size: 0.9em;
+  font-weight: bold;
+  float: right;
+  margin: 0px $marginSides;
+}
+.gitTag {
+  color: $header-font;
+  font-size: 0.7em;
+  float: right;
+  margin: 0px $marginSides;
+}
+
+.button-margin {
+  margin: 1px 4px;
+}
+
+.label-lv1 {
+  font-size: 1.4em;
+  font-weight: 500;
+  padding: 0em 0.2em;
+}
+.label-lv2 {
+  font-size: 1.1em;
+  font-weight: 500;
+  padding: 0.4em;
+}
+
+// Designing specific parts
+.status-pill {
+  @extend .badge;
+  @extend .rounded-pill;
+  margin-right: 10px;
+  margin-left: auto;
+}
+
+.file-size-pill {
+  @extend .badge;
+  @extend .rounded-pill;
+  margin: 0 1em;
+}
+
+.badge-monitoring {
+  @extend .badge;
+  @extend .rounded-pill;
+  @extend .text-bg-primary;
+  display: block;
+  margin-left: 50px;
+}
+
+.btn-primary {
+  font-size: 1.1em;
+  font-weight: 500;
+  margin: 5px 5px;
+}
+
+.filter-items {
+  @extend .no-row-margin;
+  @extend .temp-pad;
+  @extend .list-group-item;
+  @extend .d-flex;
+  @extend .justify-content-between;
+  @extend .align-items-center;
+}
+
+.left-hand-blocks {
+  @extend .temp-pad;
+  @extend .col-12;
+  @extend .border;
+  @extend .rounded;
+  @extend .card-margin;
+}
+
+.login-form {
+  margin-top: 1rem;
+}
+
+.login-switch {
+  margin: 0 auto;
+  max-width: 320px;
+}
+
+.login-button {
+  @extend .d-grid;
+  @extend .btn;
+  @extend .gap-2;
+  margin: 1.5em -6.5px 0em -6.5px;
+}
+.login-pill {
+  @extend .d-grid;
+  @extend .d-md-block;
+  @extend .btn;
+  @extend .gap-2;
+  margin: 0.5em 6px 0.5em 6px;
+}
+.catalogue {
+  padding-top: 10px;
+}
+.text-button {
+  height: 100%;
+  margin: 0.5em 1em 0.5em auto;
+}
+.text-visu {
+  background-color: #fcefe8;
+  margin: 2em;
+  padding: 2em;
+  max-width: 80em;
+}

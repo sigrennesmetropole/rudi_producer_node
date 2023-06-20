@@ -1,0 +1,10 @@
+# Libs
+**/node_modules/*
+
+# Tests
+**/*.spec.js
+**/*.test.js
+**/coverage/*
+
+# Front
+**/front/*

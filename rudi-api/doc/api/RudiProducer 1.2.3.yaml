@@ -36,12 +36,12 @@
 openapi: 3.0.0
 info:
   version: 1.2.3
-  title: API for RUDI producer node
+  title: Public API for RUDI producer node
   description: "API pour l'accès aux données au niveau du nœud producteur RUDI"
   termsOfService: 'no'
   contact:
     name: Olivier Martineau
-    email: olivier.martineau@irisa.fr
+    email: community@rudi-univ-rennes1.fr
   license:
     name: EUPL 1.2
     url: https://eupl.eu/1.2/fr
@@ -499,13 +499,9 @@ components:
                   minimum: -180
                   maximum: 180
             #......................
+            # Global geographic distribution of the data expressed in 'EPSG:4326/WGS 84' projection
             'geographic_distribution':
-              allOf:
-                - description: >
-                    Global geographic distribution of the data expressed in 
-                    'EPSG:4326/WGS 84' projection
-                  type: object
-                - $ref: 'https://app.swaggerhub.com/apis/OlivierMartineau/GeoJSON/1.0.0/#/schemas/GeoJsonObject'
+              $ref: 'https://app.swaggerhub.com/apis/OlivierMartineau/GeoJSON/1.0.1'
             #......................
             'projection':
               description: Cartographic projection used in the data.

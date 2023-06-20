@@ -1,76 +1,110 @@
 /* eslint-disable no-console */
-'use strict'
 
 const mod = 'utils'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const { inspect } = require('util')
-const { floor, pick } = require('lodash')
-const datetime = require('date-and-time')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import { inspect } from 'util'
+import objectPath from 'object-path'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const { TRACE } = require('../config/confApi')
+import _ from 'lodash'
+const { floor, pick } = _
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { TRACE } from '../config/confApi.js'
+
+// -------------------------------------------------------------------------------------------------
+// Basic logging
+// -------------------------------------------------------------------------------------------------
+
+export const LOG_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss SSS'
+export const nowLocaleFormatted = () =>
+  new Date().toISOString().replace(/T\./, ' ').replace('Z', '')
+// datetime.format(new Date(), LOG_DATE_FORMAT)
+
+const BASE_LINE =
+  '=====================================================' +
+  '====================================================='
+export const separateLogs = (insertStr, shouldDisplayDate) => {
+  const dateStr = shouldDisplayDate ? `${nowLocaleFormatted()} ` : ''
+  const inputStr = `${insertStr}` ? `[ ${insertStr} ]==` : ''
+  const eatenCharacters = dateStr.length + inputStr.length
+  // const line = inputStr.padStart(BASE_LINE.length - eatenCharacters, '=')
+  const line = BASE_LINE.substring(eatenCharacters)
+
+  const logSeparator = `${dateStr}${line}${inputStr}`
+
+  console.log('D ' + logSeparator)
+  return logSeparator
+}
+separateLogs('Booting', true)
+
+// -------------------------------------------------------------------------------------------------
 // String
-// ------------------------------------------------------------------------------------------------
-exports.toBase64 = (str) => this.convertEncoding(str, 'utf-8', 'base64')
-exports.toBase64Url = (str) => this.convertEncoding(str, 'utf-8', 'base64url')
-exports.decodeBase64 = (data) => this.convertEncoding(data, 'base64', 'utf-8')
-exports.decodeBase64url = (data) => this.convertEncoding(data, 'base64url', 'utf-8')
-exports.padWithEqualSignBase4 = (str) => this.pad(str, 4, '=')
+// -------------------------------------------------------------------------------------------------
+export const isString = (str) => typeof str === 'string'
 
-exports.convertEncoding = (data, fromEncoding, toEncoding) => {
-  const fun = 'convertEncoding'
-  try {
-    let dataStr = data
-    if (typeof data === 'object') dataStr = JSON.stringify(data)
-    return Buffer.from(dataStr, fromEncoding).toString(toEncoding)
-  } catch (err) {
-    this.consoleErr(mod, fun, err)
-    throw err
-  }
-}
-exports.pad = (str, base, padSign) => {
+export const padWithEqualSignBase4 = (str) => pad(str, 4, '=')
+export const toBase64 = (str) => convertEncoding(str, 'utf-8', 'base64')
+export const toBase64url = (str) => convertEncoding(str, 'utf-8', 'base64url')
+export const toPaddedBase64url = (str) => padWithEqualSignBase4(toBase64url(str))
+export const decodeBase64 = (data) => convertEncoding(data, 'base64', 'utf-8')
+export const decodeBase64url = (data) => convertEncoding(data, 'base64url', 'utf-8')
+
+export const convertEncoding = (data, fromEncoding, toEncoding) =>
+  Buffer.from(typeof data === 'object' ? JSON.stringify(data) : data, fromEncoding).toString(
+    toEncoding
+  )
+
+/**
+ * Adds a sign at the end of a string so that the padded string has a length that is a multiple of a given base.
+ * @param {String} str The input string
+ * @param {Number} base The number the length of the padded string must be a multiple of
+ * @param {String} padSign The character used for the padding
+ * @returns
+ */
+export const pad = (str, base, padSign) => {
   const fun = 'pad'
-  // this.consoleLog(mod, fun, `base = ${base}, sign = '${padSign}'`)
+  // consoleLog(mod, fun, `base = ${base}, sign = '${padSign}'`)
   try {
-    padSign = padSign && padSign.length > 1 ? padSign[0] : ''
+    padSign = padSign?.substring(0, 1)
     const modulo = str.length % base
-    // this.consoleLog(`modulo = ${modulo}`)
-    let paddedStr = str
-    for (let i = modulo; i > 0; i--) {
-      paddedStr = paddedStr + padSign
+    if (modulo === 0) return str
+
+    let padding = padSign
+    for (let i = modulo; i > base; i++) {
+      padding = `${padding}${padSign}`
     }
-    // this.consoleLog(mod, fun, paddedStr)
-    return paddedStr
+    // consoleLog(mod, fun, `padding: ${padding}`)
+    return `${str}${padding}`
   } catch (err) {
-    this.consoleErr(mod, fun, err)
+    consoleErr(mod, fun, err)
     throw err
   }
 }
 
-exports.shorten = (str, len) => {
+export const shorten = (str, len) => {
   if (!str) return
   if (str.length < len) return str
   return str.substring(0, len) + '[...]'
 }
 
-exports.padA1 = (num) => {
+export const padA1 = (num) => {
   var norm = Math.floor(Math.abs(num))
   return (norm < 10 ? '0' : '') + norm
 }
 
-// ------------------------------------------------------------------------------------------------
-// Dates
-// ------------------------------------------------------------------------------------------------
-exports.nowISO = () => new Date().toISOString()
+export const padZerosLeft = (number, nbZeros = 2) => String(number).padStart(nbZeros, '0')
 
-exports.toISOLocale = (date) => {
+// -------------------------------------------------------------------------------------------------
+// Dates
+// -------------------------------------------------------------------------------------------------
+export const nowISO = () => new Date().toISOString()
+
+export const toISOLocale = (date) => {
   if (!date) date = new Date()
 
   const isoTimezoneOffset = -date.getTimezoneOffset()
@@ -79,91 +113,126 @@ exports.toISOLocale = (date) => {
   return (
     date.getFullYear() +
     '-' +
-    this.padA1(date.getMonth() + 1) +
+    padA1(date.getMonth() + 1) +
     '-' +
-    this.padA1(date.getDate()) +
+    padA1(date.getDate()) +
     'T' +
-    this.padA1(date.getHours()) +
+    padA1(date.getHours()) +
     ':' +
-    this.padA1(date.getMinutes()) +
+    padA1(date.getMinutes()) +
     ':' +
-    this.padA1(date.getSeconds()) +
+    padA1(date.getSeconds()) +
     dif +
-    this.padA1(isoTimezoneOffset / 60) +
+    padA1(isoTimezoneOffset / 60) +
     ':' +
-    this.padA1(isoTimezoneOffset % 60)
+    padA1(isoTimezoneOffset % 60)
   )
 }
 
-exports.nowEpochMs = () => new Date().getTime()
+export const nowEpochMs = () => new Date().getTime()
+export const nowEpochS = () => floor(nowEpochMs() / 1000)
 
-exports.nowEpochS = () => floor(this.nowEpochMs() / 1000)
-
-exports.dateEpochSToIso = (utcSeconds) => {
+export const dateEpochSToIso = (utcSeconds) => {
   const fun = 'dateEpochSToIso'
   try {
-    return this.dateEpochMsToIso(utcSeconds * 1000)
+    return dateEpochMsToIso(utcSeconds * 1000)
   } catch (err) {
-    this.consoleErr(mod, fun, `input: ${utcSeconds} -> err: ${err}`)
+    consoleErr(mod, fun, `input: ${utcSeconds} -> err: ${err}`)
   }
 }
 
-exports.dateEpochMsToIso = (utcMs) => {
+export const dateEpochMsToIso = (utcMs) => {
   const fun = 'dateEpochMsToIso'
   try {
     return new Date(utcMs).toISOString()
   } catch (err) {
-    this.consoleErr(mod, fun, `input: ${utcMs} -> err: ${err}`)
+    consoleErr(mod, fun, `input: ${utcMs} -> err: ${err}`)
   }
 }
-
-exports.LOG_DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss SSS'
-
-exports.nowLocaleFormatted = () => datetime.format(new Date(), this.LOG_DATE_FORMAT)
 // const [date, month, year] = new Date().toLocaleDateString('fr-FR').split('/')
 // const [h, m, s] = new Date().toLocaleTimeString('fr-FR').split(/:| /)
 // return `${year}/${month}/${date} ${h}:${m}:${s}`
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Strings
-// ------------------------------------------------------------------------------------------------
-exports.isString = (str) => typeof str === 'string'
+// -------------------------------------------------------------------------------------------------
+/**
+ * Split an input string with an array of single characters
+ * @param {*} inputStr the input string
+ * @param {*} singleCharDelimiterArray an array of single characters
+ * @param {*} shouldTrim true if each chunk should be trimmed
+ * @returns the splitted string
+ */
+export const multiSplit = (inputStr, singleCharDelimiterArray, shouldTrim) => {
+  if (!Array.isArray(singleCharDelimiterArray) && singleCharDelimiterArray.length > 0)
+    throw new Error('Wrong use, second parameter should be an array')
 
-// ------------------------------------------------------------------------------------------------
+  // Converts input delimiters array elements into string
+  const delimiters = []
+  singleCharDelimiterArray.map((c) => {
+    if (`${c}`.length !== 1)
+      throw new Error('Wrong use, second parameter should be an array of single character strings')
+    delimiters.push(`${c}`)
+  })
+
+  // Examine input string, one character at a time
+  const result = []
+  let chunk = ''
+  for (let i = 0; i < inputStr.length; i++) {
+    let isDelimiter = false
+    // Check if the current input character is a delimiter
+    for (let j = 0; j < delimiters.length; j++) {
+      if (inputStr[i] === delimiters[j]) {
+        // Current input character is a delimiter
+        if (shouldTrim) chunk = chunk.trim()
+        if (chunk.length > 0) result.push(chunk)
+        chunk = ''
+        isDelimiter = true
+        break
+      }
+    }
+    if (!isDelimiter) chunk += inputStr[i]
+  }
+  if (shouldTrim) chunk = chunk.trim()
+  if (chunk.length > 0) result.push(chunk)
+  return result
+}
+// -------------------------------------------------------------------------------------------------
 // Arrays
-// ------------------------------------------------------------------------------------------------
-exports.isArray = (anArray) => Array.isArray(anArray)
-exports.isNotEmptyArray = (anArray) => Array.isArray(anArray) && anArray.length > 0
-exports.isEmptyArray = (anArray) => Array.isArray(anArray) && anArray.length === 0
-exports.getLast = (array) => (Array.isArray(array) ? array[array.length - 1] : null)
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+export const isArray = (anArray) => Array.isArray(anArray)
+export const isNotEmptyArray = (anArray) => Array.isArray(anArray) && anArray.length > 0
+export const isEmptyArray = (anArray) => Array.isArray(anArray) && anArray.length === 0
+export const getLast = (array) => (Array.isArray(array) ? array[array.length - 1] : null)
+// -------------------------------------------------------------------------------------------------
 // Objects
-// ------------------------------------------------------------------------------------------------
-exports.isObject = (obj) => Object.keys(obj).length > 0
-exports.isEmptyObject = (obj) =>
-  !this.isString(obj) && !this.isArray(obj) && Object.keys(obj).length === 0
-exports.isNotEmptyObject = (obj) => obj && Object.keys(obj).length > 0
+// -------------------------------------------------------------------------------------------------
+export const isObject = (obj) => Object.prototype.toString.call(obj) === '[object Object]'
+//Object.keys(obj).length > 0
+export const isEmptyObject = (obj) =>
+  !isString(obj) && !Array.isArray(obj) && Object.keys(obj).length === 0
+export const isNotEmptyObject = (obj) => obj && Object.keys(obj).length > 0
 
-exports.NOT_FOUND = '!_not_found_!'
-exports.quietAccess = (obj, prop) => {
+export const NOT_FOUND = '!_not_found_!'
+export const quietAccess = (obj, prop) => {
   try {
-    if (typeof obj[prop] === 'undefined') return this.NOT_FOUND
+    if (typeof obj[prop] === 'undefined') return NOT_FOUND
     return obj[prop]
   } catch {
-    return this.NOT_FOUND
+    return NOT_FOUND
   }
 }
 
 /** !! TODO: treat object arrays! */
-exports.getPaths = async (root, parentKeyName) => {
+export const getPaths = async (root, parentKeyName) => {
   // if obj has no keys, abort
-  if (this.isString(root) || this.isArray(root) || Object.keys(root).length === 0) {
+  if (isString(root) || Array.isArray(root) || Object.keys(root).length === 0) {
     return []
   }
   const keys = Object.keys(root)
   let rootSubPaths = []
 
-  // console.log(this.beautify(root))
+  // console.log(beautify(root))
 
   await Promise.all(
     keys.map(async (key) => {
@@ -172,23 +241,23 @@ exports.getPaths = async (root, parentKeyName) => {
       const keyPath = parentKeyName ? `${parentKeyName}.${key}` : `${key}`
       // console.log(`keyPath: ${keyPath}`)
       rootSubPaths.push(keyPath)
-      if (this.isNotEmptyObject(subObj)) {
-        const keyPaths = await this.getPaths(subObj, keyPath)
+      if (isNotEmptyObject(subObj)) {
+        const keyPaths = await getPaths(subObj, keyPath)
         rootSubPaths = rootSubPaths.concat(keyPaths)
         return true
       } else return false
     })
   )
-  // console.log(this.beautify(rootSubPaths))
+  // console.log(beautify(rootSubPaths))
   return rootSubPaths
 }
 
-exports.listPick = (objList, fieldList) => {
+export const listPick = (objList, fieldList) => {
   const reshapedList = objList.map((obj) => pick(obj, fieldList))
   return reshapedList
 }
 
-exports.filterOnValue = async (obj, predicate) => {
+export const filterOnValue = async (obj, predicate) => {
   const result = {}
 
   await Promise.all(
@@ -203,15 +272,18 @@ exports.filterOnValue = async (obj, predicate) => {
   return result
 }
 
-// ------------------------------------------------------------------------------------------------
+export const getSubProp = (obj, propArray) => objectPath.get(obj, propArray)
+export const setSubProp = (obj, propArray, value) => objectPath.set(obj, propArray, value)
+
+// -------------------------------------------------------------------------------------------------
 // JSON
-// ------------------------------------------------------------------------------------------------
-exports.isEmpty = (prop) => {
+// -------------------------------------------------------------------------------------------------
+export const isEmpty = (prop) => {
   const strProp = JSON.stringify(prop)
   return prop == '' || prop == '{}' || prop == '[]' || strProp == '{}' || strProp == '[]'
 }
 
-/* 
+/*
   TRUE:
     !null
     !undefined
@@ -221,8 +293,8 @@ exports.isEmpty = (prop) => {
     !{}
     ![]
 */
-exports.isNothing = (prop) => {
-  return !prop || this.isEmpty(prop)
+export const isNothing = (prop) => {
+  return !prop || isEmpty(prop)
 }
 
 /**
@@ -232,7 +304,7 @@ exports.isNothing = (prop) => {
  *                                    to display the JSON on several lines
  * @returns {String} JSON.stringify options
  */
-exports.beautify = (jsonObject, option) => {
+export const beautify = (jsonObject, option) => {
   try {
     return `${JSON.stringify(jsonObject, null, option).replace(/\\"/g, '"')}${
       option != null ? '\n' : ''
@@ -248,34 +320,22 @@ exports.beautify = (jsonObject, option) => {
  * @returns {JSON} The deep (dissociated) clone of the input object
  * @throws parameter 'jsonObject' is undefined, null or empty
  */
-exports.deepClone = (jsonObject) => {
+export const deepClone = (jsonObject) => {
   return JSON.parse(JSON.stringify(jsonObject))
 }
 
-// ------------------------------------------------------------------------------------------------
-// Basic logging
-// ------------------------------------------------------------------------------------------------
-exports.separateLogs = (insertStr) => {
-  const logSeparator = !insertStr
-    ? `--------------------------------------------------------------------------`
-    : `---------------------------------------------------------------[${insertStr}]--`
-  console.log(this.nowLocaleFormatted(), logSeparator)
-  return logSeparator
-}
+export const logWhere = (srcMod, srcFun) =>
+  !srcMod ? srcFun : !srcFun ? srcMod : `${srcMod} . ${srcFun}`
 
-exports.logWhere = (srcMod, srcFun) => {
-  return !srcMod ? srcFun : !srcFun ? srcMod : `${srcMod} . ${srcFun}`
-}
+export const displayStr = (srcMod, srcFun, msg) =>
+  `[ ${logWhere(srcMod, srcFun)} ] ${msg !== '' ? msg : '<-'}`
 
-exports.displayStr = (srcMod, srcFun, msg) => {
-  return `[ ${this.logWhere(srcMod, srcFun)} ] ${msg !== '' ? msg : '<-'}`
-}
+export const consoleLog = (srcMod, srcFun, msg) =>
+  console.log('D', nowLocaleFormatted(), displayStr(srcMod, srcFun, msg))
 
-exports.consoleLog = (srcMod, srcFun, msg) => {
-  console.log('D', this.nowLocaleFormatted(), this.displayStr(srcMod, srcFun, msg))
-}
-
-exports.consoleErr = (srcMod, srcFun, msg) => {
-  const errMsg = !msg ? undefined : msg[TRACE] || msg
-  console.error('E', this.nowLocaleFormatted(), this.displayStr(srcMod, srcFun, errMsg))
-}
+export const consoleErr = (srcMod, srcFun, msg) =>
+  console.error(
+    'E',
+    nowLocaleFormatted(),
+    displayStr(srcMod, srcFun, !msg ? undefined : msg[TRACE] || msg)
+  )

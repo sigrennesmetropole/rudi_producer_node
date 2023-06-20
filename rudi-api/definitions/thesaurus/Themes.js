@@ -1,18 +1,16 @@
-'use strict'
+// const mod = 'themeThes'
 
-const mod = 'themeThes'
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const Thesaurus = require('./Thesaurus')
+// -------------------------------------------------------------------------------------------------
+import { Thesaurus } from './Thesaurus.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Dynamic enum init
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
-/*   farming: "Agriculture",
+/*
+  farming: "Agriculture",
   biota: "Biote",
   biota: "Biote",
   boundaries: "Limites",
@@ -75,18 +73,6 @@ const INIT_VALUES = {
   society: { fr: 'Social', en: 'Society' },
 }
 
-const themes = new Thesaurus(CODE, Object.keys(INIT_VALUES), INIT_VALUES)
+export const Themes = new Thesaurus(CODE, INIT_VALUES)
 
-const fun = `init ${CODE}`
-// log.t(mod, fun, ``)
-
-;(async () => {
-  try {
-    await themes.init()
-    // log.d(mod, fun, `ok`)
-  } catch (err) {
-    log.w(mod, fun, `Init failed: ${err}`)
-  }
-})()
-
-module.exports = themes
+export default Themes

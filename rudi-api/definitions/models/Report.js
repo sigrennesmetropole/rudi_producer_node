@@ -1,27 +1,26 @@
-'use strict'
-
 const mod = 'reportSch'
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { omit } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependancies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const { HTTP_METHODS } = require('../../config/confApi')
+import _ from 'lodash'
+const { omit } = _
 
-const { makeSearchable } = require('../../db/dbActions')
-const { RudiError } = require('../../utils/errors')
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
 
-const ids = require('../schemas/Identifiers')
+import { HTTP_METHODS } from '../../config/confApi.js'
+import { UuidSchema, UuidV4Schema } from '../schemas/Identifiers.js'
 
-// ------------------------------------------------------------------------------------------------
+import { makeSearchable } from '../../db/dbActions.js'
+import { RudiError } from '../../utils/errors.js'
+
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const {
+// -------------------------------------------------------------------------------------------------
+import {
   FIELDS_TO_SKIP,
   API_COLLECTION_TAG,
   API_REPORT_RESOURCE_ID,
@@ -40,27 +39,26 @@ const {
   API_REPORT_METHOD,
   API_REPORT_COMMENT,
   API_REPORT_ERROR_CODE,
-} = require('../../db/dbFields')
-
-const IntegrationStatus = {
+} from '../../db/dbFields.js'
+export const IntegrationStatus = {
   OK: 'OK',
   KO: 'KO',
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition: Report
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 const ReportSchema = new mongoose.Schema(
   {
     /** Unique identifier of the integration report (required) */
-    [API_REPORT_ID]: ids.UUIDv4,
+    [API_REPORT_ID]: UuidV4Schema,
 
     /**
      * Unique and permanent identifier for the resource in RUDI
      * system (required)
      */
-    [API_REPORT_RESOURCE_ID]: ids.UUID,
+    [API_REPORT_RESOURCE_ID]: UuidSchema,
 
     /**
      * Title of the resource
@@ -83,7 +81,7 @@ const ReportSchema = new mongoose.Schema(
     [API_REPORT_VERSION]: {
       type: String,
       required: true,
-      // match: Validation.API_VERSION,
+      // match: API_VERSION,
     },
 
     /** State of the integration of the resource in the Portal */
@@ -109,7 +107,6 @@ const ReportSchema = new mongoose.Schema(
         {
           [API_REPORT_ERROR_CODE]: {
             type: String,
-            // type: Int32,
             // min: 0,
             required: true,
           },
@@ -145,19 +142,19 @@ ReportSchema.methods.toJSON = function () {
   return omit(this.toObject(), FIELDS_TO_SKIP)
 }
 
-/* 
+/*
 ReportSchema.pre('save', async function (next) {
   const fun = 'pre save hook'
   // if(this.version === 'v1') this.version = api.VERSION
-  log.d(mod, fun, `this: ${beautify(this)}`)
+  logD(mod, fun, `this: ${beautify(this)}`)
 
   next()
 })
  */
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Models definition
-// ------------------------------------------------------------------------------------------------
-const Report = mongoose.model('Report', ReportSchema)
+// -------------------------------------------------------------------------------------------------
+export const Report = mongoose.model('Report', ReportSchema)
 
 Report.getSearchableFields = () => [
   API_REPORT_ID,
@@ -170,18 +167,12 @@ Report.getSearchableFields = () => [
   `${LOCAL_REPORT_ERROR}.${LOCAL_REPORT_ERROR_MSG}`,
 ]
 
-const fun = 'createSearchIndexes'
-Report.createSearchIndexes = async () => {
+Report.initialize = async () => {
+  const fun = 'initReport'
   try {
     await makeSearchable(Report)
+    return `Report indexes created`
   } catch (err) {
     RudiError.treatError(mod, fun, err)
   }
 }
-Report.createSearchIndexes()
-  .catch((err) => {
-    throw RudiError.treatError(mod, fun, `Failed to create search indexes: ${err}`)
-  })
-  .then(log.t(mod, fun, 'done'))
-
-module.exports = { Report, IntegrationStatus }

@@ -1,53 +1,39 @@
-'use strict'
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { omit } = require('lodash')
+import _ from 'lodash'
+const { omit } = _
 
-const Int32 = require('mongoose-int32').loadType(mongoose)
+import mongooseInt32 from 'mongoose-int32'
+const Int32 = mongooseInt32.loadType(mongoose)
 
-// ------------------------------------------------------------------------------------------------
-// Inbternal dependancies
-// ------------------------------------------------------------------------------------------------
-const Ids = require('../schemas/Identifiers')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
-const { FIELDS_TO_SKIP } = require('../../db/dbFields')
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+import { FIELDS_TO_SKIP } from '../../db/dbFields.js'
+import { UuidSchema } from '../schemas/Identifiers.js'
+
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const PortalTokenSchema = new mongoose.Schema(
   {
     /** Base 64 encoded token information */
-    access_token: {
-      type: String,
-    },
+    access_token: String,
 
-    token_type: {
-      type: String,
-    },
+    token_type: String,
 
     /** Token life span in seconds */
-    expires_in: {
-      type: Int32,
-    },
+    expires_in: Int32,
 
     /** Expiration date in Epoch seconds */
-    exp: {
-      type: Int32,
-    },
+    exp: Int32,
 
-    scope: {
-      type: String,
-    },
+    scope: String,
 
-    jti: {
-      type: Ids.UUID,
-    },
+    jti: UuidSchema,
   },
   {
     timestamps: true,
@@ -58,8 +44,8 @@ PortalTokenSchema.methods.toJSON = function () {
   return omit(this.toObject(), FIELDS_TO_SKIP)
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Exports
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const PortalToken = mongoose.model('PortalToken', PortalTokenSchema)
-module.exports = PortalToken
+export default PortalToken

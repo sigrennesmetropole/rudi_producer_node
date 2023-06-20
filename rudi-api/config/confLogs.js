@@ -1,16 +1,15 @@
-'use strict'
+const mod = 'logConf'
+const fun = 'init'
 
-const mod = 'confLogger'
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // External dependencies
-// ------------------------------------------------------------------------------------------------
-const { existsSync, mkdirSync } = require('fs')
+// -------------------------------------------------------------------------------------------------
+import { existsSync, mkdirSync } from 'fs'
 
-const winston = require('winston')
-require('winston-daily-rotate-file')
+import winston from 'winston'
+import 'winston-daily-rotate-file'
 // require('winston-syslog').Syslog
-const rudiLogger = require('@aqmo.org/rudi_logger')
+import rudiLogger from '@aqmo.org/rudi_logger'
 
 const { combine, timestamp, printf, colorize, simple } = winston.format
 const syslogLevels = winston.config.syslog.levels
@@ -23,80 +22,88 @@ Object.assign(
   syslogLevels
 )
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const utils = require('../utils/jsUtils')
-const sys = require('../config/confSystem')
+// -------------------------------------------------------------------------------------------------
+import { getGitHash, getAppOptions, OPT_NODE_ENV } from './appOptions.js'
+import { consoleLog, consoleErr, LOG_DATE_FORMAT, separateLogs } from '../utils/jsUtils.js'
+import {
+  getAppName,
+  getIniValue,
+  shouldControlPrivateRequests,
+  shouldControlPublicRequests,
+} from './confSystem.js'
 
-// ------------------------------------------------------------------------------------------------
+separateLogs('Loading log conf', true) ///////////////////////////////////////////////////////////
+
+// -------------------------------------------------------------------------------------------------
 // Reading conf file
-// ------------------------------------------------------------------------------------------------
-const APP_NAME = sys.getAppName()
+// -------------------------------------------------------------------------------------------------
+const APP_NAME = getAppName()
 
 // ----- Flags section
 const FLAGS_SECTION = 'flags'
 
-exports.SHOULD_LOG_CONSOLE = sys.getIniValue(FLAGS_SECTION, 'should_log_console', false)
-const SHOULD_FILELOG = sys.getIniValue(FLAGS_SECTION, 'should_log_in_file', false)
-const SHOULD_SHOW_ERROR_PILE = sys.getIniValue(FLAGS_SECTION, 'should_show_error_pile', false)
-const SHOULD_SHOW_ROUTES = sys.getIniValue(FLAGS_SECTION, 'should_show_routes', true)
-exports.SHOULD_SYSLOG = sys.getIniValue(FLAGS_SECTION, 'should_syslog')
-const SHOULD_SYSLOG_IN_CONSOLE = sys.getIniValue(FLAGS_SECTION, 'should_syslog_in_console')
-const SHOULD_SYSLOG_IN_FILE = sys.getIniValue(FLAGS_SECTION, 'should_syslog_in_file')
+export const SHOULD_LOG_CONSOLE = getIniValue(FLAGS_SECTION, 'should_log_console', false)
+const SHOULD_FILELOG = getIniValue(FLAGS_SECTION, 'should_log_in_file', false)
+const SHOULD_SHOW_ERROR_PILE = getIniValue(FLAGS_SECTION, 'should_show_error_pile', false)
+const SHOULD_SHOW_ROUTES = getIniValue(FLAGS_SECTION, 'should_show_routes', true)
+export const SHOULD_SYSLOG = getIniValue(FLAGS_SECTION, 'should_syslog')
+const SHOULD_SYSLOG_IN_CONSOLE = getIniValue(FLAGS_SECTION, 'should_syslog_in_console')
+const SHOULD_SYSLOG_IN_FILE = getIniValue(FLAGS_SECTION, 'should_syslog_in_file')
 
-exports.shouldShowErrorPile = () => SHOULD_SHOW_ERROR_PILE
-exports.shouldShowRoutes = () => SHOULD_SHOW_ROUTES
+export const shouldShowErrorPile = () => SHOULD_SHOW_ERROR_PILE
+export const shouldShowRoutes = () => SHOULD_SHOW_ROUTES
 
 // Log feedback
-const checkOption = (msg, flag) => utils.consoleLog(mod, '', `[${flag ? 'x' : ' '}] ${msg}`)
-checkOption('Should log on console', this.SHOULD_LOG_CONSOLE)
-checkOption('Control private requests', sys.shouldControlPrivateRequests())
-checkOption('Control public requests', sys.shouldControlPublicRequests())
+const checkOption = (msg, flag) => consoleLog(mod, fun, `[${flag ? 'x' : ' '}] ${msg}`)
+checkOption('Should log on console', SHOULD_LOG_CONSOLE)
+checkOption('Control private requests', shouldControlPrivateRequests())
+checkOption('Control public requests', shouldControlPublicRequests())
 checkOption('Log in file', SHOULD_FILELOG)
 checkOption('Show error pile', SHOULD_SHOW_ERROR_PILE)
-checkOption('Sent syslogs', this.SHOULD_SYSLOG)
+checkOption('Sent syslogs', SHOULD_SYSLOG)
 checkOption('Backup syslogs in file', SHOULD_SYSLOG_IN_FILE)
 
 // ----- Logs section
 const LOG_SECTION = 'logging'
 
-const LOG_LVL = sys.getIniValue(LOG_SECTION, 'log_level', 'debug')
-utils.consoleLog(mod, '', `Log level set to '${LOG_LVL.toUpperCase()}'`)
+const LOG_LVL = getIniValue(LOG_SECTION, 'log_level', 'debug')
+consoleLog(mod, fun, `Log level set to '${LOG_LVL.toUpperCase()}'`)
 
-const LOG_DIR = sys.getIniValue(LOG_SECTION, 'log_dir')
-const LOG_FILE = sys.getIniValue(LOG_SECTION, 'log_file')
+const LOG_DIR = getIniValue(LOG_SECTION, 'log_dir')
+const LOG_FILE = getIniValue(LOG_SECTION, 'log_file')
 
-exports.LOG_EXP = sys.getIniValue(LOG_SECTION, 'expires', '7d')
-exports.getLogLevel = () => LOG_LVL
+export const LOG_EXP = getIniValue(LOG_SECTION, 'expires', '7d')
+export const getLogLevel = () => LOG_LVL
 
 // ----- Syslog
 const SYSLOG_SECTION = 'syslog'
 
-// const SYSLOG_LVL = sys.getIniValue(SYSLOG_SECTION, '◊log_level', 'info')
-// const SYSLOG_NODE_NAME = sys.getIniValue(SYSLOG_SECTION, 'syslog_node_name')
-const SYSLOG_PROTOCOL = sys.getIniValue(SYSLOG_SECTION, 'syslog_protocol', 'unix')
-const SYSLOG_FACILITY = sys.getIniValue(SYSLOG_SECTION, 'syslog_facility', 'local4')
-const SYSLOG_HOST = sys.getIniValue(SYSLOG_SECTION, 'syslog_host')
-const SYSLOG_PORT = sys.getIniValue(SYSLOG_SECTION, 'syslog_port', 514) // default: 514
-// const SYSLOG_TYPE = sys.getIniValue(SYSLOG_SECTION, 'syslog_type', 'RFC5424') // bsd | 5424
-const SYSLOG_SOCKET = sys.getIniValue(SYSLOG_SECTION, 'syslog_socket') // the socket for sending syslog diagrams
-const SYSLOG_DIR = sys.getIniValue(SYSLOG_SECTION, 'syslog_dir') // path of the syslog backup file
+// const SYSLOG_LVL = getIniValue(SYSLOG_SECTION, '◊log_level', 'info')
+// const SYSLOG_NODE_NAME = getIniValue(SYSLOG_SECTION, 'syslog_node_name')
+const SYSLOG_PROTOCOL = getIniValue(SYSLOG_SECTION, 'syslog_protocol', 'unix')
+const SYSLOG_FACILITY = getIniValue(SYSLOG_SECTION, 'syslog_facility', 'local4')
+const SYSLOG_HOST = getIniValue(SYSLOG_SECTION, 'syslog_host')
+const SYSLOG_PORT = getIniValue(SYSLOG_SECTION, 'syslog_port', 514) // default: 514
+// const SYSLOG_TYPE = getIniValue(SYSLOG_SECTION, 'syslog_type', 'RFC5424') // bsd | 5424
+const SYSLOG_SOCKET = getIniValue(SYSLOG_SECTION, 'syslog_socket') // the socket for sending syslog diagrams
+const SYSLOG_DIR = getIniValue(SYSLOG_SECTION, 'syslog_dir') // path of the syslog backup file
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Creating local log dir
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 if (SHOULD_FILELOG) {
   try {
     // first check if directory already exists
     if (!existsSync(LOG_DIR)) {
       mkdirSync(LOG_DIR, { recursive: true })
-      utils.consoleLog(mod, '', 'Log directory has been created')
+      consoleLog(mod, fun, 'Log directory has been created')
     } else {
-      utils.consoleLog(mod, '', 'Log directory exists')
+      consoleLog(mod, fun, 'Log directory exists')
     }
   } catch (err) {
-    utils.consoleErr(mod, '', `Log directory creation failed: ${err}`)
+    consoleErr(mod, fun, `Log directory creation failed: ${err}`)
     throw err
   }
 }
@@ -106,19 +113,19 @@ if (SHOULD_SYSLOG_IN_FILE) {
     // first check if directory already exists
     if (!existsSync(SYSLOG_DIR)) {
       mkdirSync(SYSLOG_DIR, { recursive: true })
-      utils.consoleLog(mod, '', 'Syslog directory has been created.')
+      consoleLog(mod, fun, 'Syslog directory has been created.')
     } else {
-      utils.consoleLog(mod, '', 'Syslog directory exists.')
+      consoleLog(mod, fun, 'Syslog directory exists.')
     }
   } catch (err) {
-    utils.consoleErr(mod, '', `Log directory creation failed: ${err}`)
+    consoleErr(mod, fun, `Log directory creation failed: ${err}`)
     throw err
   }
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Winston logger creation : LOG FILE
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // datedRotatingFile.on('rotate', function (oldFilename, newFilename) {
 //   // perform an action when rotation takes place
@@ -126,7 +133,7 @@ if (SHOULD_SYSLOG_IN_FILE) {
 /*
 // - New transport : MongoDB
 const options ={
-  db: `${sys.DB_LOGS_URL}`,
+  db: `${DB_LOGS_URL}`,
   collection: 'logs'
 }
 const transportMongoDb = new winston.transports.MongoDB(options)
@@ -139,7 +146,7 @@ winston.addColors({
   debug: 'cyan',
 })
 
-const FORMAT_TIMESTAMP = { format: utils.LOG_DATE_FORMAT }
+const FORMAT_TIMESTAMP = { format: LOG_DATE_FORMAT }
 const LOGS_FORMAT_PRINTF = (info) =>
   `${info.level}`.substring(0, 1).toUpperCase() + ` ${info.timestamp} ${info.message}`
 
@@ -217,7 +224,7 @@ if (SHOULD_FILELOG) {
   // loggerOpts.transports.push(
   //   new winston.transports.File({
   //     name: 'errorLogs',
-  //     filename: `${this.logDir()}/${errorLogsFileName}`,
+  //     filename: `${logDir()}/${errorLogsFileName}`,
   //     level: 'error',
   //     maxsize: MAX_SIZE,
   //     maxFiles: 2,
@@ -226,13 +233,13 @@ if (SHOULD_FILELOG) {
   // )
 }
 
-exports.logger = winston.createLogger(loggerOpts)
+export const wConsoleLogger = winston.createLogger(loggerOpts)
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Winston logger creation : logger for errors caught only on Fastify level (should be obsolete)
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const FF_LOGGER = 'ffLogger'
-exports.initFFLogger = () => {
+export const initFFLogger = () => {
   const fun = 'initFFLogger'
   // Here we use winston.containers IoC
   winston.loggers.add(FF_LOGGER, {
@@ -241,7 +248,7 @@ exports.initFFLogger = () => {
     levels: syslogLevels,
     // format: format.combine(format.splat(), format.json()),
     defaultMeta: {
-      service: sys.getAppName() + '_' + (process.env.NODE_ENV || 'dev'),
+      service: getAppName() + '_' + (getAppOptions(OPT_NODE_ENV) || 'dev'),
     },
     transports: [logOutputs.ffError],
   })
@@ -250,7 +257,7 @@ exports.initFFLogger = () => {
   const ffLogger = winston.loggers.get(FF_LOGGER)
 
   process.on('uncaughtException', (err) => {
-    utils.consoleErr(mod, fun, `UncaughtException processing: ${err}`)
+    consoleErr(mod, fun, `UncaughtException processing: ${err}`)
   })
 
   // PINO like, we link winston.containers to use only one instance of logger
@@ -259,9 +266,9 @@ exports.initFFLogger = () => {
   return ffLogger
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Winston logger creation : SYSLOG
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // const SYSLOGS_FORMAT_PRINTF = (info) =>
 //   `${info.level} ${utils.toISOLocale()} ${info.message}` +
@@ -319,7 +326,7 @@ exports.initFFLogger = () => {
 //   )
 // }
 
-// exports.sysLogger = winston.createLogger(syslogOpts)
+// export const sysLogger = winston.createLogger(syslogOpts)
 function getRudiLoggerOptions() {
   var facility = 20
   if (SYSLOG_FACILITY.substr(0, 5) === 'local') {
@@ -352,8 +359,8 @@ function getRudiLoggerOptions() {
   return rudiLoggerOpts
 }
 
-exports.sysLogger = new rudiLogger.RudiLogger(
-  sys.getAppName(),
-  sys.getGitHash(),
+export const sysLogger = new rudiLogger.RudiLogger(
+  getAppName(),
+  getGitHash(),
   getRudiLoggerOptions()
 )

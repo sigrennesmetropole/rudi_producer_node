@@ -1,37 +1,41 @@
-'use strict'
-
 // const mod = 'SkosScheme'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { omit } = require('lodash')
+// -------------------------------------------------------------------------------------------------
+// External dependencies
+// -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
-// ------------------------------------------------------------------------------------------------
-// Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const utils = require('../../utils/jsUtils')
-const Validation = require('../schemaValidators')
+import _ from 'lodash'
+const { omit } = _
 
-// ------------------------------------------------------------------------------------------------
-// Other custom schema definitions
-// ------------------------------------------------------------------------------------------------
-const ids = require('../schemas/Identifiers')
-const DictionaryEntry = require('../schemas/DictionaryEntry')
-const { FIELDS_TO_SKIP } = require('../../db/dbFields')
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Constants
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+import { FIELDS_TO_SKIP } from '../../db/dbFields.js'
+import { VALID_URI } from '../schemaValidators.js'
+import { UuidV4Schema } from '../schemas/Identifiers.js'
+
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { isNotEmptyArray } from '../../utils/jsUtils.js'
+
+// -------------------------------------------------------------------------------------------------
+// Other custom schema definitions
+// -------------------------------------------------------------------------------------------------
+import { DictionaryEntrySchema } from '../schemas/DictionaryEntry.js'
+
+// -------------------------------------------------------------------------------------------------
+// Constants
+// -------------------------------------------------------------------------------------------------
 const validArrayNotNull = {
-  validator: utils.isNotEmptyArray,
+  validator: isNotEmptyArray,
   message: `'{PATH}' property should not be empty`,
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition: SkosScheme
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 /**
  * Set of SKOS concepts gathered in a transversal and hierarchical
  * relationships.
@@ -45,7 +49,7 @@ const SkosSchemeSchema = new mongoose.Schema(
     /**
      * Unique and permanent identifier for the concept scheme in RUDI system (required)
      */
-    scheme_id: ids.UUIDv4,
+    scheme_id: UuidV4Schema,
 
     /**
      * Short abstract code / simple name for the concept scheme
@@ -63,7 +67,7 @@ const SkosSchemeSchema = new mongoose.Schema(
 
     /** Short code for the concept scheme */
     scheme_label: {
-      type: [DictionaryEntry],
+      type: [DictionaryEntrySchema],
       required: true,
       validate: validArrayNotNull,
     },
@@ -71,7 +75,7 @@ const SkosSchemeSchema = new mongoose.Schema(
     /** Web page that document the SKOS concept scheme */
     scheme_uri: {
       type: String,
-      match: Validation.VALID_URI,
+      match: VALID_URI,
     },
 
     /** List of the highest level concepts in the concept scheme */
@@ -102,17 +106,17 @@ const SkosSchemeSchema = new mongoose.Schema(
   }
 )
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Schema refinements
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 // ----- toJSON cleanup
 SkosSchemeSchema.methods.toJSON = function () {
   return omit(this.toObject(), FIELDS_TO_SKIP)
 }
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Exports
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const SkosScheme = mongoose.model('SkosScheme', SkosSchemeSchema)
-module.exports = SkosScheme
+export default SkosScheme

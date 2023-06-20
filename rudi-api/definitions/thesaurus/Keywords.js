@@ -1,16 +1,13 @@
-'use strict'
+// const mod = 'keywThes'
 
-const mod = 'keywThes'
-
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const Thesaurus = require('./Thesaurus')
+// -------------------------------------------------------------------------------------------------
+import { Thesaurus } from './Thesaurus.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Dynamic enum init
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 
 const CODE = 'keywords'
 const INIT_VALUES = [
@@ -42,25 +39,6 @@ const INIT_VALUES = [
   'wind',
 ]
 
-const keywords = new Thesaurus(CODE, INIT_VALUES)
+export const Keywords = new Thesaurus(CODE, INIT_VALUES)
 
-const fun = `init ${CODE}`
-// keywords
-//   .init()
-//   .then(() => {
-//     // log.d(mod, fun, `Keywords: ${keywords.get()}`)
-//   })
-//   .catch((err) => {
-//     log.w(mod, fun, `Init failed: ${err}`)
-//   })
-
-;(async () => {
-  try {
-    await keywords.init()
-    // log.d(mod, fun, `ok`)
-  } catch (err) {
-    log.w(mod, fun, `Init failed: ${err}`)
-  }
-})()
-
-module.exports = keywords
+export default Keywords

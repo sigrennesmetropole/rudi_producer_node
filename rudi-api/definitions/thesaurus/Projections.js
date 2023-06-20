@@ -1,42 +1,40 @@
-'use strict'
-
 const mod = 'projThes'
 
-const { BadRequestError, RudiError } = require('../../utils/errors')
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Internal dependencies
-// ------------------------------------------------------------------------------------------------
-const log = require('../../utils/logging')
-const { parameterExpected } = require('../../utils/msg')
+// -------------------------------------------------------------------------------------------------
+import { logW } from '../../utils/logging.js'
+import { parameterExpected } from '../../utils/msg.js'
+import { BadRequestError, RudiError } from '../../utils/errors.js'
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 const Projections = [
   'RGF93/Lambert-93 (EPSG:2154)', // https://www.spatialreference.org/ref/epsg/2154/
   'RGF93/CC48 (EPSG:3948)', // https://www.spatialreference.org/ref/epsg/3948/
-  'WGS 84', // https://www.spatialreference.org/ref/epsg/4326/ urn:ogc:def:crs:OGC::CRS84
+  'WGS 84 (EPSG:4326)', // https://www.spatialreference.org/ref/epsg/4326/ urn:ogc:def:crs:OGC::CRS84
 ]
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Getter / setter
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 let Thesaurus = Projections
 
-exports.initialize = (arg) => {
+export const initialize = (arg) => {
   if (arg) Thesaurus = []
 }
 
-exports.get = () => {
-  return Thesaurus
+export const get = (lang) => {
+  return lang ? Thesaurus[lang] : Thesaurus
 }
 
-exports.set = (newValue) => {
+export const set = (newValue) => {
   const fun = 'set'
   try {
     if (!newValue) {
       const errMsg = parameterExpected(fun, 'newValue')
-      log.w(mod, fun, errMsg)
+      logW(mod, fun, errMsg)
       throw new BadRequestError(errMsg)
     }
     newValue = `${newValue}`.trim()
@@ -46,13 +44,13 @@ exports.set = (newValue) => {
   }
 }
 
-exports.isValid = (value, shouldInit) => {
+export const isValid = (value, shouldInit) => {
   const fun = 'isValid'
   if (!value) {
-    log.w(mod, fun, parameterExpected(fun, 'value'))
+    logW(mod, fun, parameterExpected(fun, 'value'))
     return false
   }
-  const isIn = Thesaurus.indexOf(value) > -1
+  const isIn = get().indexOf(value) > -1
   if (!isIn && shouldInit) {
     this.set(value)
     return true

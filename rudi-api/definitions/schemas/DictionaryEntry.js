@@ -1,34 +1,29 @@
-'use strict'
+// -------------------------------------------------------------------------------------------------
+// Constants
+// -------------------------------------------------------------------------------------------------
+import { DICT_LANG, DICT_TEXT } from '../../db/dbFields.js'
 
-// ------------------------------------------------------------------------------------------------
-// External dependancies
-// ------------------------------------------------------------------------------------------------
-const mongoose = require('mongoose')
-const { PARAM_THESAURUS_LANG } = require('../../config/confApi')
-const Language = require('../thesaurus/Languages').get()
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { get as getLanguages } from '../thesaurus/Languages.js'
+const Languages = getLanguages()
 
-// ------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
-// ------------------------------------------------------------------------------------------------
-const DictionaryEntry = new mongoose.Schema(
-  {
-    [PARAM_THESAURUS_LANG]: {
+// -------------------------------------------------------------------------------------------------
+export const DictionaryEntrySchema = {
+  type: {
+    [DICT_LANG]: {
       type: String,
-      default: Language.fr,
-      enum: Object.values(Language),
+      default: Languages.fr,
+      enum: Object.values(Languages),
       required: true,
     },
-    text: {
-      type: String,
+    [DICT_TEXT]: {
+      type: String, // Only one entry per language!
       required: true,
     },
   },
-  {
-    _id: false,
-  }
-)
-
-// ------------------------------------------------------------------------------------------------
-// Exports
-// ------------------------------------------------------------------------------------------------
-module.exports = DictionaryEntry
+  _id: false,
+}
