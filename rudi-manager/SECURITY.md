@@ -2,7 +2,7 @@
 
 ## Reporting a Vulnerability
 
-If there are any vulnerabilities in `RUDI producer node API`, don't hesitate to _report them_.
+If there are any vulnerabilities in `RUDI producer node` code, don't hesitate to _report them_.
 
 Please email `security@rudi-univ-rennes1.fr` and describe what you've found.
 

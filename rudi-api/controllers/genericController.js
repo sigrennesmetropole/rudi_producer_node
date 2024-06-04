@@ -17,6 +17,7 @@ const { pick } = _
 // -------------------------------------------------------------------------------------------------
 import {
   ACT_DELETION,
+  ACT_EXT_SEARCH,
   ACT_SEARCH,
   ACT_UNLINKED,
   MONGO_ERROR,
@@ -24,10 +25,15 @@ import {
   OBJ_MEDIA,
   OBJ_METADATA,
   OBJ_ORGANIZATIONS,
+  OBJ_PUB_KEYS,
+  OBJ_PUB_KEYS_CAML,
   OBJ_SKOS_CONCEPTS,
+  OBJ_SKOS_CONCEPTS_CAML,
   OBJ_SKOS_SCHEMES,
+  OBJ_SKOS_SCHEMES_CAML,
   PARAM_ID,
   PARAM_OBJECT,
+  PARAM_PROP,
   QUERY_CONFIRM,
   QUERY_COUNT_BY,
   QUERY_FIELDS,
@@ -35,42 +41,36 @@ import {
   QUERY_GROUP_BY,
   QUERY_GROUP_LIMIT,
   QUERY_GROUP_OFFSET,
+  QUERY_LANG,
   QUERY_LIMIT,
   QUERY_OFFSET,
   QUERY_SEARCH_TERMS,
   QUERY_SORT_BY,
+  ROUTE_OPT,
+  STATUS_CODE,
   URL_OBJECTS,
   URL_PUB_METADATA,
   URL_PV_OBJECT_GENERIC,
-  OBJ_SKOS_CONCEPTS_CAML,
-  OBJ_SKOS_SCHEMES_CAML,
-  OBJ_PUB_KEYS,
-  OBJ_PUB_KEYS_CAML,
-  PARAM_PROP,
-  ACT_EXT_SEARCH,
-  ROUTE_OPT,
-  QUERY_LANG,
-  STATUS_CODE,
-} from '../config/confApi.js'
+} from '../config/constApi.js'
 
 import {
   countDbObjectList,
+  countDbObjects,
   deleteAllDbObjectsWithType,
+  deleteDbObject,
   deleteManyDbObjectsWithFilter,
   deleteManyDbObjectsWithRudiIds,
-  deleteDbObject,
   doesObjectExistWithJson,
   doesObjectExistWithRudiId,
+  getDbMetadataListAndCount,
+  getDbObjectList,
   getEnsuredObjectWithRudiId,
   getObjectIdField,
-  getDbObjectList,
-  getDbMetadataListAndCount,
   getRudiObjectList,
   groupDbObjectList,
   isReferencedInMetadata,
   overwriteDbObject,
   searchDbObjects,
-  countDbObjects,
 } from '../db/dbQueries.js'
 
 // -------------------------------------------------------------------------------------------------
@@ -86,29 +86,29 @@ import {
 
 import { accessProperty, accessReqParam } from '../utils/jsonAccess.js'
 
-import { beautify, isEmptyObject, isEmptyArray } from '../utils/jsUtils.js'
+import { beautify, isEmptyArray, isEmptyObject } from '../utils/jsUtils.js'
 
-import { NotFoundError, ForbiddenError, BadRequestError, RudiError } from '../utils/errors.js'
+import { BadRequestError, ForbiddenError, NotFoundError, RudiError } from '../utils/errors.js'
 
-import { parseQueryParameters } from '../utils/parseRequest.js'
 import { CallContext } from '../definitions/constructors/callContext.js'
+import { parseQueryParameters } from '../utils/parseRequest.js'
 
 // -------------------------------------------------------------------------------------------------
 // Specific controllers
 // -------------------------------------------------------------------------------------------------
+import { newContact } from './contactController.js'
 import { newMetadata, overwriteMetadata } from './metadataController.js'
 import { newOrganization } from './organizationController.js'
-import { newContact } from './contactController.js'
-import { newSkosConcept, newSkosScheme, widenSearch } from './skosController.js'
 import { newPublicKey, overwritePubKey } from './publicKeyController.js'
+import { newSkosConcept, newSkosScheme, widenSearch } from './skosController.js'
 
-import { deletePortalMetadata } from './portalController.js'
 import {
   API_ACCESS_CONDITION,
   API_COLLECTION_TAG,
   API_CONFIDENTIALITY,
   API_RESTRICTED_ACCESS,
 } from '../db/dbFields.js'
+import { deletePortalMetadata } from './portalController.js'
 
 // -------------------------------------------------------------------------------------------------
 // Specific object type helper functions
@@ -221,7 +221,7 @@ export const addSingleObject = async (req, reply) => {
   try {
     logT(mod, fun, `< POST ${URL_PV_OBJECT_GENERIC}`)
     // retrieve url parameters: object type
-    const objectType = getObjectParam(req, PARAM_OBJECT)
+    const objectType = getObjectParam(req)
 
     // get the rudiId field for this object type
     const idField = getObjectIdField(objectType)
@@ -288,7 +288,7 @@ export const getObjectList = async (req, reply) => {
     // logD(mod, fun, beautify(req))
     const objectType = getObjectParam(req)
 
-    return await getManyObjects(objectType, req, reply)
+    return await getManyObjects(objectType, req)
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
@@ -304,9 +304,9 @@ export const searchObjects = async (req, reply) => {
     logT(mod, fun, `< GET ${URL_PV_OBJECT_GENERIC}/${ACT_SEARCH}`)
     // retrieve url parameters: object type, object id
     const objectType = getObjectParam(req)
-    logV(mod, fun, req.routeConfig)
-    logV(mod, fun, req.routeSchema)
-    const opt = req.routeConfig ? req.routeConfig[ROUTE_OPT] : undefined
+    logV(mod, fun, req.routeOptions?.config)
+    logV(mod, fun, req.routeOptions.schema)
+    const opt = req.routeOptions?.config ? req.routeOptions?.config[ROUTE_OPT] : undefined
     logD(mod, fun, `opt: ${beautify(opt)}`)
 
     let parsedParameters
@@ -364,13 +364,13 @@ export const searchObjects = async (req, reply) => {
 export const getSearchableProperties = (req, reply) => {
   const fun = 'getSearchableProperties'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const rudiObjectList = getRudiObjectList()
     const getSearchableFields = {}
     // logD(mod, fun, `rudiObjectList: ${beautify(rudiObjectList)}`)
-    Object.keys(rudiObjectList).map((objectType) => {
+    Object.keys(rudiObjectList).forEach((objectType) => {
       try {
-        getSearchableFields[objectType] = rudiObjectList[objectType].Model.getSearchableFields()
+        getSearchableFields[objectType] = rudiObjectList[objectType].ObjModel.getSearchableFields()
       } catch (err) {
         logD(mod, fun, `${objectType}: not searchable`)
       }
@@ -387,7 +387,7 @@ export const getSearchableProperties = (req, reply) => {
 export const getManyObjects = async (objectType, req) => {
   const fun = 'getManyObjects'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     let parsedParameters
     try {
       parsedParameters = await parseQueryParameters(objectType, req.url)
@@ -413,7 +413,7 @@ export const getManyObjects = async (objectType, req) => {
       objectList = await getDbObjectList(objectType, options)
     } else if (groupBy) {
       if (countBy) {
-        const msg = `'${QUERY_GROUP_BY}' parameter found, '${QUERY_COUNT_BY}' is redondant and ignored`
+        const msg = `'${QUERY_GROUP_BY}' parameter found, '${QUERY_COUNT_BY}' is redundant and ignored`
         logW(mod, fun, msg)
       }
       const options = pick(parsedParameters, [
@@ -448,7 +448,7 @@ export const getManyObjects = async (objectType, req) => {
 export const countObjects = async (req, reply) => {
   const fun = 'countObjects'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const objectType = getObjectParam(req)
     const count = await countDbObjects(objectType)
     return count
@@ -503,7 +503,7 @@ export const getMetadataListAndCount = async (req, reply) => {
 export const getManyPubKeys = async (req, reply) => {
   const fun = 'getPubKeys'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     return await getManyObjects(OBJ_PUB_KEYS, req)
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -530,18 +530,19 @@ export const upsertSingleObject = async (req, reply) => {
     const existsObject = await doesObjectExistWithRudiId(objectType, rudiId)
 
     const context = CallContext.getCallContextFromReq(req)
+
     if (context) context.addObjId(objectType, rudiId)
 
-    if (!existsObject) {
-      return await newObject(objectType, updateData)
-    } else {
-      if (objectType === OBJ_METADATA) {
+    if (!existsObject) return await newObject(objectType, updateData)
+
+    switch (objectType) {
+      case OBJ_METADATA:
         return await overwriteMetadata(updateData)
-      } else if (objectType === OBJ_PUB_KEYS) {
+
+      case OBJ_PUB_KEYS:
         return await overwritePubKey(updateData)
-      } else {
+      default:
         return await overwriteDbObject(objectType, updateData)
-      }
     }
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -596,9 +597,6 @@ export const deleteObjectList = async (req, reply) => {
     // retrieve url parameters: object type, object id
     const objectType = getObjectParam(req)
 
-    // identify object model
-    // const { Model, idField } = getObjectAccesses(objectType)
-
     // TODO: retrieve the metadata ids, DELETE on portal side with
     // deletePortalMetadata(id)
 
@@ -637,8 +635,6 @@ export const deleteManyObjects = async (req, reply) => {
     // const fields = parsedParameters[QUERY_FIELDS]
     const confirmation = parsedParameters[QUERY_CONFIRM] || false
 
-    // if (objectType === OBJ_REPORTS) return await deleteReportsBefore(req, reply)
-
     if (isEmptyObject(filter)) {
       if (confirmation) return await deleteAllDbObjectsWithType(objectType)
       else {
@@ -660,7 +656,7 @@ export const deleteManyObjects = async (req, reply) => {
  * Generate an UUID v4
  */
 export const getOrphans = async (objectType) => {
-  const fun = 'getUnlinkdedObjects'
+  const fun = 'getOrphans'
   logT(mod, fun, `< GET ${URL_PV_OBJECT_GENERIC}/${ACT_UNLINKED}`)
 
   return await getOrphans(objectType)
@@ -672,7 +668,7 @@ export const getOrphans = async (objectType) => {
 export const generateUUID = async (req, reply) => {
   const fun = 'generateUUID'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     return UUIDv4()
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)

@@ -12,13 +12,13 @@ const { pick } = _
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  API_PUB_PEM,
-  API_PUB_URL,
-  API_PUB_NAME,
-  API_PUB_TYPE,
-  API_PUB_PROP,
-  API_PUB_KEY,
   API_PUB_ID,
+  API_PUB_KEY,
+  API_PUB_NAME,
+  API_PUB_PEM,
+  API_PUB_PROP,
+  API_PUB_TYPE,
+  API_PUB_URL,
 } from '../db/dbFields.js'
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
@@ -27,20 +27,20 @@ import { logT } from '../utils/logging.js'
 // import { beautify } from '../utils/jsUtils.js'
 import { httpGet } from '../utils/httpReq.js'
 
-import { RudiError, BadRequestError, NotFoundError } from '../utils/errors.js'
-import PublicKey from '../definitions/models/PublicKey.js'
 import { getApiUrl } from '../config/confSystem.js'
-import { OBJ_PUB_KEYS, URL_PREFIX_PUBLIC, PARAM_ID, PARAM_PROP } from '../config/confApi.js'
-import { accessReqParam } from '../utils/jsonAccess.js'
-import { CallContext } from '../definitions/constructors/callContext.js'
+import { OBJ_PUB_KEYS, PARAM_ID, PARAM_PROP, URL_PREFIX_PUBLIC } from '../config/constApi.js'
 import {
   doesObjectExistWithRudiId,
   getEnsuredObjectWithRudiId,
   overwriteDbObject,
 } from '../db/dbQueries.js'
+import { CallContext } from '../definitions/constructors/callContext.js'
+import PublicKey from '../definitions/models/PublicKey.js'
 import { REGEX_WORD } from '../definitions/schemaValidators.js'
-import { getPortalEncryptPubKey } from './portalController.js'
+import { BadRequestError, NotFoundError, RudiError } from '../utils/errors.js'
+import { accessReqParam } from '../utils/jsonAccess.js'
 import { latiniseString } from '../utils/lang.js'
+import { getPortalEncryptPubKey } from './portalController.js'
 
 // -------------------------------------------------------------------------------------------------
 // Helper functions
@@ -70,14 +70,14 @@ export const checkKeyName = (pubKeyName) => {
 const checkKeyPem = (keyPem) => {
   const fun = 'checkKeyPem'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // logV(mod, fun, keyPem)
     const key = parseKey(keyPem)
     // logV(mod, fun, key)
     return key
   } catch (err) {
     throw new BadRequestError(
-      `The key PEM cannot be parsed: '${keyPem}' ${err ? `. Error: ${err}` : ''}`,
+      `The key PEM cannot be parsed: '${keyPem}'` + (err ? `. Error: ${err}` : ''),
       mod,
       fun,
       [API_PUB_PEM]
@@ -94,10 +94,10 @@ const normalizeKeyData = async (pubKeyJson) => {
   const fun = 'normalizeKeyData'
 
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // Latinize pubKey name
     pubKeyJson[API_PUB_NAME] = latiniseString(pubKeyJson[API_PUB_NAME])
-      .replace(/[\s]/g, '_')
+      .replace(/\s/g, '_')
       .replace(/[^\w-]/g, '')
 
     // Check if either the URL or the PEM are provided
@@ -142,7 +142,7 @@ const normalizeKeyData = async (pubKeyJson) => {
       const key = checkKeyPem(keyPem)
 
       if (!pubKeyJson[API_PUB_PEM]) pubKeyJson[API_PUB_PEM] = keyPem
-      else if (keyPem.replace(/[\n\s\r]/g, '') !== pubKeyJson[API_PUB_PEM].replace(/[\n\s\r]/g, ''))
+      else if (keyPem.replace(/\s/g, '') !== pubKeyJson[API_PUB_PEM].replace(/\s/g, ''))
         throw new BadRequestError(
           `Provided PEM doesn't match the one found at the provided URL: ${pubKeyJson[API_PUB_URL]}` +
             `\n${pubKeyJson[API_PUB_PEM]}\n !==\n ${keyPem}`,
@@ -166,7 +166,7 @@ const normalizeKeyData = async (pubKeyJson) => {
 export const getSinglePubKey = async (req, reply) => {
   const fun = 'getSinglePubKey'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const objectId = accessReqParam(req, PARAM_ID)
     const objectProp = req.params[PARAM_PROP] // Could be null
     const dbObject = await getEnsuredObjectWithRudiId(OBJ_PUB_KEYS, objectId)
@@ -194,7 +194,7 @@ export const getSinglePubKey = async (req, reply) => {
 export const newPublicKey = async (pubKeyJson) => {
   const fun = 'newPublicKey'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     await normalizeKeyData(pubKeyJson)
     const pubKeyId = pubKeyJson[API_PUB_ID]
     const existsPubKey = await doesObjectExistWithRudiId(OBJ_PUB_KEYS, pubKeyId)
@@ -212,7 +212,7 @@ export const newPublicKey = async (pubKeyJson) => {
 export const overwritePubKey = async (pubKeyJson) => {
   const fun = 'overwritePubKey'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     await normalizeKeyData(pubKeyJson)
 
     const dbPubKey = await overwriteDbObject(OBJ_PUB_KEYS, pubKeyJson)

@@ -45,7 +45,7 @@ servers:
   # Added by API Auto Mocking Plugin
   - description: SwaggerHub API Auto Mocking
     url: https://virtserver.swaggerhub.com/OlivierMartineau/RudiProducer-PrivateAPI/1.3.0
-  - url: https://data-rudi.aqmo.org
+  - url: https://data-rudi.org
 
 #•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 # DEFINITIONS
@@ -1061,7 +1061,7 @@ components:
             Period of time described by the data.
             If the end date is not known (because the resource is still valid in
             the present for instance, the end_date field will be left blank)
-            For a one-time measurement, one can fill both start and end date 
+            For a one-time measurement, one can fill both start and end date
             with the same value.
           type: object
           required:
@@ -1212,7 +1212,7 @@ components:
             #......................
             'bibliographical_reference':
               description: >
-                Information that MUST be cited every time the data is used, 
+                Information that MUST be cited every time the data is used,
                 most likely a BibTeX entry
               type: array
               items:
@@ -1343,7 +1343,7 @@ components:
         'email':
           description: >
             Unique E-mail address, possibly not nominative to be less dependent
-            on changes in the organization, and comply more easily with 
+            on changes in the organization, and comply more easily with
             RGPD rules
           type: string
           format: email
@@ -1474,7 +1474,7 @@ components:
             #——————————————————————————
             'file_size':
               description: >
-                Size of the file, in bytes 
+                Size of the file, in bytes
                 (determined automatically)
               type: integer
 
@@ -1559,7 +1559,7 @@ components:
     'Connector':
       description: >
         Direct access to the dataset.
-        In the case of open data without access restriction, this can be a 
+        In the case of open data without access restriction, this can be a
         simple download link e.g. a URL
         The interface contract chosen can enable request with specified
         parameters, or make it possible to extract a GeoWMS or a GeoWFS
@@ -1640,7 +1640,7 @@ components:
         'submission_date':
           allOf:
             - description: >
-                Date when the integration request was submitted by the 
+                Date when the integration request was submitted by the
                 Producer node
               type: string
             - $ref: '#/components/schemas/Date'
@@ -1697,21 +1697,21 @@ components:
         #——————————————————————————
         'url':
           description: >
-            Accessible URL where the public key can be found. 
+            Accessible URL where the public key can be found.
             If no PEM has been supplied, the URL is required!
           type: string
           format: URI
         #——————————————————————————
         'prop':
           description: >
-            If the URL offers an object, indicates the property to get the PEM 
+            If the URL offers an object, indicates the property to get the PEM
             of the public key
           type: string
           pattern: '^[\w-]+$'
         #——————————————————————————
         'pem':
           description: >
-            The public key written as a PEM. This property is required if no URL 
+            The public key written as a PEM. This property is required if no URL
             was provided
           type: string
         #——————————————————————————
@@ -1777,7 +1777,7 @@ components:
     #---------------------------------------------------------------------------
     'MediaType':
       description: >
-        Most common Media types formerly known as MIME types, as definied in 
+        Most common Media types formerly known as MIME types, as definied in
         RFC 2049
       type: string
       enum:
@@ -1954,7 +1954,7 @@ components:
     #---------------------------------------------------------------------------
     'SkosScheme':
       description: >
-        Set of SKOS concepts gathered in a transversal and hierarchical 
+        Set of SKOS concepts gathered in a transversal and hierarchical
         relationships.
       type: object
       required:
@@ -2004,8 +2004,8 @@ components:
     #---------------------------------------------------------------------------
     'SkosConcept':
       description: >
-        A SKOS concept is an element in a controlled vocabulary such as a 
-        thesaurus. It offers to link concepts in hierarchical (broader/narrower) 
+        A SKOS concept is an element in a controlled vocabulary such as a
+        thesaurus. It offers to link concepts in hierarchical (broader/narrower)
         or neighbouring relationships.
         A set of SKOS concepts is gathered in one concept scheme.
         If a SKOS concept appears in two different concept schemes, it should be
@@ -2075,7 +2075,7 @@ components:
         'concept_role':
           description: >
             Underlines a particular use for this Concept, e.g. a potential
-            value for a property (e.g. "metadata.theme", "metadata.keywords", 
+            value for a property (e.g. "metadata.theme", "metadata.keywords",
             "metadata.licence")
           type: string
         #—•—•—•—•—•—•—•—•—•—•—•—•—•
@@ -2083,7 +2083,7 @@ components:
         #——————————————————————————
         'broader_concepts':
           description: >
-            References to the 'parent' SKOS concepts with a broader scope 
+            References to the 'parent' SKOS concepts with a broader scope
             than the current concept
           type: array
           items:
@@ -2093,7 +2093,7 @@ components:
         #——————————————————————————
         'narrower_concepts':
           description: >
-            References to the 'children' SKOS concepts with a narrower scope 
+            References to the 'children' SKOS concepts with a narrower scope
             than the current concept
           type: array
           items:
@@ -2103,7 +2103,7 @@ components:
         #——————————————————————————
         'siblings_concepts':
           description: >
-            References to the SKOS concepts that are neighbouring meanings 
+            References to the SKOS concepts that are neighbouring meanings
             of the current concept
           type: array
           items:
@@ -2113,7 +2113,7 @@ components:
         #——————————————————————————
         'relative_concepts':
           description: >
-            References to the SKOS concepts that can be associated in a 
+            References to the SKOS concepts that can be associated in a
             non-transitive relationship
           type: array
           items:
@@ -2123,7 +2123,7 @@ components:
         #——————————————————————————
         'scope_note':
           description: >
-            Contextual information about the intended meaning of the concept, 
+            Contextual information about the intended meaning of the concept,
             especially as an indication of how the use of the concept
           type: array
           items:
@@ -2146,7 +2146,7 @@ components:
       description: >
         Lowercase ISO-639 language code followed by the
         uppercase 2 letter ISO 3166-1 alpha-2 country code,
-        both joined by an hyphen-minus sign, or alternatively the 
+        both joined by an hyphen-minus sign, or alternatively the
         lowercase ISO-639 language code alone
       type: string
       pattern: '^[a-z]{2}(-[A-Z]{2})?$'
@@ -2212,7 +2212,7 @@ components:
                 enum: ['The JSON is not valid.']
     #---------------------------------------------------------------------------
     'Error401Unauthorized':
-      description: The request requires an user authentication.
+      description: The request requires a user authentication.
       content:
         application/json:
           schema:
@@ -2223,7 +2223,7 @@ components:
                 enum: [401]
               'message':
                 type: string
-                enum: ['The request requires an user authentication.']
+                enum: ['The request requires a user authentication.']
     #---------------------------------------------------------------------------
     'Error403Forbidden':
       description: The access is not allowed.

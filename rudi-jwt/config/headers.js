@@ -1,4 +1,3 @@
-
-exports.HEADERS = 'headers'
-exports.AUTH = 'Authorization'
-exports.AUTH_LOW = 'authorization'
+export const HEADERS = 'headers'
+export const AUTH = 'Authorization'
+export const AUTH_LOW = 'authorization'

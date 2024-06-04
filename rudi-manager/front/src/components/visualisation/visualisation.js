@@ -1,17 +1,17 @@
 import axios from 'axios'
 
-import React, { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
 import { Check } from 'react-bootstrap-icons'
+import { useParams } from 'react-router-dom'
 // import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types'
 
+import { JsonViewer } from '@textea/json-viewer'
 import jspreadsheet from 'jspreadsheet-ce'
 import 'jspreadsheet-ce/dist/jspreadsheet.css'
-import { JsonViewer } from '@textea/json-viewer'
 
-import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
 import { getBackUrl } from '../../utils/frontOptions'
+import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
 
 Visualisation.propTypes = {
   logout: PropTypes.func,
@@ -24,7 +24,7 @@ function Visualisation({ logout }) {
   const { defaultErrorHandler } = useDefaultErrorHandler()
 
   const { id } = useParams()
-  const [mediaId, setMediaId] = useState(id ? id : '')
+  const [mediaId, setMediaId] = useState(id || '')
   const [visuOption, setVisuOption] = useState({ displayType: 'TXT', data: '- Aucune donnée -' })
 
   const wrapper = React.useRef()
@@ -261,7 +261,7 @@ function Visualisation({ logout }) {
               </div>
             </div>
           ),
-          IMG: <img src={imgUrl} alt="image" className="image90" />,
+          IMG: <img src={imgUrl} className="image90" />,
         }[visuOption.displayType]
       }
     </div>

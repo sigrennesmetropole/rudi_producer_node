@@ -13,7 +13,6 @@ For instance, organization and contact-related tests have to be executed before 
 | Test collection name                                                                     | Description                                                                                                                                                                                    |
 | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [rudi-soft-checks.postman_collection.json](rudi-soft-checks.postman_collection.json)     | These non-intrusive tests can be executed on every environment, including production environment. Every object created by the test is tagged with a stamp and removed at the end of the tests. |
-| [rudi-sanity-checks.postman_collection.json](rudi-sanity-checks.postman_collection.json) | This test collection is meant to be used with `test` environment only. It executes some deep checks that are not suitable for running environments.                                            |
 
 ## Environment variable collections for tests
 
@@ -21,8 +20,6 @@ Here are the environment variable collections used for each dev environment.
 
 | Collection name                                                                      | Associated environment name | Environment URL                   |
 | ------------------------------------------------------------------------------------ | :-------------------------: | --------------------------------- |
-| [env-rudi-public.postman_environment.json](env-rudi-public.postman_environment.json) |           Release           | https://data-rudi.aqmo.org        |
-| [env-rudi-shared.postman_environment.json](env-rudi-shared.postman_environment.json) |           Shared            | https://shared-rudi.aqmo.org      |
 | [env-rudi-test.postman_environment.json](env-rudi-test.postman_environment.json)     |            Test             | https://shared-rudi.aqmo.org/test |
 
 To test other environment such as production one, you need to alter one of these variable environments (prefereably the `release` one).

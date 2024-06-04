@@ -356,7 +356,7 @@ components:
             $ref: 'https://raw.githubusercontent.com/zit0un/HttpErrorsOAS3/main/schemas/HttpError400_BadRequest.yaml'
     #---------------------------------------------------------------------------
     'Error401Unauthorized':
-      description: The request requires an user authentication.
+      description: The request requires a user authentication.
       content:
         application/json:
           schema:
@@ -886,7 +886,7 @@ components:
         #——————————————————————————
         'dependencies':
           description: >
-            Dependecies are other resources that were used as sources for the 
+            dependencies are other resources that were used as sources for the
             present resource (such ones are listed as parents) or that use
             the present resource as source (these are listed as children)
           type: object
@@ -1160,7 +1160,7 @@ components:
       description: >
         Lowercase ISO-639 language code followed by the
         uppercase 2 letter ISO 3166-1 alpha-2 country code,
-        both joined by an hyphen-minus sign, or alternatively the 
+        both joined by an hyphen-minus sign, or alternatively the
         lowercase ISO-639 language code alone
       type: string
       pattern: '^[a-z]{2}(-[A-Z]{2})?$'

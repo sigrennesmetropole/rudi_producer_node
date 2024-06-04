@@ -1,55 +1,45 @@
+# --------------------------------------------------------------------------------------------------
+# Notes:
+# - jobs are executed in the order indicated at root "stages" property
+# - "needs" property needs an array of job names (not stages names)
+# - linter needs install:dev as eslint and prettier are dev dependencies
+# --------------------------------------------------------------------------------------------------
 stages:
-  - install
-  - pack
   - quality
+  - pack_prod
 
-# This folder is cached between builds
-default:
-  cache:
-    paths:
-      - node_modules/
-  before_script:
-    - |
-      {
-        echo "@aqmo.org:registry=${CI_API_V4_URL}/projects/59/packages/npm/"
-        echo "${CI_API_V4_URL#https?}/projects/59/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
-      } | tee -a .npmrc
-
-install_media:
-  stage: install
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-  tags:
-    - nodejs
-  variables:
-    NODE_ENV: production
-  script:
-    - npm install
-
-pack_media:
-  stage: pack
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-  tags:
-    - nodejs
-  variables:
-    NODE_ENV: production
-  script:
-    - npm pack
-  artifacts:
-    name: "rudi_media.tgz"
-    when: on_success
-    paths:
-      - ./rudi_media_drv-*.tgz
-
-quality_lint:
+quality_dev:
   stage: quality
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE != "push"'
+      when: manual
   tags:
-    - nodejs
+    - nodejs-20
   variables:
     NODE_ENV: development
   script:
-    - npm install
+    - npm i
     - npm run lint
+
+pack_prod:
+  stage: pack_prod
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE != "push"'
+      when: manual
+  tags:
+    - nodejs
+  variables:
+    NODE_ENV: production
+  script:
+    - npm i
+    # - echo "//repository.aqmo.org/npm/:_authToken=\${CI_JOB_TOKEN}" | tee -a .npmrc
+    - npm pack
+  artifacts:
+    name: 'rudi_media.tgz'
+    when: on_success
+    paths:
+      - ./rudi_media_drv-*.tgz

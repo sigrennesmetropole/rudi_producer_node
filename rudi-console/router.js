@@ -29,16 +29,15 @@ router.get('/organizations', staticFile(relative('/public/organization.html')));
 router.get('/pub_keys', staticFile(relative('/public/publicKey.html')));
 router.get('/pub_keys_gen', staticFile(relative('/public/publicKeyGen.html')));
 
-router.get('/getTemplate/:filename', function (req, res) {
-  var x = req.params;
-  console.log('getTemplate', x.filename);
+router.get('/templates/:filename', function (req, res) {
+  const x = req.params;
   let template;
   try {
     template = require(path.join(root, '/templates/', x.filename));
   } catch {
-    res.send('Not found');
+    res.status(404).json({error: 'Not found',statusCode: 404, message: `File not found: ${x?.filename}`});
   }
-  res.send(JSON.stringify(template));
+  res.json(template);
 });
 
 module.exports = router;

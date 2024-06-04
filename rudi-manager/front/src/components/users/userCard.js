@@ -4,11 +4,7 @@ import PropTypes from 'prop-types'
 import { ArrowCounterclockwise, Pencil, Trash } from 'react-bootstrap-icons'
 
 import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
-import {
-  getOptOk,
-  getOptConfirm,
-  useModalContext,
-} from '../modals/genericModalContext'
+import { getOptOk, getOptConfirm, useModalContext } from '../modals/genericModalContext'
 import EditUserModal, { useEditUserModal } from '../modals/editUserModal'
 
 const resetPwdConfirmMsg = (id) =>
@@ -136,7 +132,7 @@ export default function UserCard({ user, roleList, refresh }) {
         <div className="card-body">
           <p className="card-text">
             id&nbsp;: <small className="text-muted">{user.id}</small>
-          </p>{' '}
+          </p>
           <p className="card-text">
             e-mail&nbsp;: <small className="text-muted">{user.email}</small>
           </p>

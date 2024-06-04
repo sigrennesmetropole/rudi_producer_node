@@ -1,0 +1,13 @@
+package-lock.json
+*.lock
+node_modules
+
+keys
+*.pem
+
+.vscode
+_logs
+_media
+media
+*.pyc
+bak

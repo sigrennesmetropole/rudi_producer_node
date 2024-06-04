@@ -7,18 +7,11 @@ const {
   getUserByUsername,
   getUsersList,
 } = require('../controllers/usersControllers')
-const {
-  getRoleById,
-  getRoleList,
-} = require('../controllers/roleController')
+const { getRoleById, getRoleList } = require('../controllers/roleController')
 const { resetPassword } = require('../controllers/authControllerPassport')
 
 router.get('/roles', getRoleList)
 router.get('/roles/:role', getRoleById)
-
-// router.get('/user-roles/:username', getUserRolesByUsername)
-// router.post('/user-roles', postUserRole)
-// router.delete('/user-roles/:userId/:role', deleteUserRole)
 
 router.get('/users', getUsersList)
 router.get('/users/:username', getUserByUsername)

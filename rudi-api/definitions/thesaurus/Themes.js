@@ -66,7 +66,7 @@ const INIT_VALUES = {
   environment: { fr: 'Environnement', en: 'Environment' },
   townPlanning: { fr: 'Urbanisme', en: 'Town planning' },
   location: { fr: 'Référentiels géographiques', en: 'Location' },
-  education: { fr: 'Education', en: 'Eduction' },
+  education: { fr: 'Education', en: 'Educa tion' },
   publicSpace: { fr: 'Espace public', en: 'Public space' },
   health: { fr: 'Santé, Sécurité', en: 'Health, security' },
   housing: { fr: 'Logement', en: 'Housing' },

@@ -2,15 +2,13 @@
 const jwt = require('jsonwebtoken')
 const axios = require('axios')
 const { v4: uuidv4 } = require('uuid')
-const { randomBytes, scryptSync } = require('crypto')
-const jwtLib = require(`@aqmo.org/jwt_lib`)
+const jwtLib = require(`@aqmo.org/jwt-lib`)
 
 // ----- Internal dependencies
 const { getConf } = require('../config/config')
-const { timeEpochS, toInt } = require('./utils')
+const { timeEpochS, toInt, cleanErrMsg } = require('./utils')
 const log = require('./logger')
 const { ForbiddenError, RudiError } = require('./errors')
-// const { compareSync } = require('bcrypt')
 const { isDevEnv } = require('../config/backOptions')
 
 // ----- Constants
@@ -27,27 +25,18 @@ exports.CONSOLE_TOKEN_NAME = 'consoleToken'
 exports.PM_FRONT_TOKEN_NAME = 'pmFrontToken'
 
 // ----- Functions
+function isJwtValid(jwt) {
+  if (!jwt) return false
+  const jwtParts = jwtLib.tokenStringToJwtObject(jwt)
+  return jwtParts?.payload?.exp > timeEpochS()
+}
+
 exports.extractCookieFromReq = (req, cookieName = this.CONSOLE_TOKEN_NAME) =>
   req?.cookies ? req.cookies[cookieName] : null
 
-exports.extractJwtFromReq = (req) => {
-  const fun = 'extractJwtFromReq'
-  const headers = req?.headers || req?.Headers
-  const auth = headers?.Authorization || headers?.authorization
-  if (!auth) {
-    log.d(mod, fun, `headers: ${headers}`)
-    throw new ForbiddenError('No Authorization found in request headers')
-  }
-  if (!auth.startsWith('Bearer ')) return new ForbiddenError('Request should use a JWT')
-
-  const token = auth.substring(7)
-  if (token.length === 0) return new ForbiddenError('Request provided an empty JWT')
-  return token
-}
-
 exports.readJwtBody = (jwt) => {
   if (!jwt) throw new ForbiddenError(`No JWT provided`, mod, 'readJwtBody')
-  if (!`${jwt}`.match(REGEX_JWT)) throw new ForbiddenError(`Wrong format for token ${jwt}`)
+  if (!RegExp(REGEX_JWT).exec(`${jwt}`)) throw new ForbiddenError(`Wrong format for token ${jwt}`)
   return jwtLib.tokenStringToJwtObject(jwt)?.payload
 }
 
@@ -75,8 +64,6 @@ exports.pmFrontCookieOpts = (exp) => {
 
 exports.createFrontUserTokens = (userInfo) => {
   const exp = timeEpochS(toInt(DEFAULT_EXP))
-  // console.log('T (createFrontUserTokens) exp:', new Date(exp * 1000));
-  // console.log('T (createFrontUserTokens) userInfo:', userInfo);
   delete userInfo?.password
   return {
     [this.CONSOLE_TOKEN_NAME]: jwt.sign({ user: userInfo, exp }, SECRET_KEY_JWT),
@@ -105,20 +92,20 @@ exports.refreshTokens = (req) => {
 exports.getTokenFromMediaForUser = async (user, exp) => {
   const fun = 'getTokenFromMediaForUser'
   const pmHeaders = this.createPmHeadersForMedia(exp ? { exp } : null)
-  // console.log('T (getTokenFromMediaForUser) pmHeadersJwt', pmHeadersJwt);
 
   const delegationBody = {
     user_id: user.id,
-    user_name: user.username || 'rudiconsole',
+    user_name: user.username || 'rudi_console',
     group_name: getConf('rudi_console', 'default_client_group'),
   }
   // Let's offset the user id to not mess with Media ids
   if (delegationBody.user_id < OFFSET_USR_ID) delegationBody.user_id += OFFSET_USR_ID
-  console.log('T (getTokenFromMediaForUser) delegationBody', delegationBody)
+  // console.log(`T (${fun})`, 'delegationBody', delegationBody)
 
   const mediaForgeJwtUrl = `${MEDIA_AUTH.rudi_media_url}/jwt/forge`
-  // console.log('T (getTokenFromMediaForUser) mediaForgeJwtUrl', mediaForgeJwtUrl);
-  // console.log('T (getTokenFromMediaForUser) opts', opts);
+  // log.d(mod, fun, `mediaForgeJwtUrl: ${mediaForgeJwtUrl}`)
+  // log.d(mod, fun, `delegationBody: ${beautify(delegationBody)}`)
+  // log.d(mod, fun, `pmHeaders: ${cleanErrMsg(pmHeaders)}`)
   try {
     const mediaRes = await axios.post(mediaForgeJwtUrl, delegationBody, pmHeaders)
     if (!mediaRes) throw Error(`No answer received from Media module`)
@@ -126,19 +113,17 @@ exports.getTokenFromMediaForUser = async (user, exp) => {
       throw new Error(`Unexpected response from Media while forging a token: ${mediaRes.data}`)
     else return mediaRes.data.token
   } catch (err) {
-    console.error(
-      'T (getTokenFromMediaForUser) mediaError.msg/data',
-      err.message,
-      err.response?.data
-    )
+    if (err.code == 'ECONNREFUSED')
+      throw RudiError.createRudiHttpError(
+        500,
+        'Connection from “RUDI Prod Manager” to “RUDI Media” module failed: ' +
+          '“RUDI Media” module is apparently down, contact the RUDI node admin'
+      )
     const rudiError = RudiError.createRudiHttpError(
       err.response?.data?.statusCode || err.response?.status,
-      `Could not forge a token for user '${user.username}' on Media: ${
-        err.response?.data?.message ||
-        err.response?.data?.msg ||
-        JSON.stringify(err.response?.data) ||
-        err.message
-      }`,
+      `Could not forge a token for user '${user.username}' on Media: ${cleanErrMsg(
+        err.response?.data?.message || err.response?.data?.msg || err.message || err.response?.data
+      )}`,
       mod,
       fun
     )
@@ -172,34 +157,26 @@ exports.createPmJwtForMedia = (body) =>
     }
   )
 
-/**
- *
- * @param {Object} jwtPayload optional options to create the JWT payload
- *  - exp: Epoch date in seconds until which the JWt is valid
- *  - exp_time: time in seconds during which the JWT is valid
- *              (not taken into account if 'exp' is given)
- *  - user_name: name of the user
- *  - user_id: id of the user
- *    (shifted here with an offset of 5000 to ensure compatibility with media)
- * @return {String} a JWT
- */
-exports.createRudiMediaToken = (jwtPayload) =>
-  jwtLib.forgeToken(
-    getPrvKey('media'),
+let cachedApiJwt
+exports.getRudiApiToken = () => {
+  if (isJwtValid(cachedApiJwt)) return cachedApiJwt
+  cachedApiJwt = jwtLib.forgeToken(
+    getPrvKey('api'),
     {},
     {
-      jti: uuidv4(),
-      iat: timeEpochS(),
-      exp:
-        jwtPayload?.exp || timeEpochS(jwtPayload?.exp_time || MEDIA_AUTH.exp_time_s || DEFAULT_EXP),
-      sub: jwtPayload?.sub || 'auth',
-      client_id: jwtPayload.client_id || MEDIA_AUTH.pm_media_id,
+      exp: timeEpochS(60), // 1 minute to reach the API should be plenty enough
+      sub: getConf('rudi_api', 'pm_api_id'),
+      req_mtd: 'all',
+      req_url: 'all',
     }
   )
+  return cachedApiJwt
+}
 
-exports.createRudiApiToken = (url, req) => {
-  // console.log('T (createRudiApiToken) url JWT', axios.getUri({ url, params: req.query }))
-  const jwt = jwtLib.forgeToken(
+let cachedUrlJwt = {}
+exports.getRudiApiTokenPrecise = (url, req) => {
+  if (isJwtValid(cachedUrlJwt?.[url])) return cachedUrlJwt[url]
+  cachedUrlJwt[url] = jwtLib.forgeToken(
     getPrvKey('api'),
     {},
     {
@@ -209,8 +186,7 @@ exports.createRudiApiToken = (url, req) => {
       req_url: axios.getUri({ url, params: req.query }),
     }
   )
-  // console.log('T (createRudiApiToken) JWT', jwt)
-  return jwt
+  return cachedUrlJwt[url]
 }
 
 /**
@@ -258,61 +234,3 @@ const getPrvKey = (name) => {
   prvKeyCache[name] = jwtLib.readPrivateKeyFile(keyPath)
   return prvKeyCache[name]
 }
-/*
-const SALT_ROUNDS = 10
-/**
- * Hash and salt a password before storing it into a DB
- * @param {String} password A password
- * @param {Boolean} isNotBase64 True of the password is not base64 encoded
- * @return {String} The salted passwrod
- *\/
-exports.hashPasswordBcrypt = (password) => {
-  const fun = 'hashPassword'
-  try {
-    const pwdStr = `${password}`
-    if (pwdStr.startsWith('$')) {
-      // console.debug('T (saltPassword) Already hashed pwd:', pwdStr);
-      return pwdStr
-    }
-    const salt = genSaltSync(SALT_ROUNDS)
-    const hashedPwd = hashSync(pwdStr, salt)
-    // console.debug('T (saltPassword) hashed pwd:', hashedPwd);
-    return hashedPwd
-  } catch (e) {
-    log.e(mod, fun, e)
-    throw e
-  }
-}
-*/
-
-/**
- * Solution using crypto native library
- * Reworked from Malik-Bagwala & Shivam @ https://stackoverflow.com/a/70631147/1563072
- * @param {String} password
- * @param {String} salt
- * @returns {String} A base64 encoded salted & hashed password
- */
-exports.encryptPassword = (password, salt) => scryptSync(password, salt, 64).toString('base64url')
-
-/**
- * Hash the password with randomly generated salt
- * @param {String} password
- * @returns {String} A base64 encoded hash of the salt+password
- */
-exports.hashPassword = (password) => {
-  // Any random string here (ideally should be atleast 16 bytes)
-  const salt = randomBytes(30).toString('base64url')
-  return `${salt}${this.encryptPassword(password, salt)}`
-}
-
-/**
- * Compares a clear password to a hashed one.
- * @param {String} password
- * @param {String} hash
- * @returns {Boolean} True if the password matches the hash
- */
-exports.matchPassword = (password, hash) =>
-  hash.slice(40) === this.encryptPassword(password, hash.slice(0, 40))
-// hash.startsWith('$2b$10$')
-//   ? compareSync(password, hash)
-//   :

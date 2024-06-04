@@ -41,10 +41,10 @@ class HttpRequest extends XMLHttpRequest {
         `Failed to execute 'send' on '${this.constructor.name}': The object's state must be OPENED.`
       );
     return new Promise((resolve, reject) => {
-      this.addEventListener('error', () => reject(this));
-      this.addEventListener('load', () => {
+      this.addEventListener('error', (e) => reject(e));
+      this.addEventListener('load', (e) => {
         if (this.readyState == 4 && this.status == 200) resolve(this.responseText);
-        else reject(this);
+        else reject(e);
       });
       super.send(body);
     });
@@ -94,7 +94,6 @@ class JsonHttpRequest extends HttpRequest {
    * @throws "InvalidStateError" DOMException if either state is not opened or the send() flag is set.
    */
   async sendJson(body) {
-    // console.debug('T (sendJson)', body);
     let res = await super.sendJson(body);
     if (res == undefined) return;
     try {
@@ -102,7 +101,7 @@ class JsonHttpRequest extends HttpRequest {
     } catch (e) {
       if (e instanceof SyntaxError)
         throw new SyntaxError(
-          `Cannot parse result of request '${this.method} ${this.url}\n${res}: ${e}`
+          `Cannot parse result of request '${this.method} ${this.url}\n${res}: ${JSON.stringify(e)}`
         );
       console.error(e);
       throw e;

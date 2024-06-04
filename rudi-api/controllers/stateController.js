@@ -11,7 +11,7 @@ import {
   OBJ_METADATA,
   QUERY_FIELDS,
   TIME_LABEL,
-} from '../config/confApi.js'
+} from '../config/constApi.js'
 import {
   API_DATA_NAME_PROPERTY,
   API_DATA_PRODUCER_PROPERTY,
@@ -25,7 +25,7 @@ import {
 } from '../db/dbFields.js'
 import { getDbObjectListAndCount } from '../db/dbQueries.js'
 import { RudiError } from '../utils/errors.js'
-import { beautify, nowEpochS } from '../utils/jsUtils.js'
+import { beautify, timeEpochS } from '../utils/jsUtils.js'
 import { logD } from '../utils/logging.js'
 import { parseQueryParameters } from '../utils/parseRequest.js'
 // -------------------------------------------------------------------------------------------------
@@ -35,6 +35,7 @@ import { parseQueryParameters } from '../utils/parseRequest.js'
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
+import { NO_PORTAL_MSG, isPortalConnectionDisabled } from '../config/confPortal.js'
 import { getPortalMetadataListWithToken, getPortalToken } from './portalController.js'
 // import { getMetadataListAndCount } from './genericController'
 
@@ -43,21 +44,15 @@ import { getPortalMetadataListWithToken, getPortalToken } from './portalControll
 // -------------------------------------------------------------------------------------------------
 
 const SLICE = 100
-const DEFAULT_CACHE_PERIOD = 3600
+const DEFAULT_CACHE_PERIOD = 300
 
 let cachedPortalMetadataList = {}
-export const getPortalCachedMetadataList = async (
-  req,
-  reply,
-  maxCacheTimeS = DEFAULT_CACHE_PERIOD
-) => {
+export const getPortalCachedMetadataList = async (maxCacheTimeS = DEFAULT_CACHE_PERIOD) => {
   const fun = 'getPortalCachedMetadataList'
   try {
+    if (isPortalConnectionDisabled()) return NO_PORTAL_MSG
     // Check cache date
-    if (
-      cachedPortalMetadataList[TIME_LABEL] &&
-      cachedPortalMetadataList[TIME_LABEL] + maxCacheTimeS > nowEpochS()
-    )
+    if ((cachedPortalMetadataList[TIME_LABEL] || 0) + maxCacheTimeS > timeEpochS())
       // Cache still valid, let's return it
       return cachedPortalMetadataList
 
@@ -76,14 +71,11 @@ export const getPortalCachedMetadataList = async (
     const metadataPackets = await Promise.all(
       optsArray.map((opt) => getPortalMetadataListWithToken(token, opt))
     )
-
+    const portalMetadataList = []
+    metadataPackets.forEach((packet) => portalMetadataList.push(...packet.items))
     // 4. Recreate the cache of portal metadata
-    let portalMetadataList = []
-    metadataPackets.map((packet) => {
-      portalMetadataList = portalMetadataList.concat(packet.items)
-    })
     cachedPortalMetadataList = {
-      [TIME_LABEL]: nowEpochS(),
+      [TIME_LABEL]: timeEpochS(),
       [COUNT_LABEL]: portalMetadataNb,
       [LIST_LABEL]: portalMetadataList,
     }
@@ -95,24 +87,17 @@ export const getPortalCachedMetadataList = async (
 }
 
 let cachedNodeMetadataList = {}
-export const getNodeCachedMetadataList = async (
-  req,
-  reply,
-  maxCacheTimeS = DEFAULT_CACHE_PERIOD
-) => {
+export const getNodeCachedMetadataList = async (maxCacheTimeS = DEFAULT_CACHE_PERIOD) => {
   const fun = 'getNodeCachedMetadataList'
   try {
     // Check cache date
-    if (
-      cachedNodeMetadataList[TIME_LABEL] &&
-      cachedNodeMetadataList[TIME_LABEL] + maxCacheTimeS > nowEpochS()
-    )
+    if ((cachedNodeMetadataList[TIME_LABEL] || 0) + maxCacheTimeS > timeEpochS())
       // Cache still valid, let's return it
       return cachedNodeMetadataList
 
     // Cache is too old, we have to retrieve the data
     cachedNodeMetadataList = await getDbObjectListAndCount(OBJ_METADATA)
-    cachedNodeMetadataList[TIME_LABEL] = nowEpochS()
+    cachedNodeMetadataList[TIME_LABEL] = timeEpochS()
 
     return cachedNodeMetadataList
   } catch (err) {
@@ -132,6 +117,7 @@ const DEFAULT_FIELD_SELECTION = [
 export const getPortalMetadataFields = async (req, reply, fields = DEFAULT_FIELD_SELECTION) => {
   const fun = 'getPortalMetadataFields'
   try {
+    if (isPortalConnectionDisabled()) return NO_PORTAL_MSG
     const options = await parseQueryParameters(OBJ_METADATA, req.url)
     logD(mod, fun, `options: ${beautify(options)}`)
     const fieldFilter = options[QUERY_FIELDS] || fields

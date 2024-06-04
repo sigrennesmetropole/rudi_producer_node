@@ -2,33 +2,32 @@ const mod = 'orgSch'
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
-import mongoose from 'mongoose'
-
 import _ from 'lodash'
+import mongoose from 'mongoose'
 const { omit } = _
 
 // -------------------------------------------------------------------------------------------------
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  FIELDS_TO_SKIP,
-  DB_PUBLISHED_AT,
-  API_ORGANIZATION_ID,
   API_COLLECTION_TAG,
-  API_ORGANIZATION_NAME,
   API_ORGANIZATION_ADDRESS,
-  API_ORGANIZATION_COORDINATES,
   API_ORGANIZATION_CAPTION,
+  API_ORGANIZATION_COORDINATES,
+  API_ORGANIZATION_ID,
+  API_ORGANIZATION_NAME,
   API_ORGANIZATION_SUMMARY,
+  DB_PUBLISHED_AT,
+  FIELDS_TO_SKIP,
 } from '../../db/dbFields.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
+import { makeSearchable } from '../../db/dbActions.js'
+import { RudiError } from '../../utils/errors.js'
 import { GpsCoordinatesSchema } from '../schemas/GpsCoordinates.js'
 import { UuidV4Schema } from '../schemas/Identifiers.js'
-import { RudiError } from '../../utils/errors.js'
-import { makeSearchable } from '../../db/dbActions.js'
 
 // -------------------------------------------------------------------------------------------------
 // Custom schema definition
@@ -100,7 +99,7 @@ Organization.getSearchableFields = () => [API_ORGANIZATION_ID, API_ORGANIZATION_
 Organization.initialize = async () => {
   const fun = 'initOrganization'
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
     await makeSearchable(Organization)
     return `Organization indexes created`
   } catch (err) {

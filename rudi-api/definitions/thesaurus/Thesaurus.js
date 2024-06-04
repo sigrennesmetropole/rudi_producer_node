@@ -8,22 +8,22 @@ import { DICT_LANG, DICT_TEXT } from '../../db/dbFields.js'
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { isObject, isString } from '../../utils/jsUtils.js'
-import { logD, logT, logW } from '../../utils/logging.js'
-import { parameterExpected } from '../../utils/msg.js'
 import {
-  MethodNotAllowedError,
   BadRequestError,
+  MethodNotAllowedError,
   NotFoundError,
   RudiError,
 } from '../../utils/errors.js'
+import { isObject, isString } from '../../utils/jsUtils.js'
+import { logD, logT, logW } from '../../utils/logging.js'
+import { parameterExpected } from '../../utils/msg.js'
 
 import {
   DynamicEnum,
-  ENUM_KEY,
-  ENUM_LABELS,
   ENUM_CODE,
+  ENUM_KEY,
   ENUM_LABELLED_VALUES,
+  ENUM_LABELS,
   ENUM_VALUES,
 } from '../models/DynamicEnum.js'
 
@@ -130,7 +130,7 @@ export class Thesaurus {
   getLabels(lang) {
     const fun = 'getLabels'
     try {
-      logT(mod, fun, ``)
+      logT(mod, fun)
 
       if (!this.#isInit) {
         const errMsg = 'Init first'
@@ -145,7 +145,7 @@ export class Thesaurus {
       const langLabels = {}
       Object.keys(this.#currentValues)
         .sort()
-        .map((key) => {
+        .forEach((key) => {
           langLabels[key] = this.#currentValues[key][lang] || key
         })
       return langLabels
@@ -182,9 +182,7 @@ export class Thesaurus {
           const keys = Object.keys(newThesaurusValue)
           if (keys.length !== 1) {
             throw new BadRequestError(
-              `Adding a value to '${
-                this.#code
-              }' shoud be done with an object {thesaurusValue: {lang1: label1, lang2: label2}}`,
+              `Adding a value to '${this.#code}' should be done with an object {thesaurusValue: {lang1: label1, lang2: label2}}`,
               mod,
               fun
             )
@@ -257,7 +255,7 @@ export class Thesaurus {
   #storeCurrentValues = async () => {
     const fun = '#storeCurrentValues'
     try {
-      if (!this.#currentValues) throw new MethodNotAllowedError('Values not inititalized')
+      if (!this.#currentValues) throw new MethodNotAllowedError('Values not initialized')
       await this.#storeEnum(this.#currentValues)
     } catch (err) {
       // logW(mod, fun, err)
@@ -267,7 +265,7 @@ export class Thesaurus {
 
   #getEnum = async () => {
     const fun = '#getEnum'
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
 
     try {
       const dbEnum = await DynamicEnum.findOne({ code: this.#code })
@@ -296,26 +294,21 @@ export class Thesaurus {
   #storeEnum = async (thesaurusValues) => {
     const fun = '#storeEnum'
     try {
-      let dbAction
-      logT(mod, fun, ``)
+      logT(mod, fun)
       if (!this.#hasLabels) {
         // case where thesaurusValues = [value1, value2]
-        dbAction = await DynamicEnum.findOneAndUpdate(
+        return await DynamicEnum.findOneAndUpdate(
           { [ENUM_CODE]: this.#code },
           { $set: { [ENUM_VALUES]: thesaurusValues } },
           { upsert: true, new: true }
         )
       } else {
-        // case where thesaurusValues = {
-        //    thesaurusValue1: { lang1: labelA, lang2: labelB },
-        //    thesaurusValue2: { lang1: labelX, lang2: labelY }
-        // }
         const storableEntries = []
 
         Object.keys(thesaurusValues).map((key) => {
           const storableLabels = []
           const labels = thesaurusValues[key]
-          Object.keys(labels).map((lang) => {
+          Object.keys(labels).forEach((lang) => {
             storableLabels.push({
               [DICT_LANG]: lang,
               [DICT_TEXT]: labels[lang],
@@ -323,15 +316,12 @@ export class Thesaurus {
           })
           storableEntries.push({ [ENUM_KEY]: key, [ENUM_LABELS]: storableLabels })
         })
-        // logD(mod, fun, beautify(storableEntries))
-        dbAction = await DynamicEnum.findOneAndUpdate(
+        return await DynamicEnum.findOneAndUpdate(
           { [ENUM_CODE]: this.#code },
           { $set: { [ENUM_LABELLED_VALUES]: storableEntries } },
           { upsert: true, new: true }
         )
       }
-      // logD(mod, fun, beautify(dbAction))
-      return dbAction
     } catch (err) {
       logW(mod, fun, err)
       throw RudiError.treatError(mod, fun, err)

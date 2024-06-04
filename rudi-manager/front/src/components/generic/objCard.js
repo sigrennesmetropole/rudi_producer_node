@@ -1,13 +1,13 @@
 import axios from 'axios'
 
-import React, { useContext, useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
+import React, { useContext, useEffect, useState } from 'react'
 import { Pencil, Plus, Trash } from 'react-bootstrap-icons'
 
+import { BackDataContext } from '../../context/backDataContext'
 import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
-import { ModalContext, getOptConfirm, getOptOk } from '../modals/genericModalContext'
-import { usePMFrontContext } from '../../generalContext'
 import { getObjFormUrl } from '../../utils/utils'
+import { ModalContext, getOptConfirm, getOptOk } from '../modals/genericModalContext'
 
 ObjCard.propTypes = {
   editMode: PropTypes.bool,
@@ -40,12 +40,15 @@ export function ObjCard({
   deleteMsg,
   refresh,
 }) {
-  const { appInfo } = usePMFrontContext()
+  const { appInfo } = useContext(BackDataContext)
   const { changeOptions, toggle } = useContext(ModalContext)
   const { defaultErrorHandler } = useDefaultErrorHandler()
 
-  const [isEdit, setEdit] = useState(!!editMode)
-  useEffect(() => setEdit(!!editMode), [editMode])
+  const [formUrl, setFormUrl] = useState('')
+  useEffect(() => setFormUrl(appInfo?.formUrl || ''), [appInfo])
+
+  const [isEdit, setIsEdit] = useState(!!editMode)
+  useEffect(() => setIsEdit(!!editMode), [editMode])
 
   const objId = obj[propId]
   const objName = obj[propName]
@@ -57,7 +60,7 @@ export function ObjCard({
   const deleteObj = (id) => {
     axios
       .delete(deleteUrl(id))
-      .then((res) => {
+      .then(() => {
         changeOptions(getOptOk(deleteMsg(id), () => refresh()))
         toggle()
       })
@@ -82,7 +85,7 @@ export function ObjCard({
               <div className="btn-group" role="group">
                 {!hideEdit && (
                   <a
-                    href={getObjFormUrl(appInfo.formUrl, objType, `?update=${objId}`)}
+                    href={getObjFormUrl(formUrl, objType, `?update=${objId}`)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-warning"
@@ -106,7 +109,7 @@ export function ObjCard({
             (key) =>
               obj[key] && (
                 <p className="card-text" key={`${objId}.${key}`}>
-                  {displayFields[key]} :{' '}
+                  {displayFields[key]}&nbsp;:&nbsp;
                   <small className="text-muted">
                     {!Array.isArray(obj[key]) ? obj[key] : JSON.stringify(obj[key])}
                   </small>
@@ -144,8 +147,11 @@ export function EditObjCard({
   deleteMsg,
   refresh,
 }) {
-  const { appInfo } = usePMFrontContext()
+  const { appInfo } = useContext(BackDataContext)
   const { defaultErrorHandler } = useDefaultErrorHandler()
+
+  const [formUrl, setFormUrl] = useState('')
+  useEffect(() => setFormUrl(appInfo?.formUrl || ''), [appInfo])
 
   const [editID, setEditID] = useState('')
   const { changeOptions, toggle } = useContext(ModalContext)
@@ -164,7 +170,7 @@ export function EditObjCard({
   const deleteObj = (id) => {
     axios
       .delete(deleteUrl(id))
-      .then((res) => {
+      .then(() => {
         changeOptions(getOptOk(deleteMsg(id), () => refresh()))
         toggle()
       })
@@ -182,7 +188,7 @@ export function EditObjCard({
   const button = {
     edit: (
       <a
-        href={getObjFormUrl(appInfo.formUrl, objType, `?update=${editID}`)}
+        href={getObjFormUrl(formUrl, objType, `?update=${editID}`)}
         target="_blank"
         rel="noopener noreferrer"
         className="btn btn-warning"
@@ -202,7 +208,7 @@ export function EditObjCard({
         <div className="card-body">
           <div className="inline">
             <a
-              href={getObjFormUrl(appInfo.formUrl, objType)}
+              href={getObjFormUrl(formUrl, objType)}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-secondary"

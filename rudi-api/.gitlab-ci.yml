@@ -1,0 +1,101 @@
+# --------------------------------------------------------------------------------------------------
+# Notes:
+# - jobs are executed in the order indicated at root "stages" property
+# - "needs" property needs an array of job names (not stages names)
+# - linter needs install:dev as eslint and prettier are dev dependencies
+# --------------------------------------------------------------------------------------------------
+
+stages:
+  - install_dev
+  - quality
+  # - tests
+  - install_prod
+
+#---------------------------------------------------------------------------------------------------
+# INSTALL
+#---------------------------------------------------------------------------------------------------
+install:dev:
+  stage: install_dev
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE != "push"'
+      when: manual
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+    policy: push
+  tags:
+    - nodejs-20
+  variables:
+    NODE_ENV: development
+  script:
+    - npm i
+
+#---------------------------------------------------------------------------------------------------
+# QUALITY (LINTER)
+#---------------------------------------------------------------------------------------------------
+quality:dev:
+  stage: quality
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: on_success
+    - if: '$CI_PIPELINE_SOURCE != "push"'
+      when: manual
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - node_modules/
+    policy: pull
+  tags:
+    - nodejs-20
+  variables:
+    NODE_ENV: development
+  script:
+    - npm run lint
+
+#---------------------------------------------------------------------------------------------------
+# TESTS
+#---------------------------------------------------------------------------------------------------
+# tests:dev:
+#   stage: tests
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "push"'
+#       when: on_success
+#     - if: '$CI_PIPELINE_SOURCE != "push"'
+#       when: manual
+#   cache:
+#     key:
+#       files:
+#         - package-lock.json
+#     paths:
+#       - node_modules/
+#     policy: pull
+#   tags:
+#     - nodejs-20
+#   variables:
+#     NODE_ENV: development
+#   script:
+#     - npm run test
+
+#---------------------------------------------------------------------------------------------------
+# INSTALL
+#---------------------------------------------------------------------------------------------------
+install:prod:
+  stage: install_prod
+  rules:
+    - if: $CI_COMMIT_BRANCH == "release"
+      when: on_success
+    - if: $CI_COMMIT_BRANCH != "release"
+      when: manual
+  tags:
+    - nodejs-20
+  variables:
+    NODE_ENV: production
+  script:
+    - npm i

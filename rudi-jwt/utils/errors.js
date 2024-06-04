@@ -7,52 +7,49 @@ const mod = 'errors'
 // -----------------------------------------------------------------------------
 const DEFAULT_MESSAGE = 'Rudi producer node - API Server Error'
 
-class RudiHttpError extends Error {
+export class RudiHttpError extends Error {
   constructor(message, code, name, description) {
     super(message || DEFAULT_MESSAGE)
     this.statusCode = code || 500
     this.name = name || 'Internal Server Error'
     this.error = description || 'An unexpected error occured'
   }
-  toString() {
-    return `Error ${this.statusCode} (${this.name}): ${this.message}`
-  }
-  toJSON() {
-    return {
-      statusCode: this.statusCode,
-      type: this.constructor.name,
-      name: this.name,
-      error: this.error,
-      message: this.message,
-    }
-  }
+  toString = () => `Error ${this.statusCode} (${this.name}): ${this.message}`
+
+  toJSON = () => ({
+    statusCode: this.statusCode,
+    type: this.constructor.name,
+    name: this.name,
+    error: this.error,
+    message: this.message,
+  })
 }
 
-class BadRequestError extends RudiHttpError {
+export class BadRequestError extends RudiHttpError {
   constructor(errMessage) {
     super(errMessage, 400, 'Bad request', 'The JSON is not valid')
   }
 }
 
-class UnauthorizedError extends RudiHttpError {
+export class UnauthorizedError extends RudiHttpError {
   constructor(errMessage) {
     super(errMessage, 401, 'Unauthorized', 'The request requires an user authentication')
   }
 }
 
-class ForbiddenError extends RudiHttpError {
+export class ForbiddenError extends RudiHttpError {
   constructor(errMessage) {
     super(errMessage, 403, 'Forbidden', 'The access is not allowed')
   }
 }
 
-class NotFoundError extends RudiHttpError {
+export class NotFoundError extends RudiHttpError {
   constructor(errMessage) {
     super(errMessage, 404, 'Not Found', 'The resource was not found')
   }
 }
 
-class MethodNotAllowedError extends RudiHttpError {
+export class MethodNotAllowedError extends RudiHttpError {
   constructor(errMessage) {
     super(
       errMessage,
@@ -63,7 +60,7 @@ class MethodNotAllowedError extends RudiHttpError {
   }
 }
 
-class NotAcceptableError extends RudiHttpError {
+export class NotAcceptableError extends RudiHttpError {
   constructor(errMessage) {
     super(
       errMessage,
@@ -74,13 +71,13 @@ class NotAcceptableError extends RudiHttpError {
   }
 }
 
-class InternalServerError extends RudiHttpError {
+export class InternalServerError extends RudiHttpError {
   constructor(errMessage) {
     super(errMessage, 500, 'Internal Server Error', 'Internal Server Error')
   }
 }
 
-class NotImplementedError extends RudiHttpError {
+export class NotImplementedError extends RudiHttpError {
   constructor(errMessage) {
     super(
       errMessage,
@@ -91,8 +88,7 @@ class NotImplementedError extends RudiHttpError {
   }
 }
 
-function createRudiHttpError(code, message) {
-  let err
+export function createRudiHttpError(code, message) {
   switch (code) {
     case 400:
       return new BadRequestError(message)
@@ -112,17 +108,4 @@ function createRudiHttpError(code, message) {
     default:
       return new InternalServerError(message)
   }
-}
-
-module.exports = {
-  RudiHttpError,
-  BadRequestError,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  MethodNotAllowedError,
-  NotAcceptableError,
-  InternalServerError,
-  NotImplementedError,
-  createRudiHttpError,
 }

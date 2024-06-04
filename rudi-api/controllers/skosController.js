@@ -12,24 +12,24 @@ const mod = 'skosCtrl'
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  URL_PV_THESAURUS_ACCESS,
   PARAM_THESAURUS_CODE,
   PARAM_THESAURUS_LANG,
+  URL_PV_THESAURUS_ACCESS,
   USER_AGENT,
-} from '../config/confApi.js'
+} from '../config/constApi.js'
 
 import {
-  DB_ID,
-  API_SKOS_SCHEME_ID,
-  API_SKOS_SCHEME_CODE,
-  API_SKOS_CONCEPT_ID,
-  API_SKOS_CONCEPT_CODE,
-  API_SCHEME_TOPS_PROPERTY,
+  API_CONCEPT_CHILDREN_PROPERTY,
   API_CONCEPT_CLASS_PROPERTY,
   API_CONCEPT_PARENTS_PROPERTY,
-  API_CONCEPT_CHILDREN_PROPERTY,
-  API_CONCEPT_SIBLINGS_PROPERTY,
   API_CONCEPT_RELATIVE_PROPERTY,
+  API_CONCEPT_SIBLINGS_PROPERTY,
+  API_SCHEME_TOPS_PROPERTY,
+  API_SKOS_CONCEPT_CODE,
+  API_SKOS_CONCEPT_ID,
+  API_SKOS_SCHEME_CODE,
+  API_SKOS_SCHEME_ID,
+  DB_ID,
   LicenceTypes,
 } from '../db/dbFields.js'
 
@@ -45,9 +45,9 @@ const PROPERTIES_WITH_CONCEPT_REFS = [
 // -------------------------------------------------------------------------------------------------
 import {
   beautify,
+  deepClone,
   isNotEmptyArray,
   isNotEmptyObject,
-  deepClone,
   toPaddedBase64url,
 } from '../utils/jsUtils.js'
 
@@ -56,10 +56,10 @@ import { accessProperty, accessReqParam } from '../utils/jsonAccess.js'
 import { logD, logE, logT, logW, sysAlert } from '../utils/logging.js'
 
 import {
-  ParameterExpectedError,
-  NotFoundError,
-  RudiError,
   BadRequestError,
+  NotFoundError,
+  ParameterExpectedError,
+  RudiError,
 } from '../utils/errors.js'
 
 import {
@@ -73,14 +73,14 @@ import { directGet } from '../utils/httpReq.js'
 // -------------------------------------------------------------------------------------------------
 // Thesauri
 // -------------------------------------------------------------------------------------------------
-import Themes from '../definitions/thesaurus/Themes.js'
-import Keywords from '../definitions/thesaurus/Keywords.js'
 import { get as getEncodings } from '../definitions/thesaurus/Encodings.js'
-import { get as getFileTypes, getExtensions } from '../definitions/thesaurus/FileTypes.js'
+import { getExtensions, get as getFileTypes } from '../definitions/thesaurus/FileTypes.js'
 import { get as getHashAlgorithms } from '../definitions/thesaurus/HashAlgorithms.js'
+import Keywords from '../definitions/thesaurus/Keywords.js'
 import { get as getLanguages } from '../definitions/thesaurus/Languages.js'
 import { get as getProjections } from '../definitions/thesaurus/Projections.js'
 import { get as getStorageStatus } from '../definitions/thesaurus/StorageStatus.js'
+import Themes from '../definitions/thesaurus/Themes.js'
 
 // -------------------------------------------------------------------------------------------------
 // Controllers
@@ -90,8 +90,9 @@ import { getLicenceCodes } from './licenceController.js'
 // -------------------------------------------------------------------------------------------------
 // Data models
 // -------------------------------------------------------------------------------------------------
-import SkosScheme from '../definitions/models/SkosScheme.js'
+import { InterfaceContract } from '../definitions/models/Media.js'
 import SkosConcept from '../definitions/models/SkosConcept.js'
+import SkosScheme from '../definitions/models/SkosScheme.js'
 
 // -------------------------------------------------------------------------------------------------
 // Controllers: Scheme
@@ -108,7 +109,7 @@ import SkosConcept from '../definitions/models/SkosConcept.js'
 export const newSkosScheme = async (rudiScheme) => {
   const fun = 'newScheme'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     if (!rudiScheme) throw new ParameterExpectedError('rudiScheme', mod, fun)
 
@@ -137,7 +138,7 @@ const CONCEPT_HIERARCHY_DISPLAY = `${API_SKOS_CONCEPT_ID} ${API_SKOS_CONCEPT_COD
 
 export const dbSchemeToRudi = async (dbScheme) => {
   const fun = 'dbSchemeToRudi'
-  logT(mod, fun, ``)
+  logT(mod, fun)
 
   // logD(mod, fun, `dbScheme: ${beautify(dbScheme)}`)
 
@@ -170,7 +171,7 @@ export const dbSchemeToRudi = async (dbScheme) => {
 export const createConceptHierarchy = async (listConcepts, schemeDbId, parentConcept) => {
   const fun = 'createConceptHierarchy'
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
     // Check input parameters
     if (!listConcepts) throw new ParameterExpectedError('listConcepts', mod, fun)
     if (!schemeDbId) throw new ParameterExpectedError('schemeDbId', mod, fun)
@@ -263,7 +264,7 @@ export const createConceptHierarchy = async (listConcepts, schemeDbId, parentCon
 export const newSkosConcept = async (rudiConcept, inSchemeDbId) => {
   const fun = 'newConcept'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     await setDbScheme(rudiConcept, inSchemeDbId)
 
@@ -296,7 +297,7 @@ export const newSkosConcept = async (rudiConcept, inSchemeDbId) => {
 export const setDbScheme = async (rudiConcept, inSchemeDbId) => {
   const fun = 'setDbScheme'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     let schemeDbId
     if (!inSchemeDbId) {
@@ -321,7 +322,7 @@ export const setDbScheme = async (rudiConcept, inSchemeDbId) => {
 export const getDbIdForConceptCode = async (conceptRudiId) => {
   const fun = 'getDbIdForConceptCode'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const conceptDbId = await getConceptDbIdWithRudiId(conceptRudiId)
     return conceptDbId
   } catch (err) {
@@ -332,7 +333,7 @@ export const getDbIdForConceptCode = async (conceptRudiId) => {
 export const setDbConceptRefs = async (rudiConcept, prop) => {
   const fun = 'setDbConceptRefs'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const listConceptsReferences = rudiConcept[prop]
 
     // logD(mod, fun, `listConceptsReferences: ${beautify(listConceptsReferences)}`)
@@ -374,7 +375,7 @@ const CONCEPT_SHORT_DISPLAY = `${API_SKOS_CONCEPT_ID} ${API_SKOS_CONCEPT_CODE}` 
 export const dbConceptToRudiMinimal = async (dbConcept) => {
   const fun = 'dbConceptToRudi'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     const rudiConcept = await dbConcept.populate([
       {
@@ -410,7 +411,7 @@ export const dbConceptToRudiMinimal = async (dbConcept) => {
 export const dbConceptToRudiRecursive = async (dbConcept) => {
   const fun = 'dbConceptToRudiRecursive'
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
 
     // logD(mod, fun, `dbConcept: ${beautify(dbConcept)}`)
     if (!dbConcept) return
@@ -454,7 +455,7 @@ export const dbConceptToRudiRecursive = async (dbConcept) => {
 export const dbConceptListToRudiRecursive = async (dbConceptList) => {
   const fun = 'dbConceptListToRudiRecursive'
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
 
     // logD(mod, fun, `dbConceptList: ${beautify(dbConceptList)}`)
     if (!dbConceptList) return
@@ -479,15 +480,16 @@ export const dbConceptListToRudiRecursive = async (dbConceptList) => {
 export const getThesaurusList = async (lang) => {
   const fun = 'getThesaurusList'
   try {
-    const keywords = await Keywords.get(lang)
-    const themes = await Themes.get(lang)
+    const keywords = Keywords.get(lang)
+    const themes = Themes.get(lang)
     const licences = await getLicenceCodes()
 
     const thesauri = {
       encodings: getEncodings(),
-      filetypes: getFileTypes(),
       fileextensions: getExtensions(),
+      filetypes: getFileTypes(),
       hashalgorithms: getHashAlgorithms(),
+      interfacecontracts: Object.values(InterfaceContract),
       keywords: keywords,
       languages: getLanguages(),
       licences: licences,
@@ -508,9 +510,10 @@ export const getThesaurus = async (thesaurusCode) => {
   try {
     const code = thesaurusCode.toLowerCase()
 
-    if (code === 'keywords') return await Keywords.get()
-    if (code === 'themes') return await Themes.get()
+    if (code === 'keywords') return Keywords.get()
+    if (code === 'themes') return Themes.get()
     if (code === 'licences') return await getLicenceCodes()
+    if (code === 'interfacecontracts') return Object.values(InterfaceContract)
 
     switch (code) {
       case 'encodings':
@@ -538,27 +541,9 @@ export const getThesaurusLabel = async (thesaurusCode, lang) => {
   try {
     const code = thesaurusCode.toLowerCase()
 
-    if (code === 'themes') return await Themes.getLabels(lang)
+    if (code === 'themes') return Themes.getLabels(lang)
 
-    if (code === 'keywords') return await Keywords.get()
-    if (code === 'licences') return await getLicenceCodes()
-
-    switch (code) {
-      case 'encodings':
-        return getEncodings()
-      case 'filetypes':
-        return getFileTypes()
-      case 'fileextensions':
-        return getExtensions()
-      case 'hashalgorithms':
-        return getHashAlgorithms()
-      case 'languages':
-        return getLanguages()
-      case 'projections':
-        return getProjections()
-      default:
-        throw new BadRequestError(`This is not a valid thesaurus code: '${thesaurusCode}'`)
-    }
+    return await getThesaurus(thesaurusCode)
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
@@ -571,7 +556,7 @@ export const getEveryThesaurus = async (req, reply) => {
   const fun = 'getEveryThesaurus'
   try {
     logT(mod, fun, `< GET ${URL_PV_THESAURUS_ACCESS}`)
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     const lang = req.query[PARAM_THESAURUS_LANG]
     // logD(mod, fun, `lang: ${lang}`)
@@ -634,7 +619,7 @@ export const getSingleThesaurusLabels = async (req, reply) => {
 export const widenSearch = async (searchTerms, lang) => {
   const fun = 'widenSearch'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     if (!searchTerms || !getSkosmosConf()) return searchTerms
 
     const widenedSearchTerms = []

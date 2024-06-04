@@ -2,8 +2,9 @@
 **/custom.ini
 **/*custom.ini
 
-# Libs
+# Generated
 **/node_modules
+package-lock.json
 
 # Logs
 **/logs

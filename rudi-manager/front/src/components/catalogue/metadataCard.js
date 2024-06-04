@@ -1,22 +1,93 @@
 import axios from 'axios'
 
-import React, { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
-import { Link } from 'react-router-dom'
-import { BoxArrowUpRight, Pencil, Trash, CloudDownload, Eye, Share } from 'react-bootstrap-icons'
-
-import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
-import { getObjFormUrl, getLocaleFormatted } from '../../utils/utils'
-import { getBackUrl } from '../../utils/frontOptions'
+import React, { useContext, useEffect, useState } from 'react'
 import {
-  DefaultOkOption,
+  BoxArrowUpRight,
+  CloudDownload,
+  CloudSlash,
+  Eye,
+  Pencil,
+  Share,
+  Trash,
+} from 'react-bootstrap-icons'
+import { Link } from 'react-router-dom'
+
+import { BackDataContext } from '../../context/backDataContext'
+import { getBackUrl } from '../../utils/frontOptions'
+import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
+import { getLocaleFormatted, getObjFormUrl, pathJoin } from '../../utils/utils'
+import {
   DefaultConfirmOption,
+  DefaultOkOption,
   useModalContext,
 } from '../modals/genericModalContext'
-import ThemeDisplay from '../other/themeDisplay'
 import FileSizeDisplay from '../other/fileSizeDisplay'
-import { usePMFrontContext } from '../../generalContext'
+import ThemeDisplay from '../other/themeDisplay'
 
+const downloadButton = (url) => (
+  <button type="button" className="btn btn-green button-margin">
+    <a id="downloadMedia" title="Télécharger" href={url}>
+      <CloudDownload />
+    </a>
+  </button>
+)
+
+const externalUrlButton = (url) => (
+  <button type="button" className="btn btn-green margin-right">
+    <a id="downloadMedia" title="Site externe" href={url}>
+      <BoxArrowUpRight />
+    </a>
+  </button>
+)
+
+const eyeButton = (id) => (
+  <Link to={getBackUrl(`show/${id}`)}>
+    <span className="btn btn-green" title="Aperçu">
+      <Eye />
+    </span>
+  </Link>
+)
+const shareButton = (url) => (
+  <a
+    className="btn btn-success"
+    title="Partager la métadonnée"
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <Share />
+  </a>
+)
+const editButton = (url) => (
+  <a
+    className="btn btn-warning"
+    href={url}
+    title="Editer"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <Pencil />
+  </a>
+)
+const deleteButton = (triggerDelete) => (
+  <button
+    type="button"
+    className="btn btn-danger"
+    title="Supprimer"
+    onClick={() => triggerDelete()}
+  >
+    <Trash />
+  </button>
+)
+const missButton = () => (
+  <button type="button" className="btn btn-missing" title="Fichier manquant, à retransmettre">
+    {/* <CloudSlashFill /> */}
+    <CloudSlash />
+    {/* <FileEarmarkExcel /> */}
+    {/* <XLg /> */}
+  </button>
+)
 MetadataCard.propTypes = {
   editMode: PropTypes.bool,
   metadata: PropTypes.object,
@@ -24,42 +95,59 @@ MetadataCard.propTypes = {
   logout: PropTypes.func,
 }
 
+export const displaySpan = (level, text) => (
+  <span className={'status-pill text-bg-' + level} id="status-pill">
+    {text}
+  </span>
+)
+
+/**
+ * Display a metadata status
+ * @param {string} metadataStatus a metadata status
+ * @return {html} A round pill that shows the status
+ */
+export const displayStatus = (metadataStatus) => {
+  switch (metadataStatus) {
+    case 'incomplete':
+      return displaySpan('danger', 'Incomplet')
+    case 'refused':
+      return displaySpan('danger', 'Refus portail')
+    case 'deleted':
+      return displaySpan('muted', 'Supprimé')
+    case 'local':
+      return displaySpan('success', 'Publié (local)')
+    case 'published':
+      return displaySpan('success', 'Publié (portail)')
+    case 'sent':
+      return displaySpan('warning', 'Envoyé')
+    default:
+      return displaySpan('dark', 'Local')
+  }
+}
+/**
+ * Display the status for the metadata
+ * @param {JSON} metadata a RUDI metadata
+ * @return {html} A round pill that shows the status
+ */
+export const displayMetadataStatus = (metadata) =>
+  metadata.metadataStatus == 'local' && metadata.collection_tag
+    ? displaySpan('dark', metadata.collection_tag)
+    : displayStatus(metadata.metadata_status)
+
 /**
  * Composant : metadataCard
  * @return {ReactNode}
  */
 export default function MetadataCard({ editMode, metadata, refresh, logout }) {
-  const { appInfo } = usePMFrontContext()
+  const { appInfo } = useContext(BackDataContext)
   const { changeOptions, toggle } = useModalContext()
 
   const { defaultErrorHandler } = useDefaultErrorHandler()
+  const [appData, setAppData] = useState({})
+  useEffect(() => setAppData(appInfo), [appInfo])
 
-  const [isEdit, setEdit] = useState(!!editMode)
-  useEffect(() => setEdit(!!editMode), [editMode])
-  /**
-   * download le fichier via media_id
-   * @param {*} ressource connector du fichier
-   */
-  /*
-  function downloadFile(ressource) {
-    axios
-      .get(`${ressource.connector.url}`, {
-        responseType: 'blob',
-        headers: { 'media-access-method': 'Direct' },
-      })
-      .then((response) => {
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `${ressource.media_name}`);
-        document.body.appendChild(link);
-        link.click();
-      })
-      .catch((err) => {
-        defaultErrorHandler(err);
-      });
-  }
-   */
+  const [isEdit, setIsEdit] = useState(!!editMode)
+  useEffect(() => setIsEdit(!!editMode), [editMode])
 
   /**
    * call for metadata deletion
@@ -130,80 +218,49 @@ export default function MetadataCard({ editMode, metadata, refresh, logout }) {
    */
   const isRestricted = (metadata) =>
     !!metadata?.access_condition?.confidentiality?.restricted_access
+  // console.log(metadata)
+  const metaDates = metadata.metadata_info?.metadata_dates
 
-  const metaDates = metadata.metadata_info.metadata_dates
-  /**
-   * Display the metadata status
-   * @return {html} A round pill that shows the status
-   */
-  function displayStatus() {
-    const displaySpan = (level, text) => (
-      <span className={'status-pill text-bg-' + level} id="status-pill">
-        {text}
+  const displayMediaFile = (mediaFile) => (
+    <div key={`${mediaFile.media_id}`}>
+      {button.visualize(mediaFile.media_id)}
+      {button.download(mediaFile.connector.url)}
+      <FileSizeDisplay number={mediaFile.file_size}></FileSizeDisplay>
+      <span className="">
+        <a href={mediaFile.connector.url}>{mediaFile.media_name}</a>
       </span>
-    )
-    if (metadata.collection_tag) return displaySpan('dark', metadata.collection_tag)
-    if (metadata.storage_status === 'pending') return displaySpan('danger', 'Incomplet')
-    if (metadata.integration_error_id) return displaySpan('danger', 'Refus portail')
-    if (!metaDates?.published && !metaDates?.deleted) return displaySpan('warning', 'Envoyé')
-    if (metaDates?.published && !metaDates?.deleted) return displaySpan('success', 'Publié')
-    if (metaDates?.deleted) return displaySpan('danger', 'Supprimé')
-  }
+    </div>
+  )
+
+  const displayMediaService = (mediaService) => (
+    <div key={`${mediaService.media_id}`}>
+      {button.external(mediaService.connector.url)}
+      <span className="">
+        <a href={mediaService.connector.url}>{mediaService.connector.url}</a>
+      </span>
+    </div>
+  )
+  const displayMissingMedia = (media) => (
+    <div key={`${media.media_id}`}>
+      {missButton()}
+      <span className="text-muted"> {media.media_name} </span>
+    </div>
+  )
+  const displayAvailableMedia = (media) =>
+    media.file_size ? displayMediaFile(media) : displayMediaService(media)
+
+  const displayMedia = (media) =>
+    media.file_storage_status === 'missing'
+      ? displayMissingMedia(media)
+      : displayAvailableMedia(media)
 
   const button = {
-    share: (
-      <a
-        className="btn btn-success"
-        title="Partager la métadonnée"
-        href={`${appInfo.apiExtUrl}api/v1/resources/${metadata.global_id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Share />
-      </a>
-    ),
-    edit: (
-      <a
-        className="btn btn-warning"
-        href={`${appInfo.formUrl}?update=${metadata.global_id}`}
-        title="Editer"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Pencil />
-      </a>
-    ),
-    delete: (
-      <button
-        type="button"
-        className="btn btn-danger"
-        title="Supprimer"
-        onClick={() => triggerDeleteRessource()}
-      >
-        <Trash />
-      </button>
-    ),
-    download: (url) => (
-      <button type="button" className="btn btn-success button-margin">
-        <a id="downloadMedia" title="Télécharger" href={url}>
-          <CloudDownload />
-        </a>
-      </button>
-    ),
-    external: (url) => (
-      <button type="button" className="btn btn-success margin-right">
-        <a id="downloadMedia" title="Site externe" href={url}>
-          <BoxArrowUpRight />
-        </a>
-      </button>
-    ),
-    visualize: (id) => (
-      <Link to={getBackUrl(`show/${id}`)}>
-        <span className="btn btn-success" title="Aperçu">
-          <Eye />
-        </span>
-      </Link>
-    ),
+    share: shareButton(pathJoin(appData.apiExtUrl, 'api/v1/resources', metadata.global_id)),
+    edit: editButton('?'.merge(appData.formUrl, `update=${metadata.global_id}`)),
+    delete: deleteButton(triggerDeleteRessource),
+    download: (url) => downloadButton(url),
+    external: (url) => externalUrlButton(url),
+    visualize: (id) => eyeButton(id),
   }
   return (
     <div className="col-12" key={metadata.global_id}>
@@ -211,7 +268,7 @@ export default function MetadataCard({ editMode, metadata, refresh, logout }) {
         <h5 className={isRestricted(metadata) ? 'card-header restricted' : 'card-header'}>
           <div className="d-flex justify-content-between align-items-center">
             <a
-              href={getObjFormUrl(appInfo.formUrl, '', `?read-only=${metadata.global_id}`)}
+              href={getObjFormUrl(appData.formUrl, '', `?read-only=${metadata.global_id}`)}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -219,7 +276,7 @@ export default function MetadataCard({ editMode, metadata, refresh, logout }) {
                 {metadata.resource_title}
               </span>
             </a>
-            {displayStatus()}
+            <span className="align-pill-right">{displayMetadataStatus(metadata)}</span>
             {isEdit ? (
               <div className="btn-group" role="group">
                 {button.share}
@@ -259,25 +316,7 @@ export default function MetadataCard({ editMode, metadata, refresh, logout }) {
             <ThemeDisplay value={metadata.theme}></ThemeDisplay>
           </a>
           <span className="card-text">
-            {metadata.available_formats.map((ressource) =>
-              ressource.file_size ? (
-                <div key={`${ressource.media_id}`}>
-                  {button.visualize(ressource.media_id)}
-                  {button.download(ressource.connector.url)}
-                  <FileSizeDisplay number={ressource.file_size}></FileSizeDisplay>
-                  <span className="">
-                    <a href={ressource.connector.url}>{ressource.media_name}</a>
-                  </span>
-                </div>
-              ) : (
-                <div key={`${ressource.media_id}`}>
-                  {button.external(ressource.connector.url)}
-                  <span className="">
-                    <a href={ressource.connector.url}>{ressource.connector.url}</a>
-                  </span>
-                </div>
-              )
-            )}
+            {metadata.available_formats.map((media) => displayMedia(media))}
           </span>
         </div>
       </div>

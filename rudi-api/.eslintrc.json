@@ -7,8 +7,7 @@
   },
   "parser": "@babel/eslint-parser",
   "parserOptions": {
-    "ecmaVersion": "latest",
-    "requireConfigFile": false
+    "ecmaVersion": "latest"
   },
   "rules": {
     "arrow-body-style": "off",
@@ -19,6 +18,7 @@
     "no-console": "warn",
     "no-dupe-keys": "error",
     "no-empty": "error",
+    "no-extend-native": ["error", { "exceptions": ["RegExp"] }],
     "no-invalid-regexp": "error",
     "no-redeclare": "error",
     "no-return-assign": "error",
@@ -38,9 +38,9 @@
       "warn",
       {
         "vars": "all",
-        "varsIgnorePattern": "^(_|req|reply|res|next)$",
+        "varsIgnorePattern": "^_",
         "args": "after-used",
-        "argsIgnorePattern": "^(_|req|reply|res|next)$"
+        "argsIgnorePattern": "^(_|req|reply|res|next|fun)$"
       }
     ]
   },

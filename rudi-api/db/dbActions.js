@@ -15,15 +15,18 @@ import { DICT_LANG } from './dbFields.js'
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 import { beautify } from '../utils/jsUtils.js'
+
 import { LogEntry } from '../definitions/models/LogEntry.js'
+
 import { logD, logT, logV, logW } from '../utils/logging.js'
+
 import { RudiError } from '../utils/errors.js'
 
 // -------------------------------------------------------------------------------------------------
 // Actions on MongoDB tables from mongoose
 // -------------------------------------------------------------------------------------------------
-export const daDropModelCollection = (Model) =>
-  Model?.collection
+export const daDropModelCollection = (ObjModel) =>
+  ObjModel?.collection
     ?.drop()
     .then(() => logD(mod, 'dropModelCollection', `done`))
     .catch((err) => logW(mod, 'dropModelCollection', err))
@@ -35,7 +38,7 @@ export const daGetCollections = async () => {
   const fun = `getCollections`
   try {
     const collections = await connection.db.listCollections().toArray()
-    collections.map((collection) => collection.name)
+    collections.forEach((collection) => collection.name)
     return collections
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -45,7 +48,7 @@ export const daGetCollections = async () => {
 export const daDropDB = async (req, reply) => {
   const fun = `daDropDB`
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     /* Drop the whole DB !!! */
     // const dbActionResult = await connection.db.dropDatabase()
     // logD(mod, fun, 'DB dropped')
@@ -55,24 +58,20 @@ export const daDropDB = async (req, reply) => {
     const listCollections = await connection.db.listCollections().toArray()
     // logD(mod, fun, `listCollections: ${beautify(listCollections)}`)
 
-    const collectionDropped = {}
+    const droppedCollections = []
     await Promise.all(
       listCollections.map(async (collection) => {
         if (!collection) logD(mod, fun, `Weird: ${beautify(collection)}`)
-        if (collection.name !== logsCollection) {
-          logD(mod, fun, `Dropping '${collection.name}'`)
-          connection.db.dropCollection(collection.name, (err, res) => {
-            if (err) {
-              logW(mod, fun, `Coudn't drop '${collection.name}': ERR ${err}`)
-            } else {
-              logD(mod, fun, `Dropped '${collection.name}': ${res}`)
-            }
+        if (collection?.name !== logsCollection)
+          droppedCollections.push(await daDropCollection(collection.name))
+        else
+          droppedCollections.push({
+            name: logsCollection,
+            dropped: false,
           })
-          collectionDropped[collection.name] = true
-        }
       })
     )
-    return collectionDropped
+    return droppedCollections
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
@@ -83,29 +82,27 @@ export const daDropCollection = async (collectionName) => {
   try {
     const listCollections = await connection.db.listCollections().toArray()
     // logD(mod, fun, `listCollections: ${utils.beautify(listCollections)}`)
+    const droppedCollections = []
     let isCollectionDropped = false
     await Promise.all(
       listCollections.map(async (collection) => {
         if (collection.name === collectionName) {
-          connection.db.dropCollection(collectionName, (err, res) => {
-            if (err) {
-              logW(mod, fun, `Coudn't drop '${collection.name}': ERR ${err}`)
-            } else {
-              logD(mod, fun, `Dropped '${collection.name}': ${res}`)
-            }
+          droppedCollections.push({
+            name: collectionName,
+            id: collection.info?.uuid,
+            dropped: await connection.db.dropCollection(collectionName),
           })
           isCollectionDropped = true
-          return isCollectionDropped
         }
         return isCollectionDropped
       })
     )
     if (isCollectionDropped) {
       logD(mod, fun, `Dropped collection '${collectionName}'`)
-      return true
+      return droppedCollections[0]
     } else {
       logD(mod, fun, `Collection '${collectionName}' was not found`)
-      return false
+      return { name: collectionName, dropped: false }
     }
   } catch (err) {
     // logW(mod, fun, err)
@@ -116,29 +113,29 @@ export const daDropCollection = async (collectionName) => {
 // const MDB_SEARCH_INDEXES = { _fts: 'text', _ftsx: 1 }
 const SEARCH_INDEX = 'searchIndex'
 
-export const makeSearchable = async (Model) => {
+export const makeSearchable = async (ObjModel) => {
   const fun = 'makeSearchable'
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
     let collection
     try {
-      collection = Model.collection
+      collection = ObjModel.collection
     } catch (err) {
-      logW(mod, fun, `No collection for '${Model.name}': ${err}`)
+      logW(mod, fun, `No collection for '${ObjModel.name}': ${err}`)
       return
     }
     if (!collection) {
-      logW(mod, fun, `No collection for '${Model.name}'`)
+      logW(mod, fun, `No collection for '${ObjModel.name}'`)
       return
     }
 
     let searchableFields
     try {
-      searchableFields = Model.getSearchableFields()
+      searchableFields = ObjModel.getSearchableFields()
       if (!searchableFields)
         throw Error(`Can't find any searchable field for Model '${collection.name}'`)
     } catch (err) {
-      // => searchableFields is undefined or method Model.getSearchableFields() doesn't exist
+      // => searchableFields is undefined or method ObjModel.getSearchableFields() doesn't exist
       logD(mod, fun, `No searchable fields for '${collection.name}'`)
       return
     }
@@ -148,7 +145,7 @@ export const makeSearchable = async (Model) => {
     // Dropping current text indexes if they exist
     try {
       const indexes = await collection.getIndexes()
-      if (!!indexes[SEARCH_INDEX]) {
+      if (indexes[SEARCH_INDEX]) {
         // const val = indexes[SEARCH_INDEX]
         logD(mod, fun, `Search indexes already exist: ${collection.name}`)
         // logT(mod, fun, `Dropping search indexes for '${collection.name}'`)
@@ -187,12 +184,12 @@ export const makeSearchable = async (Model) => {
       }`
       logT(mod, fun, msg)
     } catch (e) {
-      logW(mod, fun, `Indexes not created for '${Model.collection.name}': ${e}`)
+      logW(mod, fun, `Indexes not created for '${ObjModel.collection.name}': ${e}`)
       throw RudiError.treatError(mod, fun, e)
     }
     return `${collection.name} indexes created`
   } catch (err) {
-    logW(mod, fun, `Couldn't create indexes for '${Model.collection.name}': ${err}`)
+    logW(mod, fun, `Couldn't create indexes for '${ObjModel.collection.name}': ${err}`)
     throw RudiError.treatError(mod, fun, err)
   }
 }

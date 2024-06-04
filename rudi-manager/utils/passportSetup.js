@@ -17,7 +17,8 @@ const {
   dbClose,
   dbOpen,
 } = require('../database/database')
-const { extractCookieFromReq, CONSOLE_TOKEN_NAME, matchPassword } = require('./secu')
+const { extractCookieFromReq, CONSOLE_TOKEN_NAME } = require('./secu')
+const { matchPassword } = require('@aqmo.org/jwt-lib')
 
 // Passport configuration
 passport.serializeUser((user, done) => done(null, user.id))
@@ -51,7 +52,6 @@ const checkPassport = async (username, password) => {
       throw new UnauthorizedError('No user found')
     }
 
-    // console.log('T (LocalStrategy) match:', matchPassword(password, dbUserInfo.password))
     if (!matchPassword(password, dbUserHash)) {
       log.e(mod, fun, `Password mismatch`)
       throw new UnauthorizedError('Wrong password')
@@ -98,7 +98,6 @@ passport.use(
     },
     async (token, done) => {
       try {
-        // console.error('T (JWTstrategy) Error auth:', token);
         return done(null, token.user)
       } catch (error) {
         log.sysWarn(mod, 'JWTstrategy', error)

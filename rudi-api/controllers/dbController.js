@@ -14,11 +14,11 @@ const { map } = _
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 
-import { URL_PV_DB_ACCESS, PARAM_OBJECT, MONGO_ERROR } from '../config/confApi.js'
+import { MONGO_ERROR, PARAM_OBJECT, URL_PV_DB_ACCESS } from '../config/constApi.js'
 
-import { NotFoundError, BadRequestError, RudiError } from '../utils/errors.js'
+import { BadRequestError, NotFoundError, RudiError } from '../utils/errors.js'
 
-import { daDropDB, daGetCollections, daDropCollection } from '../db/dbActions.js'
+import { daDropCollection, daDropDB, daGetCollections } from '../db/dbActions.js'
 
 import { accessReqParam } from '../utils/jsonAccess.js'
 import { logT } from '../utils/logging.js'
@@ -35,8 +35,7 @@ export const getCollections = async (req, reply) => {
   const fun = 'getCollections'
   logT(mod, fun, `< GET ${URL_PV_DB_ACCESS}`)
   try {
-    const dbActionResult = await daGetCollections()
-    return map(dbActionResult, 'name').sort()
+    return map(await daGetCollections(), 'name').sort()
   } catch (err) {
     const error = err.name === MONGO_ERROR ? new BadRequestError(err) : new NotFoundError(err)
     throw RudiError.treatError(mod, fun, error)

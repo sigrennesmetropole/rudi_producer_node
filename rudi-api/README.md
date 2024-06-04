@@ -31,7 +31,7 @@ _See https://app.swaggerhub.com/apis/OlivierMartineau/RUDI-PRODUCER/ for further
 
 **Use example:**
 
-> GET https://data-rudi.aqmo.org/api/v1/resources?limit=10&fields=global_id,resource_title&updated_after=2021-07
+> GET https://data-rudi.org/api/v1/resources?limit=10&fields=global_id,resource_title&updated_after=2021-07
 
 ---
 

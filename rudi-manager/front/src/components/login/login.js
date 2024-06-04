@@ -2,13 +2,13 @@ import './login.css'
 
 import axios from 'axios'
 
-import React, { useState } from 'react'
 import PropTypes from 'prop-types'
+import React, { useState } from 'react'
 
-import Form from 'react-bootstrap/Form'
-import Button from 'react-bootstrap/esm/Button'
-import InputGroup from 'react-bootstrap/InputGroup'
 import { Eye, EyeSlash } from 'react-bootstrap-icons'
+import Form from 'react-bootstrap/Form'
+import InputGroup from 'react-bootstrap/InputGroup'
+import Button from 'react-bootstrap/esm/Button'
 
 import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
 import GenericModal, { useGenericModal, useGenericModalOptions } from '../modals/genericModal'
@@ -25,24 +25,21 @@ export const showPill = (condition, showState) =>
     ''
   )
 
-Login.propTypes = {
-  setToken: PropTypes.func.isRequired,
-  setUserInfo: PropTypes.func.isRequired,
-}
+Login.propTypes = { updateToken: PropTypes.func.isRequired }
 
 /**
  * Login component
  * @param {*} param0 (token hooks)
  * @return {ReactNode} Login html component
  */
-export default function Login({ setToken, setUserInfo }) {
+export default function Login({ updateToken }) {
   const { defaultErrorHandler } = useDefaultErrorHandler()
-  // console.log('-- Login');
-  const [username, setUserName] = useState('')
+
+  const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
 
-  const [isPwdShown, setPasswordShown] = useState(false)
-  const togglePwdVisibility = () => setPasswordShown(!isPwdShown)
+  const [isPwdShown, setIsPwdShown] = useState(false)
+  const togglePwdVisibility = () => setIsPwdShown(!isPwdShown)
   const stateType = () => (isPwdShown ? 'text' : 'password')
 
   const { toggle, visible } = useGenericModal()
@@ -52,7 +49,7 @@ export default function Login({ setToken, setUserInfo }) {
    * is form valid?
    * @return {Boolean} return true is the form is valid
    */
-  const isFormValid = () => username.length > 0 && password.length > 0
+  const isFormValid = () => userName.length > 0 && password.length > 0
 
   /**
    * call server to log user
@@ -81,12 +78,7 @@ export default function Login({ setToken, setUserInfo }) {
           text: [errMsg],
           title: 'Une erreur est survenue',
           type: 'error',
-          buttons: [
-            {
-              text: 'Ok',
-              action: () => {},
-            },
-          ],
+          buttons: [{ text: 'Ok', action: () => {} }],
         })
         toggle()
       })
@@ -97,16 +89,8 @@ export default function Login({ setToken, setUserInfo }) {
    */
   function handleSubmit(event) {
     event.preventDefault()
-    loginUser({
-      username,
-      password,
-    })
-      .then((res) => {
-        setToken()
-        const userInfo = res?.data
-        // console.debug('T (Login) user', userInfo)
-        setUserInfo(userInfo)
-      })
+    loginUser({ username: userName, password })
+      .then(() => updateToken())
       .catch((err) => {
         console.error('T (handleSubmit) handleSubmit ERR', err)
         defaultErrorHandler(err)
@@ -149,7 +133,7 @@ export default function Login({ setToken, setUserInfo }) {
             <Form.Control
               autoFocus={true}
               type="text"
-              value={username}
+              value={userName}
               autoComplete="username"
               onChange={(e) => setUserName(e.target.value)}
             />

@@ -12,9 +12,7 @@ let serviceForm = {
     submitBtn: "submit_btn",
     submitTemplate: {
         media_name: "media_name",
-        connector: {
-            url: "url"
-        }
+        connector: {url: "url"}
     },
     displayTemplate: [
         { id: "media_name", tag: "p", class: ["card-title"],  },

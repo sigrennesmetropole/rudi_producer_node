@@ -3,54 +3,59 @@ const mod = 'fastify'
 // -------------------------------------------------------------------------------------------------
 // Constants
 // -------------------------------------------------------------------------------------------------
-import { STATUS_CODE, ROUTE_NAME } from '../config/confApi.js'
+import { ROUTE_NAME, STATUS_CODE } from '../config/constApi.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { padA1, nowEpochMs, beautify, separateLogs, consoleLog } from '../utils/jsUtils.js'
+import { beautify, padA1, separateLogs, timeEpochMs } from '../utils/jsUtils.js'
+
 import { shouldControlPrivateRequests, shouldControlPublicRequests } from '../config/confSystem.js'
+
 import { shouldShowErrorPile, shouldShowRoutes } from '../config/confLogs.js'
-import { JWT_USER } from '../config/confPortal.js'
+
+import { JWT_USER, isPortalConnectionDisabled } from '../config/confPortal.js'
 
 import {
-  logLine,
   logE,
+  logI,
+  logLine,
   logT,
   logV,
   logW,
   sysCrit,
   sysNotice,
   sysOnError,
-  logI,
-  fastifyLogger,
 } from '../utils/logging.js'
 
-import { JWT_SUB, JWT_CLIENT } from '../utils/crypto.js'
+import { JWT_CLIENT, JWT_SUB } from '../config/constJwt.js'
 
 import { RudiError } from '../utils/errors.js'
+
 import { CallContext } from '../definitions/constructors/callContext.js'
 
 import {
-  publicRoutes,
-  portalRoutes,
   backOfficeRoutes,
   devRoutes,
+  portalRoutes,
+  publicRoutes,
   unrestrictedPrivateRoutes,
 } from './routes.js'
 
-import { checkRudiProdPermission } from '../controllers/tokenController.js'
 import { checkPortalTokenInHeader } from '../controllers/portalController.js'
+import { checkRudiProdPermission } from '../controllers/tokenController.js'
 import { getUrlMaxLength } from '../utils/protection.js'
 
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
 // Require the fastify framework and instantiate it
-consoleLog(mod, 'ff', beautify(fastifyLogger.log))
 import fastify from 'fastify'
+import { createIpsMsg } from '../utils/httpReq.js'
+
+// const fastifyLogger = new FFLogger('warn')
 export const fastifyConf = fastify({
-  logger: fastifyLogger({ leve: 'warn' }),
+  // logger: fastifyLogger,
   // logger: initFFLogger(),
   // logger: {
   //    level: 'warn',
@@ -60,7 +65,7 @@ export const fastifyConf = fastify({
 })
 
 // -------------------------------------------------------------------------------------------------
-// Cosntants
+// Constants
 // -------------------------------------------------------------------------------------------------
 
 // -------------------------------------------------------------------------------------------------
@@ -74,16 +79,14 @@ fastifyConf.addHook('onError', (request, reply, error, done) => {
     // logD(mod, fun, `showErrorPile: ${shouldShowErrorPile()}`)
 
     const reqContext = CallContext.getCallContextFromReq(request)
-    // if (reqContext) logD(mod, fun, `request: ${beautify(reqContext)}`)
-
     if (RudiError.isRudiError(error) && shouldShowErrorPile()) RudiError.logErrorPile(error)
 
-    if (!!reqContext) {
+    if (reqContext) {
       reqContext.logErr(mod, fun, error)
     } else {
       sysOnError(error.statusCode, '[onError] ' + beautify(error))
     }
-    if (reply) reply.isError = true
+    reply.isError = true
   } catch (err) {
     logE(mod, fun, err)
     // const context = CallContext.getCallContextFromReq(request)
@@ -97,7 +100,7 @@ fastifyConf.addHook('onError', (request, reply, error, done) => {
 fastifyConf.setErrorHandler((error, request, reply) => {
   const fun = 'finalErrorHandler'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // logD(mod, fun, RudiError.isRudiError(error))
     let rudiHttpError
     if (RudiError.isRudiError(error)) {
@@ -167,9 +170,9 @@ fastifyConf.addHook('onRequest', (req, res, next) => {
   const fun = 'onRequest'
   try {
     const context = new CallContext()
-    logV(mod, fun, `----- Rcv req #${context.id} -----vvv---`)
+    logV(mod, fun, `----- Rcv req #${context.id} from ${createIpsMsg(req)} -----vvv---`)
     // logV(mod, fun, req.url)
-    const now = nowEpochMs()
+    const now = timeEpochMs()
     context.setIpsFromRequest(req)
     context.timestamp = now
     try {
@@ -178,12 +181,12 @@ fastifyConf.addHook('onRequest', (req, res, next) => {
       context.setReqDescription(
         req.method,
         req.url.substring(0, getUrlMaxLength()),
-        req.routeConfig[ROUTE_NAME]
+        req.routeOptions?.config[ROUTE_NAME]
       )
       CallContext.setAsReqContext(req, context)
       throw err
     }
-    context.setReqDescription(req.method, req.url, req.routeConfig[ROUTE_NAME])
+    context.setReqDescription(req.method, req.url, req.routeOptions?.config[ROUTE_NAME])
     CallContext.setAsReqContext(req, context)
 
     logT('http', fun, CallContext.createApiCallMsg(req))
@@ -197,10 +200,10 @@ fastifyConf.addHook('onRequest', (req, res, next) => {
 fastifyConf.addHook('onSend', (request, reply, payload, next) => {
   const fun = 'onSend'
   try {
-    // logT(mod, fun, ``)
-    const now = nowEpochMs()
+    // logT(mod, fun)
+    const now = timeEpochMs()
     const context = CallContext.getCallContextFromReq(request)
-    if (!!context) {
+    if (context) {
       context.duration = now - context.timestamp
       context.statusCode = reply.statusCode
       if (!reply.isError) context.logInfo(mod, fun, 'API reply')
@@ -220,7 +223,7 @@ fastifyConf.addHook('onSend', (request, reply, payload, next) => {
 // Pre-handler functions
 // -------------------------------------------------------------------------------------------------
 /**
- * Pre-handler for requests that need no authentification ("free routes")
+ * Pre-handler for requests that need no authentication ("free routes")
  * @param {object} req incoming request
  * @param {object} reply reply
  */
@@ -230,14 +233,7 @@ async function onPublicRoute(req, reply) {
     logT(mod, fun, `${req.method} ${req.url} `)
     const context = CallContext.getCallContextFromReq(req)
 
-    try {
-      // Checking the token, if it exists, to retrieve the user info
-      const portalJwt = await checkPortalTokenInHeader(req, true)
-      const jwtPayload = portalJwt[1]
-      // logD(mod, fun, `Payload: ${beautify(jwtPayload)}`)
-      context.clientApp = jwtPayload[JWT_SUB] || 'RUDI Portal'
-      context.reqUser = jwtPayload[JWT_USER] || jwtPayload[JWT_CLIENT]
-    } catch (er) {
+    if (isPortalConnectionDisabled()) {
       try {
         const { subject, clientId } = await checkRudiProdPermission(req, true)
         context.clientApp = subject
@@ -246,9 +242,25 @@ async function onPublicRoute(req, reply) {
         // It's OK to have no token
         logT(mod, fun, `Token-less call to ${req.method} ${req.url} `)
       }
-    } finally {
-      context.logInfo('route', fun, 'API call')
-      return true
+    } else {
+      try {
+        // Checking the token, if it exists, to retrieve the user info
+        const portalJwt = await checkPortalTokenInHeader(req, true)
+        const jwtPayload = portalJwt[1]
+        // logD(mod, fun, `Payload: ${beautify(jwtPayload)}`)
+        context.clientApp = jwtPayload[JWT_SUB] || 'RUDI Portal'
+        context.reqUser = jwtPayload[JWT_USER] || jwtPayload[JWT_CLIENT]
+      } catch (er) {
+        try {
+          const { subject, clientId } = await checkRudiProdPermission(req, true)
+          context.clientApp = subject
+          context.reqUser = clientId
+        } catch {
+          // It's OK to have no token
+          logT(mod, fun, `Token-less call to ${req.method} ${req.url} `)
+        }
+      }
+      context.logInfo('route', fun, 'v1 API call')
     }
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -256,7 +268,7 @@ async function onPublicRoute(req, reply) {
 }
 
 /**
- * Pre-handler for requests that need a "public" (aka portal) authentification
+ * Pre-handler for requests that need a "public" (aka portal) authentication
  * ("public routes")
  * @param {object} req incoming request
  * @param {object} reply reply
@@ -285,7 +297,7 @@ async function onPortalRoute(req, reply) {
 
 /**
  * Pre-handler for requests that need a "private" (aka rudi producer node)
- * authentification ("private/backoffice routes")
+ * authentication ("private/back-office routes")
  * These requests should normally bear a user identification
  * @param {object} req incoming request
  * @param {object} reply reply
@@ -311,7 +323,7 @@ async function onPrivateRoute(req, reply) {
 
 /**
  * Pre-handler for private requests that don't need an
- * authentification ("unrestricted private routes")
+ * authentication ("unrestricted private routes")
  * These requests are normally not user driven actions, but sent by an app
  * such as the prodmanager
  * @param {object} req incoming request
@@ -325,7 +337,6 @@ async function onUnrestrictedPrivateRoute(req, reply) {
 
     try {
       const { subject, clientId } = await checkRudiProdPermission(req, true)
-
       context.clientApp = subject
       context.reqUser = clientId
     } catch (er) {
@@ -333,7 +344,6 @@ async function onUnrestrictedPrivateRoute(req, reply) {
       logT(mod, fun, `Token-less call to ${req.method} ${req.url} `)
     } finally {
       context.logInfo('route', fun, 'API call')
-      return true
     }
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -357,7 +367,7 @@ function declareRouteGroup(routeGroup, preHandler, routeGroupName, logLevel) {
 }
 
 /**
- * Pre-handler fonction assignments
+ * Pre-handler function assignments
  */
 export const declareRoutes = () => {
   // declareRouteGroup(redirectRoutes, onPortalRoute, 'Redirect', 'd')

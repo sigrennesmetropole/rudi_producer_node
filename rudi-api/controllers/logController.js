@@ -9,24 +9,24 @@ const { pick } = _
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  URL_PV_LOGS_ACCESS,
+  ACT_SEARCH,
+  OBJ_LOGS,
+  QUERY_COUNT_BY,
+  QUERY_FIELDS,
+  QUERY_FILTER,
   QUERY_LIMIT,
   QUERY_OFFSET,
-  OBJ_LOGS,
-  QUERY_FILTER,
-  QUERY_FIELDS,
-  QUERY_SORT_BY,
   QUERY_SEARCH_TERMS,
-  QUERY_COUNT_BY,
-  ACT_SEARCH,
-} from '../config/confApi.js'
+  QUERY_SORT_BY,
+  URL_PV_LOGS_ACCESS,
+} from '../config/constApi.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { logD, logT, logW } from '../utils/logging.js'
 import { RudiError } from '../utils/errors.js'
 import { isEmptyArray } from '../utils/jsUtils.js'
+import { logD, logT, logW } from '../utils/logging.js'
 
 import { getLogEntries, searchDbObjects } from '../db/dbQueries.js'
 import { parseQueryParameters } from '../utils/parseRequest.js'

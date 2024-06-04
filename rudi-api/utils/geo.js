@@ -12,8 +12,8 @@ const mod = 'geo'
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { logT, logW } from './logging.js'
 import { BadRequestError } from './errors.js'
+import { logT, logW } from './logging.js'
 
 // -------------------------------------------------------------------------------------------------
 // Functions
@@ -24,7 +24,7 @@ import { BadRequestError } from './errors.js'
  */
 export const bboxToGeoJsonPolygon = (western, southern, eastern, northern) => {
   const fun = 'bboxToGeoJsonPolygon'
-  logT(mod, fun, ``)
+  logT(mod, fun)
 
   if (southern > northern) {
     const errMsg = `Southern coordinate must be lower than northern coordinate`
@@ -64,7 +64,7 @@ export const bboxToGeoJsonPolygon = (western, southern, eastern, northern) => {
 
 export const coordsToGeoJsonPoint = (westLongitude, southLatitude) => {
   const fun = 'coordsToGeoJsonPoint'
-  logT(mod, fun, ``)
+  logT(mod, fun)
 
   // The values of a "bbox" array are "[west, south, east, north]"
   // given in decimal degrees
@@ -91,7 +91,7 @@ export const coordsToGeoJsonPoint = (westLongitude, southLatitude) => {
 /*
 export const bboxFromGeoJsonObject = (geoJsonObject) => {
   const fun = 'bboxFromGeoJsonObject'
-  logT(mod, fun, ``)
+  logT(mod, fun)
 
   const bbox = geojson.geo_bbox(geoJsonObject)
   logD(mod, fun, `bbox: ${bbox}`)

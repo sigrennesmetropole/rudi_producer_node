@@ -1,28 +1,12 @@
+export const URL_PREFIX = '/crypto'
 
-// -----------------------------------------------------------------------------
-// REQ URL
-// -----------------------------------------------------------------------------
-exports.URL_PREFIX = '/crypto'
+export const URL_KEYS = `${URL_PREFIX}/pub`
 
-// -----------------------------------------------------------------------------
-// Public keys
-// -----------------------------------------------------------------------------
-exports.URL_KEYS = `${this.URL_PREFIX}/pub`
+export const URL_JWT = `${URL_PREFIX}/jwt`
+export const URL_SUFFIX_FORGE = 'forge'
+export const URL_SUFFIX_CHECK = 'check'
 
-// -----------------------------------------------------------------------------
-// JWT actions
-// -----------------------------------------------------------------------------
-exports.URL_JWT = `${this.URL_PREFIX}/jwt`
-exports.URL_SUFFIX_FORGE = 'forge'
-exports.URL_SUFFIX_CHECK = 'check'
+export const URL_REDIRECT = `${URL_PREFIX}/redirect`
+export const SUFFIX_REDIRECT = `*`
 
-// -----------------------------------------------------------------------------
-// Redirections
-// -----------------------------------------------------------------------------
-exports.URL_REDIRECT = `${this.URL_PREFIX}/redirect`
-exports.SUFFIX_REDIRECT = `*`
-
-// -----------------------------------------------------------------------------
-// Logs
-// -----------------------------------------------------------------------------
-exports.URL_LOGS = `${this.URL_PREFIX}/logs`
+export const URL_LOGS = `${URL_PREFIX}/logs`

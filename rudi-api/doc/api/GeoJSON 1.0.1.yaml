@@ -414,7 +414,7 @@ components:
                 enum: ['The JSON is not valid.']
     #---------------------------------------------------------------------------
     'Error401Unauthorized':
-      description: The request requires an user authentication.
+      description: The request requires a user authentication.
       content:
         application/json:
           schema:
@@ -425,7 +425,7 @@ components:
                 enum: [401]
               'message':
                 type: string
-                enum: ['The request requires an user authentication.']
+                enum: ['The request requires a user authentication.']
     #---------------------------------------------------------------------------
     'Error403Forbidden':
       description: The access is not allowed.

@@ -1,36 +1,49 @@
 {
   "env": {
+    "node": true,
     "browser": true,
     "commonjs": true,
     "es2021": true
   },
+  "parser": "@babel/eslint-parser",
   "parserOptions": {
-    "ecmaVersion": 2021
+    "ecmaVersion": "latest"
   },
   "rules": {
+    "arrow-body-style": "off",
     "comma-dangle": ["error", "only-multiline"],
+    "complexity": ["warn", { "max": 20 }],
+    "indent": "off",
+    "no-await-in-loop": "error",
+    "no-console": "warn",
+    "no-dupe-keys": "error",
+    "no-empty": "error",
+    "no-extend-native": ["error", { "exceptions": ["RegExp"] }],
+    "no-invalid-regexp": "error",
+    "no-redeclare": "error",
+    "no-return-assign": "error",
+    "no-self-assign": "warn",
+    "no-self-compare": "warn",
+    "no-undef": "error",
+    "no-unused-vars": "off",
+    "quotes": ["error", "single", { "allowTemplateLiterals": true }],
+    "prefer-arrow-callback": "off",
+    "prettier/prettier": "warn",
     "space-before-function-paren": [
       "error",
       { "anonymous": "always", "named": "never", "asyncArrow": "always" }
     ],
-    "no-console": "warn",
-    "no-self-assign": "warn",
-    "no-self-compare": "warn",
-    "complexity": ["error", { "max": 15 }],
-    "indent": ["error", 2, { "SwitchCase": 1 }],
-    "quotes": ["error", "single", { "allowTemplateLiterals": true }],
-    "no-dupe-keys": "error",
-    "no-invalid-regexp": "error",
-    "no-undef": "error",
-    "no-return-assign": "error",
-    "no-redeclare": "error",
-    "no-empty": "error",
-    "no-await-in-loop": "error",
-    "semi": ["error", "never"],
-    "arrow-body-style": "off",
-    "prefer-arrow-callback": "off",
-    "prettier/prettier": "error"
+    "unused-imports/no-unused-imports": "error",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^_|mod",
+        "args": "after-used",
+        "argsIgnorePattern": "^(_|req|reply|res|next|fun)$"
+      }
+    ]
   },
   "extends": ["prettier"],
-  "plugins": ["prettier"]
+  "plugins": ["unused-imports", "prettier"]
 }

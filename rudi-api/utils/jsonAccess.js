@@ -4,9 +4,9 @@ const mod = 'json'
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 
+import { BadRequestError } from './errors.js'
 import { beautify, isNothing } from './jsUtils.js'
 import { logD } from './logging.js'
-import { BadRequestError } from './errors.js'
 import {
   missingObjectProperty,
   missingRequestParameter,

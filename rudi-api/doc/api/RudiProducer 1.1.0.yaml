@@ -851,7 +851,7 @@ components:
             Period of time described by the data.
             If the end date is not known (because the resource is still valid in
             the present for instance, the end_date field will be left blank)
-            For a one-time measurement, one can fill both start and end date 
+            For a one-time measurement, one can fill both start and end date
             with the same value.
           type: object
           required:
@@ -1033,7 +1033,7 @@ components:
         'email':
           description: >
             E-mail address, possibly not nominative to be less dependent
-            on changes in the organization, and comply more easily with 
+            on changes in the organization, and comply more easily with
             RGPD rules
           type: string
           format: email
@@ -1086,7 +1086,7 @@ components:
             #——————————————————————————
             'file_size':
               description: >
-                Size of the file, in bytes 
+                Size of the file, in bytes
                 (determined automatically)
               type: integer
 
@@ -1171,7 +1171,7 @@ components:
     'Connector':
       description: >
         Direct access to the dataset.
-        In the case of open data without access restriction, this can be a 
+        In the case of open data without access restriction, this can be a
         simple download link e.g. a URL
         The interface contract chosen can enable request with specified
         parameters, or make it possible to extract a GeoWMS or a GeoWFS
@@ -1225,7 +1225,7 @@ components:
         'submission_date':
           allOf:
             - description: >
-                Date when the integration request was submitted by the 
+                Date when the integration request was submitted by the
                 Producer node
               type: string
             - $ref: '#/components/schemas/Date'
@@ -1286,7 +1286,7 @@ components:
     #---------------------------------------------------------------------------
     'MediaType':
       description: >
-        Most common Media types formerly known as MIME types, as definied in 
+        Most common Media types formerly known as MIME types, as definied in
         RFC 2049
       type: string
       enum:
@@ -1416,7 +1416,7 @@ components:
       description: >
         Lowercase ISO-639 language code followed by the
         uppercase 2 letter ISO 3166-1 alpha-2 country code,
-        both joined by an hyphen-minus sign, or alternatively the 
+        both joined by an hyphen-minus sign, or alternatively the
         lowercase ISO-639 language code alone
       type: string
       pattern: '^[a-z]{2}(-[A-Z]{2})?$'
@@ -1482,7 +1482,7 @@ components:
                 enum: ['The JSON is not valid.']
     #---------------------------------------------------------------------------
     'Error401Unauthorized':
-      description: The request requires an user authentication.
+      description: The request requires a user authentication.
       content:
         application/json:
           schema:
@@ -1493,7 +1493,7 @@ components:
                 enum: [401]
               'message':
                 type: string
-                enum: ['The request requires an user authentication.']
+                enum: ['The request requires a user authentication.']
     #---------------------------------------------------------------------------
     'Error403Forbidden':
       description: The access is not allowed.

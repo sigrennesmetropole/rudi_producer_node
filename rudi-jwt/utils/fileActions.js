@@ -5,26 +5,28 @@ const mod = 'files'
 // -----------------------------------------------------------------------------
 // External dependecies
 // -----------------------------------------------------------------------------
-const fs = require('fs')
-const ini = require('ini')
-const utils = require('./jsUtils')
+import { readFileSync } from 'fs'
+import { parse } from 'ini'
+
+// -----------------------------------------------------------------------------
+// Internal dependecies
+// -----------------------------------------------------------------------------
+import { consoleErr, consoleLog } from './jsUtils.js'
 
 // -----------------------------------------------------------------------------
 // Functions
 // -----------------------------------------------------------------------------
 
 // Local configuration file extraction
-exports.readIniFile = (confFile, debug) => {
+export function readIniFile(confFile) {
   const fun = 'readIniFile'
   try {
-    const fileContent = fs.readFileSync(`${confFile}`, 'utf-8')
-    utils.consoleLog(mod, fun, `Conf file found at ${confFile}`)
-    // if (debug) utils.consoleLog(mod, fun, `INI file content: ${fileContent}`)
-    const conf = ini.parse(fileContent)
-    // if (debug) utils.consoleLog(mod, fun, `Conf: ${utils.beautify(conf)}`)
+    const fileContent = readFileSync(`${confFile}`, 'utf-8')
+    consoleLog(mod, fun, `Conf file found at ${confFile}`)
+    const conf = parse(fileContent)
     return conf
   } catch (err) {
-    utils.consoleErr(mod, fun, `Couldn't read file '${confFile}': ${err}`)
+    consoleErr(mod, fun, `Couldn't read file '${confFile}': ${err}`)
     return false
   }
 }

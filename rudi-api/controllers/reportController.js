@@ -1,91 +1,106 @@
 const mod = 'repCtrl'
 /*
  * This file describes the different steps followed for each
- * action on the intergration reports submitted by the Portal
+ * action on the integration reports submitted by the Portal
  * (for metadata as well as organizations and contacts integration)
  */
 
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
+import { v4 as uuidv4 } from 'uuid'
+
+import mongoose from 'mongoose'
+
+// -------------------------------------------------------------------------------------------------
+// Constants
+// -------------------------------------------------------------------------------------------------
+import {
+  ACT_DELETION,
+  ACT_REPORT,
+  API_VERSION,
+  DEFAULT_QUERY_LIMIT,
+  OBJ_METADATA,
+  OBJ_REPORTS,
+  PARAM_ID,
+  PARAM_OBJECT,
+  PARAM_REPORT_ID,
+  QUERY_FILTER,
+  QUERY_LIMIT,
+  QUERY_OFFSET,
+  QUERY_SUBMITTED_BEFORE,
+  QUERY_SUBMITTED_BEFORE_CAML,
+  QUERY_TREATED_BEFORE,
+  QUERY_TREATED_BEFORE_CAML,
+  QUERY_UPDATED_BEFORE,
+  QUERY_UPDATED_BEFORE_CAML,
+  URL_PUB_METADATA,
+  URL_PV_OBJECT_GENERIC,
+} from '../config/constApi.js'
+import {
+  API_COLLECTION_TAG,
+  API_DATA_NAME_PROPERTY,
+  API_INTEGRATION_ERROR_ID,
+  API_METADATA_ID,
+  API_REPORT_COMMENT,
+  API_REPORT_ERRORS,
+  API_REPORT_ERROR_CODE,
+  API_REPORT_ERROR_MSG,
+  API_REPORT_ID,
+  API_REPORT_METHOD,
+  API_REPORT_RESOURCE_ID,
+  API_REPORT_STATUS,
+  API_REPORT_SUBMISSION_DATE,
+  API_REPORT_TREATMENT_DATE,
+  API_REPORT_VERSION,
+  DB_PUBLISHED_AT,
+  DB_UPDATED_AT,
+  LOCAL_REPORT_ERROR,
+  LOCAL_REPORT_ERROR_MSG,
+  LOCAL_REPORT_ERROR_TYPE,
+} from '../db/dbFields.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 import { beautify, isEmptyObject, nowISO, padZerosLeft as pad0 } from '../utils/jsUtils.js'
-import { accessProperty, accessReqParam } from '../utils/jsonAccess.js'
-import { objectAlreadyExists, parametersMismatch } from '../utils/msg.js'
-import { logD, logI, logMetadata, logT, logW } from '../utils/logging.js'
+
 import {
   BadRequestError,
-  ObjectNotFoundError,
+  InternalServerError,
   MethodNotAllowedError,
-  RudiError,
+  ObjectNotFoundError,
   ParameterExpectedError,
+  RudiError,
 } from '../utils/errors.js'
+import { accessProperty, accessReqParam } from '../utils/jsonAccess.js'
+
+import { cleanDate } from '../utils/parseRequest.js'
+
 import {
   deleteAllDbObjectsWithType,
   deleteManyDbObjectsWithFilter,
   doesObjectExistWithRudiId,
   getDbObjectList,
   getEnsuredObjectWithRudiId,
+  getMetadataWithRudiId,
   getObjectWithRudiId,
   overwriteDbObject,
 } from '../db/dbQueries.js'
 
-// -------------------------------------------------------------------------------------------------
-// Constants
-// -------------------------------------------------------------------------------------------------
-import {
-  API_REPORT_ID,
-  API_REPORT_RESOURCE_ID,
-  API_REPORT_STATUS,
-  LOCAL_REPORT_ERROR,
-  LOCAL_REPORT_ERROR_TYPE,
-  LOCAL_REPORT_ERROR_MSG,
-  API_REPORT_VERSION,
-  API_REPORT_ERRORS,
-  API_REPORT_SUBMISSION_DATE,
-  API_REPORT_TREATMENT_DATE,
-  API_REPORT_METHOD,
-  API_COLLECTION_TAG,
-  DB_PUBLISHED_AT,
-  DB_UPDATED_AT,
-} from '../db/dbFields.js'
-import {
-  PARAM_OBJECT,
-  PARAM_ID,
-  PARAM_REPORT_ID,
-  QUERY_LIMIT,
-  QUERY_OFFSET,
-  ACT_REPORT,
-  URL_PUB_METADATA,
-  ACT_DELETION,
-  API_VERSION,
-  OBJ_METADATA,
-  URL_PV_OBJECT_GENERIC,
-  DEFAULT_QUERY_LIMIT,
-  QUERY_FILTER,
-  OBJ_REPORTS,
-  QUERY_TREATED_BEFORE,
-  QUERY_TREATED_BEFORE_CAML,
-  QUERY_UPDATED_BEFORE,
-  QUERY_UPDATED_BEFORE_CAML,
-  QUERY_SUBMITTED_BEFORE,
-  QUERY_SUBMITTED_BEFORE_CAML,
-} from '../config/confApi.js'
+import { logD, logI, logMetadata, logT, logW } from '../utils/logging.js'
+import { objectAlreadyExists, parametersMismatch } from '../utils/msg.js'
+
 // -------------------------------------------------------------------------------------------------
 // Data models
 // -------------------------------------------------------------------------------------------------
-import { Report, IntegrationStatus } from '../definitions/models/Report.js'
+import { IntegrationStatus, Report } from '../definitions/models/Report.js'
 
-import { removeMetadataFromWaitingList } from './portalController.js'
 import { setFlagIntegrationKO } from './metadataController.js'
-import { cleanDate } from '../utils/parseRequest.js'
-import mongoose from 'mongoose'
+import { removeMetadataFromWaitingList } from './portalController.js'
 
 // -------------------------------------------------------------------------------------------------
-// Comformity functions
+// Conformity functions
 // -------------------------------------------------------------------------------------------------
 function fromPortalToRudiFormat(reportBody) {
   if (reportBody[API_REPORT_VERSION] === 'v1') {
@@ -210,37 +225,13 @@ export const addOrEditSingleReportForObject = async (req, reply) => {
 export const addOrEditSingleReport = async (objectType, req, reply) => {
   const fun = 'addOrEditSingleReport'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // retrieve url parameters: object type, object id
     const urlObjectId = accessReqParam(req, PARAM_ID)
     const reportBody = fromPortalToRudiFormat(req.body)
 
     let reportSrc = reportBody[API_COLLECTION_TAG] ? 'test' : 'Portal'
     logD(mod, fun, `Incoming ${reportSrc} report: ${beautify(req.body)}`)
-
-    // logV(mod, fun, `new report: ${beautify(reportBody)}`)
-    /* if (reportBody[API_COLLECTION_TAG]) {
-      try {
-        await checkRudiProdPermission(req, reply)
-        logI(mod, fun, `Report accepted with test access`)
-      } catch (err) {
-        const errMsg = `Incoming test integration report should be presented with a JWT identified request. Error: ${err}`
-        logW(mod, fun, errMsg)
-        throw new ForbiddenError(errMsg)
-      }
-    } else {
-      try {
-        const header = accessProperty(req, 'headers')
-        const auth = accessProperty(header, 'authorization')
-        const portalToken = auth.substring(7)
-        await getTokenCheckedByPortal(portalToken) // TODO: check ourselves
-        logI(mod, fun, `JWT issued from RUDI Portal`)
-      } catch (er) {
-        const errMsg = `Incoming Portal integration report should be presented with a JWT identified request. Error: ${error}`
-        logW(mod, fun, errMsg)
-        throw new ForbiddenError(errMsg)
-      }
-    } */
 
     // retrieve body parameters: object id, report id
     const reportId = accessProperty(reportBody, API_REPORT_ID)
@@ -264,31 +255,7 @@ export const addOrEditSingleReport = async (objectType, req, reply) => {
       }
     }
 
-    // check if the report exists
-    const dbReport = await getObjectWithRudiId(OBJ_REPORTS, reportId)
-
-    let dbReadyReport
-    if (!dbReport) {
-      // adding new report
-      // logD(mod, fun, `Adding new report`)
-      // add new integration report
-      try {
-        dbReadyReport = new Report(reportBody)
-        await dbReadyReport.save()
-        logI(mod, fun, `Report created: ${beautify(dbReadyReport)}`)
-      } catch (er) {
-        const errMsg = `Couldn't create a new report with incoming data: ${beautify(
-          reportBody
-        )}. Cause: ${er}`
-        logW(mod, fun, errMsg)
-        throw new BadRequestError(errMsg)
-      }
-    } else {
-      // updating existing report
-      logD(mod, fun, `Updating existing report`)
-      dbReadyReport = await overwriteDbObject(OBJ_REPORTS, reportBody)
-      logI(mod, fun, `Report edited: ${beautify(dbReadyReport)}`)
-    }
+    const dbReadyReport = putReport(reportBody)
 
     if (dbObject) {
       if (reportBody[API_REPORT_STATUS] === IntegrationStatus.OK) {
@@ -323,7 +290,7 @@ export const getReportListForObject = async (req, reply) => {
 
 export const getReportList = async (objectType, req, reply) => {
   const fun = 'getReportList'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   try {
     // retrieve url parameters: object id
     const urlObjectId = accessReqParam(req, PARAM_ID)
@@ -413,10 +380,8 @@ export const deleteSingleReportForObject = async (req, reply) => {
 export const deleteReportsBefore = async (req, reply) => {
   const fun = 'deleteReportsBefore'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const queryParams = req.query
-    // logT(mod, fun + '.queryParams', beautify(queryParams))
-    // if (isEmptyObject(queryParams)) return { status: 'OK', message: 'No request parameter found' }
     if (isEmptyObject(queryParams)) return await deleteAllDbObjectsWithType(OBJ_REPORTS)
 
     // logT(mod, fun, `reqParams: ${beautify(queryParams)}`)
@@ -489,6 +454,85 @@ export const getReportListForObjectType = async (req, reply) => {
   try {
     // delete every integration report for all objects
     return `Function '${fun}' still needs to be implemented in module ${mod}`
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+/**
+ * Creates an internal report, e.g. for errors happening during a transmission to the portal
+ * @param {MetadataSchema} metadata
+ * @param {HTTP_METHODS} httpMethod
+ */
+export const createErrorReport = async (err, details, shouldUpdateMetadataStatus) => {
+  const fun = 'createErrorReport'
+  if (!details) throw new InternalServerError('Input details should not be null', mod, fun)
+  const { step, description, method, url, metadata } = details
+
+  const metaId = metadata?.[API_METADATA_ID]
+  const reportId = uuidv4()
+  try {
+    const body = {
+      [API_REPORT_ID]: reportId,
+      [API_REPORT_RESOURCE_ID]: metaId,
+      [API_DATA_NAME_PROPERTY]:
+        metadata?.[API_DATA_NAME_PROPERTY] || description || `An error occurred while ${step}`,
+      [API_REPORT_SUBMISSION_DATE]: nowISO(),
+      [API_REPORT_METHOD]: method?.toUpperCase(),
+      [API_REPORT_VERSION]: API_VERSION,
+      [API_REPORT_STATUS]: IntegrationStatus.KO,
+      [API_REPORT_COMMENT]: `While ${step}` + url ? `on ${url}` : '',
+      [API_REPORT_ERRORS]: {
+        [API_REPORT_ERROR_CODE]: err?.statusCode || 500,
+        [API_REPORT_ERROR_MSG]: `${description}: ${err.message || err}`,
+      },
+    }
+    await putReport(body)
+
+    if (shouldUpdateMetadataStatus && metaId) {
+      const dbMeta = await getMetadataWithRudiId(metaId)
+      if (!dbMeta) {
+        logW(mod, fun, `Metadata was not found with id ${metaId}`)
+        return
+      }
+      dbMeta[API_INTEGRATION_ERROR_ID] = reportId
+      // updateMetadataStatus(dbMeta) // Done in metadata.save()
+      await dbMeta.save()
+    }
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+export const putReport = async (reportBody) => {
+  const fun = 'putReport'
+  try {
+    // check if the report exists
+    const dbReport = await getObjectWithRudiId(OBJ_REPORTS, reportBody[API_REPORT_ID])
+
+    let dbReadyReport
+    if (!dbReport) {
+      // adding new report
+      // logD(mod, fun, `Adding new report`)
+      // add new integration report
+      try {
+        dbReadyReport = new Report(reportBody)
+        await dbReadyReport.save()
+        logI(mod, fun, `Report created: ${beautify(dbReadyReport)}`)
+      } catch (er) {
+        const errMsg = `Couldn't create a new report with incoming data: ${beautify(
+          reportBody
+        )}. Cause: ${er}`
+        logW(mod, fun, errMsg)
+        throw new BadRequestError(errMsg, mod, fun)
+      }
+    } else {
+      // updating existing report
+      logD(mod, fun, `Updating existing report`)
+      dbReadyReport = await overwriteDbObject(OBJ_REPORTS, reportBody)
+      logI(mod, fun, `Report edited: ${beautify(dbReadyReport)}`)
+    }
+    return dbReadyReport
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }

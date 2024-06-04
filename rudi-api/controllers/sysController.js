@@ -15,11 +15,11 @@ import mongoose from 'mongoose'
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { NOT_FOUND } from '../utils/jsUtils.js'
-import { getGitHash as getGitHashOpt, getAppOptions, OPT_APP_ENV } from '../config/appOptions.js'
+import { OPT_APP_ENV, getAppOptions, getGitHash as getGitHashOpt } from '../config/appOptions.js'
 import { getAppHash as getAppHashOpt } from '../config/confSystem.js'
+import { API_VERSION } from '../config/constApi.js'
 import { RudiError } from '../utils/errors.js'
-import { API_VERSION } from '../config/confApi.js'
+import { NOT_FOUND } from '../utils/jsUtils.js'
 import { logT, logW } from '../utils/logging.js'
 
 // -------------------------------------------------------------------------------------------------
@@ -32,7 +32,7 @@ import { logT, logW } from '../utils/logging.js'
 export const getGitHash = () => {
   const fun = 'getGitHash'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     return getGitHashOpt()
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -43,7 +43,7 @@ export const getGitHash = () => {
 export const getAppHash = () => {
   const fun = 'getCurrentAppId'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     return getAppHashOpt()
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -67,37 +67,40 @@ export const getEnvironment = () => {
 /** Returns the node and npm versions */
 export const getNodeVersion = async () => {
   const fun = 'getNodeVersion'
+  // logD(mod, fun, ` GET ${URL_PV_NODE_VERSION_ACCESS}`)
+  let nodeVersion = 'n/a'
+  let npmVersion = 'n/a'
+  let mongooseVersion = 'n/a'
+  let mongoDbVersion = 'n/a'
   try {
-    // logD(mod, fun, ` GET ${URL_PV_NODE_VERSION_ACCESS}`)
-    const nodeVersion = execSync('node -v')
-    const npmVersion = execSync('npm -v')
-
-    let mongooseVersion = 'n/a'
-    try {
-      mongooseVersion = execSync('npm view mongoose version')
-    } catch (err) {
-      logW(mod, fun, `Command 'npm view mongoose version' failed: ${err}`)
-    }
-
-    let mongoDbVersion = 'n/a'
-    try {
-      mongoDbVersion = await getMongoDbVersion()
-    } catch (err) {
-      logW(mod, fun, `Couldn't get MongoDB version: ${err}`)
-    }
-
-    const nVersions = {
-      node: `${nodeVersion}`.trim(),
-      npm: `${npmVersion}`.trim(),
-      mongoose: `${mongooseVersion}`.trim(),
-      mongodb: `${mongoDbVersion}`.trim(),
-    }
-    // logD(mod, fun, `${utils.beautify(nVersions)}`)
-
-    return nVersions
+    nodeVersion = execSync('node -v')
   } catch (err) {
-    throw RudiError.treatError(mod, fun, err)
+    logW(mod, fun, `Command 'node -v failed: ${err}`)
   }
+  try {
+    npmVersion = execSync('npm -v')
+  } catch (err) {
+    logW(mod, fun, `Command 'npm -v failed: ${err}`)
+  }
+  try {
+    mongooseVersion = execSync('npm view mongoose version')
+  } catch (err) {
+    setTimeout(() => logW(mod, fun, `Command 'npm view mongoose version' failed: ${err}`), 3000)
+  }
+
+  try {
+    mongoDbVersion = await getMongoDbVersion()
+  } catch (err) {
+    logW(mod, fun, `Couldn't get MongoDB version: ${err}`)
+  }
+
+  const nVersions = {
+    node: `${nodeVersion}`.trim(),
+    npm: `${npmVersion}`.trim(),
+    mongoose: `${mongooseVersion}`.trim(),
+    mongodb: `${mongoDbVersion}`.trim(),
+  }
+  return nVersions
 }
 
 async function getMongoDbVersion() {
@@ -126,7 +129,7 @@ export const serveFavicon = (req, res) => {
     // )
     res.header('Content-Length', favicon.length)
     res.header('Content-Type', 'image/png')
-    res.header('Cache-Control', `public, max-age=${MONTH_IN_S}`) // expiers after a month
+    res.header('Cache-Control', `public, max-age=${MONTH_IN_S}`) // expires after a month
     res.header('Expires', new Date(Date.now() + MONTH_IN_MS).toUTCString())
     res.statusCode = 200
     res.send(favicon)

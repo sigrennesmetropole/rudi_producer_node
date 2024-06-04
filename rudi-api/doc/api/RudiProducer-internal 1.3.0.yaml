@@ -1,0 +1,2361 @@
+#•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+#
+# [- LIST OF CHANGES -]
+#
+# [1.2.0]
+#   - Separate description for private API
+#
+# [1.3.0]
+#   - Added 'MediaService' type of Media, to be able to serve geoserver files
+#     or other AIP/webservices. A link towards the API documentation can be
+#     indicated in the 'api_documentation_url' property
+#   - Added to 'Media' the following properties:
+#       - 'media_caption' (description),
+#       - 'media_dates' (dates of the creation / last update of the Media),
+#       _ 'media_visual' (URI towards a quick visualization of the Media)
+#   - Added to 'Organization' the following properties:
+#       - 'organization_caption' (more explicit name of the Organization)
+#       - 'organization_summary' (description of the Organization)
+#       - 'organization_coordinates' (GPS coordinates of the Organization)
+#   - Added to 'Contact' the following property:
+#       - 'contact_summary' (description of the Contact)
+#   - Added 'metadata_info.metadata_source': URI of the initial metadata
+#   - Connector can now be described with 'connector_parameters' property
+#   - Added 'expires' to the Dates to signal a date after which the data /
+#     metadata may not be available or relevant anymore
+#   - Added MediaTypes '+crypt' for encrypted files
+#   - Added a new MIME type 'text/x-yaml' for .yaml / .yml files
+
+#•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+openapi: 3.0.0
+info:
+  version: 1.3.0
+  title: RUDI Producer private API
+  description: "API privée pour l'accès aux données au niveau du nœud producteur RUDI"
+  termsOfService: 'no'
+  contact:
+    name: Olivier Martineau
+    email: 'community@rudi-univ-rennes1.fr'
+  license:
+    name: EUPL 1.2
+    url: https://eupl.eu/1.2/fr
+
+#•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/OlivierMartineau/RudiProducer-PrivateAPI/1.3.0
+  - url: https://data-rudi.org
+
+#•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+# DEFINITIONS
+# - 'Portal': the main RUDI catalog for all metadata in the RUDI system
+# - 'Producer node': The RUDI node where data is produced and published with its
+#       metadata
+# - 'Producer': Entity that produces the data on the Producer node
+# - 'Provider': Entity that publishes the data and metadata on the Producer node
+# - 'Media': a data, usually (but not necessarily) a file. Several Media can be
+#       bound to the same Metadata
+# - 'Metadata': the metadata bound to one or several Media
+# - 'Resource': a metadata and one or several data bound to it.
+# - 'Report': the integration report sent from the RUDI Portal to the Node when
+#       a Metadata has been processed, and either successfully integrated or
+#       rejected with an error message
+# - 'Organization': the organization in charge of the data ("RUDI Producer") or
+#       the metadata ("RUDI Provider")
+# - 'Contact': the contact that can be used to get further information on the
+#       data or metadata
+# - 'Object': RUDI "object", ie 'Metadata', 'Organization', 'Contact', 'Report'
+#       but also SkosScheme, SkosConcept and 'PublicKey'
+
+#•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+tags:
+  - name: RudiObject
+  - name: Metadata
+  - name: Report
+  - name: Portal
+  - name: App
+
+#•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+paths:
+  #=============================================================================
+  # Private API: access to RUDI objects
+  #=============================================================================
+  '/api/admin/{rudi_object}':
+    summary: Access a list of RUDI object of a designated type
+    parameters:
+      - name: 'rudi_object'
+        description: >
+          A RUDI Object:
+          - resources (metadata)
+          - organizations (data/metadata producer/provider)
+          - contacts
+          - media (file, or stream)
+          - public key
+          - logs
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            [
+              'resources',
+              'organizations',
+              'contacts',
+              'media',
+              'reports',
+              'pub_keys',
+              'logs',
+              'skos_schemes',
+              'skos_concepts',
+            ]
+    'get':
+      summary: Access a list of RUDI object of a designated type
+      description: Returns an array of RUDI objects of a designated type. The
+        notation '?a_field=value' can be used in the url to filter the results
+      tags:
+        - RudiObject
+      operationId: getObjectList
+      security:
+        - authRudi: [backadmin]
+      parameters:
+        - name: 'limit'
+          description: Maximum number of elements in the result set
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 100 # default value for this parmater
+            maximum: 500 # implicit max limit for this parameter
+          example: 100
+        - name: 'offset'
+          description: Number of elements to skip before starting to collect the
+            result set
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          example: 1
+        - name: 'sort_by'
+          description: Comma-separated properties used to order the elements in
+            the result set. First property gets the priority over the second one
+            and so on.
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: 'fields'
+          description: Comma-separated properties that are kept for displaying
+            the elements of the result set
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: 'updated_after'
+          description: ISO date after which the elements of the result set were
+            updated
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: 'updated_before'
+          description: ISO date before which the elements of the result set were
+            updated
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Date'
+      responses:
+        '200':
+          description: (Possibly partial) list or RUDI objects
+          content:
+            application/json:
+              schema:
+                description: >
+                  list of RUDI objects that match the filter, possibly partial
+                  (navigation is offered with limit / offset parameters)
+                type: array
+                items:
+                  $ref: '#/components/schemas/RudiObject'
+    #===========================================================================
+    #'/api/admin/{rudi_object}':
+    'post':
+      summary: Create a RUDI object of a designated type
+      description: Create a RUDI object of a designated type
+      tags:
+        - RudiObject
+      operationId: newObject
+      security:
+        - authRudi: [backadmin]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RudiObject'
+      responses:
+        '200':
+          description: a designated RUDI object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RudiObject'
+
+    #===========================================================================
+    #'/api/admin/{rudi_object}':
+    'put':
+      summary: Update (or create) a RUDI object of a designated type
+      description: Update (or create) a RUDI object of a designated type
+      tags:
+        - RudiObject
+      operationId: updateSingleObject
+      security:
+        - authRudi: [backadmin]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RudiObject'
+      responses:
+        '200':
+          description: a designated RUDI object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RudiObject'
+
+    #===========================================================================
+    #'/api/admin/{rudi_object}':
+    'delete':
+      summary: Delete every RUDI object of a designated type
+      description: Delete every RUDI object of a designated type.
+        The notation '?a_field=value' can be used in the url to only delete the
+        objects that match the filter
+      tags:
+        - RudiObject
+      operationId: deleteManyObjects
+      security:
+        - authRudi: [backadmin]
+      parameters:
+        - name: 'updated_after'
+          description: ISO date after which the elements of the result set were
+            updated
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: 'updated_before'
+          description: ISO date before which the elements of the result set were
+            updated
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Date'
+      responses:
+        '200':
+          description: (Possibly partial) list or RUDI objects
+          content:
+            application/json:
+              schema:
+                type: 'object'
+                properties:
+                  'acknowledged':
+                    description: true if the request was successfully treated
+                    type: boolean
+                  'deletedCount':
+                    description: number of elements deleted
+                    type: integer
+  #=============================================================================
+  '/api/admin/{rudi_object}/deletion':
+    parameters:
+      - name: 'rudi_object'
+        description: >
+          A RUDI Object: resources (metadata), organizations (data/metadata
+          producer/provider), contacts, media (file, or stream)...
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            [
+              'resources',
+              'organizations',
+              'contacts',
+              'media',
+              'reports',
+              'pub_keys',
+              'logs',
+              'skos_schemes',
+              'skos_concepts',
+            ]
+    'post':
+      summary: Delete a list of RUDI object of a designated type
+      description: Delete a list of RUDI object of a designated type
+      tags:
+        - RudiObject
+      operationId: deleteObjectList
+      security:
+        - authRudi: [backadmin]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                description: identifiers of the RUDI objects to delete
+                type: string
+                format: uuid
+      responses:
+        '200':
+          description: (Possibly partial) list or RUDI objects
+          content:
+            application/json:
+              schema:
+                type: 'object'
+                properties:
+                  'acknowledged':
+                    description: true if the request was successfully treated
+                    type: boolean
+                  'deletedCount':
+                    description: number of elements deleted
+                    type: integer
+  #=============================================================================
+  '/api/admin/{rudi_object}/{id}/{prop}':
+    summary: Access the property value of a designated RUDI object
+    parameters:
+      - name: 'rudi_object'
+        description: >
+          A RUDI Object:
+          - resources (metadata)
+          - organizations (data/metadata producer/provider)
+          - contacts
+          - media (file, or stream)
+          - logs
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            [
+              'resources',
+              'organizations',
+              'contacts',
+              'media',
+              'reports',
+              'pub_keys',
+              'logs',
+              'skos_schemes',
+              'skos_concepts',
+            ]
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: 'prop'
+        description: A property of the RUDI object
+        in: path
+        required: true
+        schema:
+          type: string
+    'get':
+      tags:
+        - RudiObject
+      description: Returns the value of the property of a designated RUDI object
+      operationId: getSingleObjectProp
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: the value for a property of a designated RUDI object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RudiObject'
+  #=============================================================================
+  '/api/admin/{rudi_object}/{id}':
+    summary: Access a designated RUDI object
+    parameters:
+      - name: 'rudi_object'
+        description: >
+          A RUDI Object:
+          - resources (metadata)
+          - organizations (data/metadata producer/provider)
+          - contacts
+          - media (file, or stream)
+          - logs
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            [
+              'resources',
+              'organizations',
+              'contacts',
+              'media',
+              'reports',
+              'pub_keys',
+              'logs',
+              'skos_schemes',
+              'skos_concepts',
+            ]
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    'get':
+      tags:
+        - RudiObject
+      description: Returns a designated RUDI object
+      operationId: getSingleObject
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: a designated RUDI object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RudiObject'
+        '400':
+          $ref: '#/components/responses/Error400BadRequest'
+        '401':
+          $ref: '#/components/responses/Error401Unauthorized'
+        '403':
+          $ref: '#/components/responses/Error403Forbidden'
+        '404':
+          $ref: '#/components/responses/Error404NotFound'
+        '500':
+          $ref: '#/components/responses/Error500InternalServerError'
+        '503':
+          $ref: '#/components/responses/Error503ServiceUnavailable'
+    #===========================================================================
+    #'/api/admin/{rudi_object}/{id}':
+    'delete':
+      tags:
+        - RudiObject
+      description: Delete a designated RUDI object
+      operationId: deleteSingleObject
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: the designated RUDI object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RudiObject'
+        '400':
+          $ref: '#/components/responses/Error400BadRequest'
+        '401':
+          $ref: '#/components/responses/Error401Unauthorized'
+        '403':
+          $ref: '#/components/responses/Error403Forbidden'
+        '404':
+          $ref: '#/components/responses/Error404NotFound'
+        '500':
+          $ref: '#/components/responses/Error500InternalServerError'
+        '503':
+          $ref: '#/components/responses/Error503ServiceUnavailable'
+  #=============================================================================
+  '/api/admin/{rudi_object}/search':
+    parameters:
+      - name: 'rudi_object'
+        description: A RUDI Object
+        in: path
+        required: true
+        schema:
+          type: string
+          enum:
+            [
+              'resources',
+              'organizations',
+              'contacts',
+              'media',
+              'reports',
+              'pub_keys',
+              'logs',
+              'skos_schemes',
+              'skos_concepts',
+            ]
+    'get':
+      summary: Search a list of designated RUDI object that match a filter
+        expressed in the url with the notation '?a_field=value&b_field=4'
+      description: Search a list of designated RUDI object that match a filter
+        expressed in the url with the notation '?a_field=value&b_field=4'
+      tags:
+        - RudiObject
+      operationId: searchObjects
+      security:
+        - authRudi: [backadmin]
+      parameters:
+        - name: 'limit'
+          description: Maximum number of elements in the result set
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 100 # default value for this parmater
+            maximum: 500 # implicit max limit for this parameter
+          example: 100
+        - name: 'offset'
+          description: Number of elements to skip before starting to collect the result set
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          example: 1
+        - name: 'sort_by'
+          description: Comma-separated properties used to order the elements in the result
+            set. First property gets the priority over the second one and so on.
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: 'fields'
+          description: Comma-separated properties that are kept for displaying the elements
+            of the result set
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: 'updated_after'
+          description: ISO date after which the elements of the result set were updated
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Date'
+        - name: 'updated_before'
+          description: ISO date before which the elements of the result set were updated
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Date'
+      responses:
+        '200':
+          description: List of RUDI objects
+          content:
+            application/json:
+              schema:
+                description: >
+                  list of RUDI objects that match the filter, possibly partial
+                  (navigation is offered with limit / offset parameters)
+                type: array
+                items:
+                  $ref: '#/components/schemas/RudiObject'
+  #=============================================================================
+  '/api/admin/portal/resources/send':
+    'post':
+      description: Forces the metadata to get sent to the portal
+      tags:
+        - Metadata
+      operationId: sendManyMetadataToPortal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: If no array is provided in the request body, every
+                metadata is sent to the Portal. Use an array of uuid to get a
+                set of metadata to get sent to the portal. Metadata with a
+                non-null 'collection_tag' property will not be sent.
+              type: array
+              items:
+                description: The 'global_id' of a metadata
+                type: string
+                format: uuid
+      responses:
+        '200':
+          description: Ackowledgement message
+          content:
+            application/json:
+              schema:
+                type: string
+                enum: ['Sending metadata to portal']
+  #=============================================================================
+  '/api/admin/resources/init':
+    'get':
+      description: Makes it possible to init the API module with dummy metadata
+        for testing purpose
+      tags:
+        - Metadata
+      operationId: initWithODR
+      responses:
+        '200':
+          description: Acknowledgement message
+          content:
+            application/json:
+              schema:
+                type: string
+                enum: ['Initialization initiated']
+
+  #=============================================================================
+  # REPORT
+  #=============================================================================
+  '/api/admin/resources/{id}/reports':
+    parameters:
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    'put':
+      description: Create or update a Portal report for a metadata integration operation
+        (create, update or delete)
+      tags:
+        - Report
+      operationId: updateIntegrationReport
+      security:
+        - authRudi: [backadmin]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationReport'
+      responses:
+        '200':
+          description: The report has been received.
+    #===========================================================================
+    #'/api/admin/resources/{id}/reports':
+    'get':
+      description: List reports all the Portal integration reports for the identified resource
+      tags:
+        - Report
+      operationId: getIntegrationReportListForMetadata
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: List of the integration reports for the resource
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntegrationReport'
+
+  #=============================================================================
+  '/api/admin/resources/{id}/reports/{irid}':
+    parameters:
+      - name: 'id'
+        description: Unique id of the resource
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: 'irid'
+        description: Unique id of the report
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    'get':
+      description: Access one identified integration for the identified resource
+      tags:
+        - Report
+      operationId: getIntegrationReportForMetadata
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: Identified integration report for the resource
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationReport'
+  #=============================================================================
+  # App infos
+  #=============================================================================
+  '/api/admin/hash':
+    'get':
+      description: Returns the git hash / version of the source code
+      tags:
+        - App
+      operationId: getGitHash
+      security:
+        - authRudi: [public]
+      responses:
+        '200':
+          description: a git hash
+          content:
+            application/json:
+              schema:
+                type: string
+  #=============================================================================
+  '/api/admin/apphash':
+    'get':
+      description: Returns the git hash / version of the app currently running
+      tags:
+        - App
+      operationId: getAppHash
+      security:
+        - authRudi: [public]
+      responses:
+        '200':
+          description: a git hash
+          content:
+            application/json:
+              schema:
+                type: string
+  #=============================================================================
+  '/api/admin/env':
+    'get':
+      description: Returns the environment name
+      tags:
+        - App
+      operationId: getEnvironment
+      security:
+        - authRudi: [public]
+      responses:
+        '200':
+          description: The environment name (dev|shared|release)
+          content:
+            application/json:
+              schema:
+                type: string
+  #=============================================================================
+  '/api/admin/nv':
+    'get':
+      description: Returns the environment name
+      tags:
+        - App
+      operationId: getNodeVersion
+      security:
+        - authRudi: [backoffice]
+      responses:
+        '200':
+          description: version for node, npm, mongoose and mongodb
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  'node':
+                    type: string
+                  'npm':
+                    type: string
+                  'mongoose':
+                    type: string
+                  'mongodb':
+                    type: string
+  #=============================================================================
+  '/api/admin/enum/':
+    'get':
+      description: Returns the list of all enums in RUDI API. Use '?lang=fr' to
+        get a list of all the labels in French language (or any other available
+        language)
+      tags:
+        - App
+      operationId: getEveryThesaurus
+      security:
+        - authRudi: [backoffice]
+      responses:
+        '200':
+          description: Object each key of which is an enum name, and the
+            corresponding value the list of accepted values for this enum.
+          content:
+            application/json:
+              schema:
+                type: object
+  #=============================================================================
+  '/api/admin/enum/{code}':
+    parameters:
+      - name: 'code'
+        description: Name of an enum
+        in: path
+        required: true
+        schema:
+          type: string
+    'get':
+      description: Returns the list of all the values available for a given enum
+      tags:
+        - App
+      operationId: getSingleThesaurus
+      security:
+        - authRudi: [backoffice]
+      responses:
+        '200':
+          description: List of the values available for the given enum
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  #=============================================================================
+  '/api/admin/enum/{code}/{lang}':
+    parameters:
+      - name: 'code'
+        description: Name of an enum
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: 'lang'
+        description: A value of the 'Language' enum
+        in: path
+        required: true
+        schema:
+          type: string
+    'get':
+      description: Returns the list of all enums in RUDI API. Use '?lang=fr' to
+        get a list of all the labels in French language (or any other available
+        language)
+      tags:
+        - App
+      operationId: getSingleThesaurusLabels
+      security:
+        - authRudi: [backoffice]
+      responses:
+        '200':
+          description: List of the couples enum value / label in the given language
+          content:
+            application/json:
+              schema:
+                type: object
+  #=============================================================================
+  '/api/admin/search':
+    'get':
+      summary: Gives for each RUDI object the fields that are searched through
+        the quick search
+      description: Gives for each RUDI object the fields that are searched
+        through the quick search. The notation '?a_field=value' can be used in
+        the url to filter the results
+      tags:
+        - App
+      operationId: getSearchableProperties
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: List of searchable properties for every RUDI object
+          content:
+            application/json:
+              schema:
+                description: JSON object the keys of which are the RUDI objects
+                  that have searchable properties
+                type: object
+  #=============================================================================
+  '/api/admin/id_generation':
+    'get':
+      description: Generates a UUID v4
+      tags:
+        - App
+      operationId: generateUUID
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: A UUID v4
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+
+  #=============================================================================
+  # Portal related actions
+  #=============================================================================
+  '/api/admin/portal/token':
+    'get':
+      description: Retrieves a portal token that is valid for this producer node
+      tags:
+        - Portal
+      operationId: exposedGetPortalToken
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: a JWT encapsulated in an object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  'access_token':
+                    description: a RFC 7519 compliant JSON web token
+                    type: object
+  #=============================================================================
+  '/api/admin/portal/token/check':
+    'get':
+      description: Checks a portal token using the portal API
+      tags:
+        - Portal
+      operationId: checkStoredToken
+      security:
+        - authRudi: [backadmin]
+      responses:
+        '200':
+          description: a JWT encapsulated in an object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  'access_token':
+                    description: a RFC 7519 compliant JSON web token
+                    type: object
+#•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+components:
+  #=============================================================================
+  # See schemas definitions at
+  # https://github.com/sigrennesmetropole/rudi_documentation/tree/main/schemas
+  #=============================================================================
+  schemas:
+    #---------------------------------------------------------------------------
+    'RudiObject':
+      oneOf:
+        - $ref: '#/components/schemas/Metadata'
+        - $ref: '#/components/schemas/Organization'
+        - $ref: '#/components/schemas/Contact'
+        - $ref: '#/components/schemas/Media'
+        - $ref: '#/components/schemas/IntegrationReport'
+        - $ref: '#/components/schemas/PublicKey'
+        - $ref: '#/components/schemas/LogEntry'
+        - $ref: '#/components/schemas/SkosScheme'
+        - $ref: '#/components/schemas/SkosConcept'
+        - $ref: '#/components/schemas/Licence'
+
+    #---------------------------------------------------------------------------
+    'Metadata':
+      type: object
+      required:
+        - global_id
+
+        - resource_title
+        - synopsis
+        - summary
+
+        - theme
+        - keywords
+
+        - producer
+        - contacts
+
+        - available_formats
+
+        - dataset_dates
+        - storage_status
+
+        - access_condition
+
+        - metadata_info
+
+      properties:
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # RESOURCE IDENTIFICATION
+        #——————————————————————————
+        'global_id':
+          type: string
+          format: uuid
+        #——————————————————————————
+        'local_id':
+          description: Identifier in the data producer system
+          type: string
+          #TODO: Constraints?
+          # - pattern for avoiding spaces and unusal characters?
+          # - max lenght?
+          example: '2020.11-Laennec-AQMO-air quality sensors measures'
+        #——————————————————————————
+        'doi':
+          $ref: '#/components/schemas/DOI'
+
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # DATASET DESCRIPTION
+        #——————————————————————————
+        'resource_title':
+          description: Simple name for the resource
+          type: string
+          maxLength: 150
+          example: "Données de capteurs de la qualité de l'air, novembre 2020, Laënnec"
+        # !DICO!
+        #——————————————————————————
+        'synopsis':
+          description: Short description for the whole dataset
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryEntry'
+          minItems: 1
+          # TODO: size ≤ 150
+        # !DICO!
+        #——————————————————————————
+        'summary':
+          description: More precise description for the whole dataset
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryEntry'
+          minItems: 1
+          # TODO: size ≤ 500
+        # !DICO!
+
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # CLASSIFICATION
+        #——————————————————————————
+        'theme':
+          $ref: '#/components/schemas/Theme'
+        # !SKOS!
+        #——————————————————————————
+        'keywords':
+          description: List of tags that can be used to retrieve the data
+          type: array
+          items:
+            $ref: '#/components/schemas/Keyword'
+        # !SKOS!
+
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # INVOLVED PARTIES
+        #——————————————————————————
+        'producer':
+          $ref: '#/components/schemas/Organization'
+        #——————————————————————————
+        'contacts':
+          description: Address to ask details on the dataset and its production
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # CONTAINER DESCRIPTION
+        #——————————————————————————
+        'available_formats':
+          description: Available formats
+          type: array
+          items:
+            $ref: '#/components/schemas/Media'
+          minItems: 1
+
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # DATASET INFO
+        #——————————————————————————
+        'resource_languages':
+          description: Languages available in the dataset, if relevant
+          type: array
+          items:
+            $ref: '#/components/schemas/Language'
+          default: [fr]
+        #——————————————————————————
+        'temporal_spread':
+          description: >
+            Period of time described by the data.
+            If the end date is not known (because the resource is still valid in
+            the present for instance, the end_date field will be left blank)
+            For a one-time measurement, one can fill both start and end date
+            with the same value.
+          type: object
+          required:
+            - start_date
+          properties:
+            #......................
+            'start_date':
+              $ref: '#/components/schemas/Date'
+            #......................
+            'end_date':
+              $ref: '#/components/schemas/Date'
+        #——————————————————————————
+        'geography':
+          description: Geographic localisation of the data
+          type: object
+          required:
+            - bounding_box
+          properties:
+            #......................
+            'bounding_box':
+              description: >
+                Geographic distribution of the data as a rectangle.
+                The 4 parameters are given as decimal as described in the
+                norm ISO 6709
+              type: object
+              required:
+                - west_longitude
+                - east_longitude
+                - north_latitude
+                - south_latitude
+              properties:
+                'north_latitude':
+                  description: Northernmost latitude given as a decimal number (norm ISO 6709)
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                'south_latitude':
+                  description: Southernmost latitude (decimal number, norm ISO 6709)
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                'west_longitude':
+                  description: Westernmost latitude (decimal number, norm ISO 6709)
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                'east_longitude':
+                  description: Easternmost latitude (decimal number, norm ISO 6709)
+                  type: number
+                  minimum: -180
+                  maximum: 180
+            #......................
+            # Global geographic distribution of the data expressed in
+            # 'EPSG:4326/WGS 84' projection
+            'geographic_distribution':
+              $ref: 'https://app.swaggerhub.com/apis/OlivierMartineau/GeoJSON/1.0.1'
+            #......................
+            'projection':
+              description: Cartographic projection used in the data.
+                EPSG codes highly recommended.
+              type: string
+              default: 'WGS 84 (EPSG:4326)'
+              example:
+                'WGS 84 (EPSG:4326)'
+                # 'RGF93/Lambert-93 (EPSG:2154)'
+                # 'RGF93/CC48 (EPSG:3948)'
+              #TODO: 'Projection' thesaurus
+        #——————————————————————————
+        'dataset_size':
+          description: Indicative total size of the data
+          type: object
+          properties:
+            #......................
+            'numbers_of_records':
+              type: integer
+              minimum: 0
+            #......................
+            'number_of_fields':
+              type: integer
+              minimum: 0
+        #——————————————————————————
+        'dataset_dates':
+          allOf:
+            - $ref: '#/components/schemas/ReferenceDates'
+            - description: Dates of the actions performed on the data (creation, publishing, update, deletion...)
+              type: object
+        #——————————————————————————
+        'storage_status':
+          description: >-
+            Status of the storage of the dataset
+            Metadata can exist without the data
+            - online      = data are published and available
+            - archived    = data are not immediately available, access is not automatic
+            - unavailable = data were deleted
+          type: string
+          enum: [online, archived, unavailable]
+        # !SKOS!
+
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # ACCESS CONSTRAINTS
+        #——————————————————————————
+        'access_condition':
+          description: >
+            Access restrictions for the use of data in the form of licence,
+            confidentiality, terms of service, habilitation or required rights,
+            economical model. Default is open licence.
+            #TODO: to be defined. Possible redundencies with other fields!
+          type: object
+          required:
+            - licence
+          properties:
+            #......................
+            'confidentiality':
+              description: Restriction level for the resource
+              type: object
+              properties:
+                'restricted_access':
+                  description: >
+                    Undefined for open data
+                    Name of the public key if restricted
+                  type: string
+                'gdpr_sensitive':
+                  description: >
+                    True if the dataset embeds personal data
+                  type: boolean
+            #......................
+            'licence':
+              $ref: '#/components/schemas/Licence'
+            #......................
+            'usage_constraint':
+              description: >
+                Describes how constrained is the use of the resource
+              type: array
+              items:
+                $ref: '#/components/schemas/DictionaryEntry'
+              example:
+                [
+                  {
+                    'lang': 'fr',
+                    'text': 'Usage libre sous réserve des mentions obligatoires sur tout document de diffusion',
+                  },
+                ]
+            #......................
+            'bibliographical_reference':
+              description: >
+                Information that MUST be cited every time the data is used,
+                most likely a BibTeX entry
+              type: array
+              items:
+                $ref: '#/components/schemas/DictionaryEntry'
+            #......................
+            'mandatory_mention':
+              description: >
+                Mention that must be cited verbatim in every publication that
+                makes use of the data
+              type: array
+              items:
+                $ref: '#/components/schemas/DictionaryEntry'
+              minItems: 1
+              example: [{ 'lang': 'fr-FR', 'text': 'Source: Région Bretagne' }]
+            #......................
+            'access_constraint':
+              type: array
+              items:
+                $ref: '#/components/schemas/DictionaryEntry'
+            #......................
+            'other_constraints':
+              type: array
+              items:
+                $ref: '#/components/schemas/DictionaryEntry'
+              example: [{ 'lang': 'fr', 'text': "Pas de restriction d'accès public" }]
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # METADATA INFO
+        #——————————————————————————
+        'metadata_info':
+          description: Metadata on the metadata
+          type: object
+          required:
+            - api_version
+          properties:
+            #......................
+            'api_version':
+              type: string
+              pattern: '([0-9]{1,2}\.){2}[0-9]{1,2}[a-z]*'
+            #......................
+            'metadata_dates':
+              $ref: '#/components/schemas/ReferenceDates'
+            #......................
+            'metadata_provider':
+              allOf:
+                - $ref: '#/components/schemas/Organization'
+                - description: Description of the organization that produced the metadata
+                  type: object
+            #......................
+            'metadata_contacts':
+              description: Addresses to get further information on the metadata
+              type: array
+              items:
+                $ref: '#/components/schemas/Contact'
+            #......................
+            'metadata_source':
+              description: URI of the initial metadata
+              type: string
+              format: uri
+
+    #---------------------------------------------------------------------------
+    'Organization': # Organization
+      description: Entity that produced the data or provided the associated metadata
+      type: object
+      required:
+        - organization_id
+        - organization_name
+      properties:
+        #——————————————————————————
+        'organization_id':
+          description: Unique identifier of the organization in RUDI system
+          type: string
+          format: uuid
+        #——————————————————————————
+        'organization_name':
+          description: Updated offical name of the organization
+          type: string
+        #——————————————————————————
+        'organization_caption':
+          description: >
+            Explicit/complete name for an acronym, or alternative name of the
+            organization
+          type: string
+        #——————————————————————————
+        'organization_summary':
+          description: Describes the organization
+          type: string
+        #——————————————————————————
+        'organization_address':
+          description: Updated offical postal address of the organization
+          type: string
+        #——————————————————————————
+        'organization_coordinates':
+          description: GPS coordinates in EPSG:4326/WGS 84 coordinates
+          type: object
+          properties:
+            'latitude':
+              type: number
+              minimum: -90
+              maximum: 90
+            'longitude':
+              type: number
+              minimum: -180
+              maximum: 180
+    #---------------------------------------------------------------------------
+    'Contact':
+      description: Address to get further information on the resource
+      type: object
+      required:
+        - contact_id
+        - contact_name
+        - email
+      properties:
+        #——————————————————————————
+        'contact_id':
+          description: Unique identifier of the contact in RUDI system
+          type: string
+          format: uuid
+        #——————————————————————————
+        'organization_name':
+          description: Updated offical name of the organization
+          type: string
+        #——————————————————————————
+        'contact_name':
+          description: Updated name of the service, or possibly the person
+          type: string
+        #——————————————————————————
+        'role':
+          description: Updated status of the contact person
+          type: string
+          example: Administrator
+        #——————————————————————————
+        'contact_summary':
+          description: Description of the contact person
+          type: string
+        #——————————————————————————
+        'email':
+          description: >
+            Unique E-mail address, possibly not nominative to be less dependent
+            on changes in the organization, and comply more easily with
+            RGPD rules
+          type: string
+          format: email
+          #TODO: RGPD compliant!
+    #---------------------------------------------------------------------------
+    'Licence':
+      description: Abstract object from which standard and custom licences inherit
+      type: object
+      required:
+        - licence_type
+      properties:
+        #——————————————————————————
+        'licence_type':
+          type: string
+          enum: ['STANDARD', 'CUSTOM']
+
+      discriminator:
+        propertyName: licence_type
+        mapping:
+          'STANDARD': '#/components/schemas/LicenceStandard'
+          'CUSTOM': '#/components/schemas/LicenceCustom'
+    #---------------------------------------------------------------------------
+    'LicenceStandard':
+      allOf:
+        - $ref: '#/components/schemas/Licence'
+        - description: Standard licence (recognized by RUDI system)
+          type: object
+          required:
+            - licence_label
+          properties:
+            'licence_label':
+              description: Value of the field SkosConcept.concept_code
+              type: string
+              format: skosConceptCode
+    #---------------------------------------------------------------------------
+    'LicenceCustom':
+      allOf:
+        - $ref: '#/components/schemas/Licence'
+        - description: Custom licence
+          type: object
+          required:
+            - custom_licence_label
+            - custom_licence_uri
+          properties:
+            'custom_licence_label':
+              description: Title of the custom licence
+              type: array
+              items:
+                $ref: '#/components/schemas/DictionaryEntry'
+            'custom_licence_uri':
+              description: URL towards the custom licence
+              type: string
+              format: uri
+
+    #---------------------------------------------------------------------------
+    'Media':
+      description: Abstract object from which File and Series inherit
+      type: object
+      required:
+        - media_type
+        - media_id
+        - connector
+      properties:
+        #——————————————————————————
+        'media_type':
+          description: Transmission mode (file | series)
+          type: string
+          enum: ['FILE', 'SERVICE', 'SERIES']
+        #——————————————————————————
+        'media_id':
+          type: string
+          format: uuid
+        #——————————————————————————
+        'media_name':
+          description: Name of the Media
+          type: string
+        #——————————————————————————
+        'media_caption':
+          description: Description of the Media
+          type: string
+        #——————————————————————————
+        'media_visual':
+          description: Link towards a (low-fidelity) visualization of the Media
+          type: string
+          format: uri
+        #——————————————————————————
+        'media_dates':
+          allOf:
+            - $ref: '#/components/schemas/ReferenceDates'
+            - description: Time of the creation / last update of the Media
+        #——————————————————————————
+        'connector':
+          $ref: '#/components/schemas/Connector'
+
+      discriminator:
+        propertyName: media_type
+        mapping:
+          'FILE': '#/components/schemas/MediaFile'
+          'SERVICE': '#/components/schemas/MediaService'
+          'SERIES': '#/components/schemas/MediaSeries'
+
+    #---------------------------------------------------------------------------
+    'MediaService':
+      allOf:
+        - $ref: '#/components/schemas/Media'
+        - description: Link to a service
+          type: object
+          properties:
+            'api_documentation_url':
+              description: Link towards the resource that describes the structure of the API
+              type: string
+              format: uri
+
+    #---------------------------------------------------------------------------
+    'MediaFile':
+      allOf:
+        - $ref: '#/components/schemas/Media'
+        - description: Description of the container of data as a file
+          type: object
+          required:
+            - file_type
+            - file_size
+            - checksum
+          properties:
+            #——————————————————————————
+            'file_type':
+              # File type (determined automatically)
+              $ref: '#/components/schemas/MediaType'
+            #——————————————————————————
+            'file_size':
+              description: >
+                Size of the file, in bytes
+                (determined automatically)
+              type: integer
+            #——————————————————————————
+            'checksum':
+              description: Hash that makes it possible to check the a file intergrity
+                (determined automatically)
+              type: object
+              required:
+                - algo
+                - hash
+              properties:
+                'algo':
+                  $ref: '#/components/schemas/HashAlgorithm'
+                'hash':
+                  type: string
+            #——————————————————————————
+            'file_structure':
+              description: >
+                Link towards the resource that describes the structure of the data
+                (language, norm, data structure, JSON schema, OpenAPI, etc.)
+              type: string
+              format: uri
+              #'URI definition - https://tools.ietf.org/html/rfc2396'
+            #——————————————————————————
+            'file_encoding':
+              description: Source encoding of the data
+                (determined automatically)
+              type: string
+              #format:
+              #ISO/CEI 10646'
+              #TODO: thesaurus for encoding
+
+    #---------------------------------------------------------------------------
+    'MediaSeries':
+      allOf:
+        - $ref: '#/components/schemas/Media'
+        - description: Description of the container of data as a file
+          type: object
+          properties:
+            #——————————————————————————
+            'latency':
+              description: >
+                Theorical delay between the production of the record and its availability,
+                in milliseconds.
+              type: integer
+              minimum: 0
+            #——————————————————————————
+            'period':
+              description: Theorical delay between the production of two records, in milliseconds.
+              type: integer
+              minimum: 0
+            #——————————————————————————
+            'current_number_of_records':
+              description: Actual number of records
+              type: integer
+              minimum: 0
+            #——————————————————————————
+            'current_size':
+              description: Actual size of the data, in bytes (refreshed automatically)
+              type: integer
+              minimum: 0
+
+            #——————————————————————————
+            'total_number_of_records':
+              description: Estimated total number of records
+              type: integer
+              minimum: 0
+
+            #——————————————————————————
+            'total_size':
+              description: Estimated total size of the data, in bytes
+              type: integer
+              minimum: 0
+
+    #---------------------------------------------------------------------------
+    'Connector':
+      description: >
+        Direct access to the dataset.
+        In the case of open data without access restriction, this can be a
+        simple download link e.g. a URL
+        The interface contract chosen can enable request with specified
+        parameters, or make it possible to extract a GeoWMS or a GeoWFS
+        If it is not defined, the link should be a direct download link.
+      type: object
+      required:
+        - url
+      properties:
+        #——————————————————————————
+        'url':
+          type: string
+          format: uri
+        #——————————————————————————
+        'interface_contract':
+          description: Link towards the interface contract defined with RUDI Portal
+          type: string # original
+          # maxLength: 10
+        #——————————————————————————
+        'connector_parameters':
+          description: Additional parameters that can be used to refine the call to the URL
+          type: array
+          items:
+            type: object
+            properties:
+              'key':
+                type: string
+                description: A parameter name
+              'value':
+                type: string
+                description: Current value for the parameter
+              'type':
+                type: string
+                description: Type of the value, in capital letters
+                enum: [STRING, BOOLEAN, DATE, LONG, DOUBLE, ENUM]
+                default: 'STRING'
+              'usage':
+                type: string
+                description: Text that explains how to use this parameter
+              'accepted_values':
+                description: List of the parameters that can be used
+                type: array
+                items:
+                  type: object
+
+    #---------------------------------------------------------------------------
+    'IntegrationError':
+      required:
+        - error_code
+        - error_message
+      properties:
+        'error_code':
+          type: integer
+        'error_message':
+          type: string
+        'field_name':
+          type: string
+
+    #---------------------------------------------------------------------------
+    'IntegrationReport':
+      required:
+        - PublicAPI_id
+        - resource_id
+      properties:
+        #——————————————————————————
+        'report_id':
+          description: Unique identifier of the integration report
+          type: string
+          format: uuid
+        #——————————————————————————
+        'resource_id':
+          type: string
+          format: uuid
+        #——————————————————————————
+        'resource_title':
+          type: string
+          description: Simple name of the resource
+        #——————————————————————————
+        'submission_date':
+          allOf:
+            - $ref: '#/components/schemas/Date'
+            - description: >
+                Date when the integration request was submitted by the
+                Producer node
+              type: string
+        #——————————————————————————
+        'treatment_date':
+          allOf:
+            - $ref: '#/components/schemas/Date'
+            - description: Date when the integration request was processed by the Portal
+              type: string
+        #——————————————————————————
+        'method':
+          description: Method used by the Producer node for the integration request
+          type: string
+          enum: [POST, PUT, DELETE]
+        #——————————————————————————
+        'version':
+          description: Version number of the integration contract used for the file
+          type: string
+          # pattern: '^[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]{1,2})?[a-z]*$'
+        #——————————————————————————
+        'integration_status':
+          description: State of the integration of the resource in the Portal
+          type: string
+          enum: [OK, KO]
+        #——————————————————————————
+        'comment':
+          description: >
+            Comment on the state of the integration of the resource in the
+            Portal
+          type: string
+          #TODO: lang?
+        #——————————————————————————
+        'integration_errors':
+          description: >
+            List of all the errors that were encountered during the
+            integration of the resource.
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationError'
+
+    #---------------------------------------------------------------------------
+    'PublicKey':
+      description: >
+        Public key that can be accessed on the Producer node
+      type: object
+      required:
+        - name
+      properties:
+        #——————————————————————————
+        'name':
+          description: Unique name of the public key
+          type: string
+          pattern: '^[\w-]+$'
+        #——————————————————————————
+        'url':
+          description: >
+            Accessible URL where the public key can be found.
+            If no PEM has been supplied, the URL is required!
+          type: string
+          format: uri
+        #——————————————————————————
+        'prop':
+          description: >
+            If the URL offers an object, indicates the property to get the PEM
+            of the public key
+          type: string
+          pattern: '^[\w-]+$'
+        #——————————————————————————
+        'pem':
+          description: >
+            The public key written as a PEM. This property is required if no URL
+            was provided
+          type: string
+        #——————————————————————————
+        'key':
+          description: The public key
+          type: string
+        #——————————————————————————
+        'type':
+          description: The public key type
+          type: string
+
+    #---------------------------------------------------------------------------
+    'LogEntry':
+      description: Log message for an event that occured in the RUDI API module
+      type: object
+      required:
+        - entry_id
+        - time
+        - message
+        - log_level
+      properties:
+        #——————————————————————————
+        'entry_id':
+          description: Unique and permanent identifier for the log entry
+          type: string
+          format: uuid
+        #——————————————————————————
+        'time':
+          description: Epoch time of the event in ms
+          type: integer
+        #——————————————————————————
+        'message':
+          description: Message that describes the event
+          type: string
+        #——————————————————————————
+        'log_level':
+          description: Log level
+          type: string
+        #——————————————————————————
+        'location_module':
+          description: Module/file the log is coming from
+          type: string
+        #——————————————————————————
+        'location_function':
+          description: Function the log is coming from
+          type: string
+        #——————————————————————————
+        'user_address':
+          description: User identified for the request
+          type: string
+
+    #---------------------------------------------------------------------------
+    'DOI':
+      description: Digital object identifier (modern Crossref DOIs version)
+      type: string
+      pattern: '^10.\d{4,9}/[-.;()/:\w]+$'
+      # \d : digit character == [0-9]
+      # \w : word character == [0-9a-zA-Z_]
+      # /i (at the end) : expression is case insensitive
+      #source: https://www.crossref.org/blog/dois-and-matching-regular-expressions/
+      #alternative: https://github.com/regexhq/doi-regex/blob/master/index.js
+
+    #---------------------------------------------------------------------------
+    'MediaType':
+      description: >
+        Most common Media types formerly known as MIME types, as definied in
+        RFC 2049
+      type: string
+      enum:
+        - 'application/x-executable'
+        - 'application/graphql'
+        - 'application/javascript' # (.js)
+        - 'application/json' # (.json)
+        - 'application/ld+json'
+        - 'application/msword' # (.doc)
+        - 'application/pdf' # (.pdf)
+        - 'application/sql'
+        - 'application/vnd.api+json'
+        - 'application/vnd.ms-excel' # (.xls)
+        - 'application/vnd.ms-powerpoint' # (.ppt)
+        - 'application/vnd.oasis.opendocument.text' # (.odt)
+        - 'application/vnd.openxmlformats-officedocument.presentationml.presentation' # (.pptx)
+        - 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' # (.xlsx)
+        - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' # (.docx)'
+        - 'application/x-www-form-urlencoded'
+        - 'application/xml'
+        - 'application/zip' # (.zip)
+        - 'application/zstd' # (.zst)
+        - 'audio/mpeg' # (.mpeg | .mpg)
+        - 'audio/ogg' # (.ogg)
+        - 'image/gif' # (.gif)
+        - 'image/apng'
+        - 'image/flif'
+        - 'image/webp'
+        - 'image/x-mng'
+        - 'image/jpeg' # (.jpeg)
+        - 'image/png' # (.png)
+        - 'multipart/form-data'
+        - 'text/css' # (.css)
+        - 'text/csv' # (.csv)
+        - 'text/html' # (.html | .htm)
+        - 'text/php' # (.php)
+        - 'text/plain' # (.txt)
+        - 'text/xml' # (.xml)
+        - 'application/x-executable+crypt' # ------ Unconventionnal MIME types for encypted files
+        - 'application/graphql+crypt'
+        - 'application/javascript+crypt' # (.js)
+        - 'application/json+crypt' # (.json)
+        - 'application/ld+json+crypt'
+        - 'application/msword+crypt' # (.doc)
+        - 'application/pdf+crypt' # (.pdf)
+        - 'application/sql+crypt'
+        - 'application/vnd.api+json+crypt'
+        - 'application/vnd.ms-excel+crypt' # (.xls)
+        - 'application/vnd.ms-powerpoint+crypt' # (.ppt)
+        - 'application/vnd.oasis.opendocument.text+crypt' # (.odt)
+        - 'application/vnd.openxmlformats-officedocument.presentationml.presentation+crypt' # (.pptx)
+        - 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet+crypt' # (.xlsx)
+        - 'application/vnd.openxmlformats-officedocument.wordprocessingml.document+crypt' # (.docx)
+        - 'application/x-www-form-urlencoded+crypt'
+        - 'application/xml+crypt'
+        - 'application/zip+crypt' # (.zip)
+        - 'application/zstd+crypt' # (.zst)
+        - 'audio/mpeg+crypt' # (.mpeg | .mpg)
+        - 'audio/ogg+crypt' # (.ogg)
+        - 'image/gif+crypt' # (.gif)
+        - 'image/apng+crypt'
+        - 'image/flif+crypt'
+        - 'image/webp+crypt'
+        - 'image/x-mng+crypt'
+        - 'image/jpeg+crypt' # (.jpeg)
+        - 'image/png+crypt' # (.png)
+        - 'multipart/form-data+crypt'
+        - 'text/css+crypt' # (.css)
+        - 'text/csv+crypt' # (.csv)
+        - 'text/html+crypt' # (.html | .htm)
+        - 'text/php+crypt' # (.php)
+        - 'text/plain+crypt' # (.txt)
+        - 'text/xml+crypt' # (.xml)
+        - 'text/x-yaml+crypt' # (.yaml | .yml)
+    #---------------------------------------------------------------------------
+    'FileExtension':
+      description: Source format of the data
+      type: string
+      enum:
+        - csv
+        - doc
+        - docx
+        - jpg
+        - json
+        - odt
+        - pdf
+        - png
+        - ppt
+        - pptx
+        - txt
+        - xls
+        - xlsx
+        - xml
+
+    #---------------------------------------------------------------------------
+    'HashAlgorithm':
+      description: Method for computing the integrity hash of the data
+      type: string
+      enum: ['MD5', 'SHA-256', 'SHA-512']
+      #TODO: define the thesaurus for the hash algorithms
+
+    #---------------------------------------------------------------------------
+    'Theme':
+      description: Category for thematic classification of the data
+      type: string
+      # TODO: "Theme" thesaurus
+      # !SKOS!
+
+    #---------------------------------------------------------------------------
+    'Keyword':
+      description: Tags to help researching the data
+      type: string
+      # TODO: "Tags" thesaurus
+      # !SKOS!
+
+    #---------------------------------------------------------------------------
+    'Date':
+      description: 'Date in the ISO 8601 format (e.g. 2021-07-20T00:00:00.000Z)'
+      type: string
+      format: date-time
+      #TODO: timezone + nanosec?
+
+    #---------------------------------------------------------------------------
+    'ReferenceDates':
+      description: 'Dates of the ac tions on the data'
+      type: object
+      required:
+        - created
+        - updated
+      properties:
+        'created':
+          $ref: '#/components/schemas/Date'
+        'validated':
+          $ref: '#/components/schemas/Date'
+        'published':
+          $ref: '#/components/schemas/Date'
+        'updated':
+          $ref: '#/components/schemas/Date'
+        'expires':
+          $ref: '#/components/schemas/Date'
+        'deleted':
+          $ref: '#/components/schemas/Date'
+
+    #---------------------------------------------------------------------------
+    'DictionaryList':
+      type: object
+      required:
+        - lang
+        - text
+      properties:
+        'lang':
+          $ref: '#/components/schemas/Language'
+        'text':
+          type: array
+          items:
+            type: string
+            #TODO: possibly set limitations (size, characters allowed, HTML-ready or not)
+      example: { lang: 'fr-FR', text: ['abeilles', 'Apis'] }
+
+    #---------------------------------------------------------------------------
+    'DictionaryEntry':
+      type: object
+      required:
+        - lang
+        - text
+      properties:
+        'lang':
+          $ref: '#/components/schemas/Language'
+        'text':
+          type: string
+          #TODO: possibly set limitations (size, characters allowed, HTML-ready or not)
+      example: { lang: 'fr-FR', text: 'abeilles' }
+
+    #---------------------------------------------------------------------------
+    'SkosScheme':
+      description: >
+        Set of SKOS concepts gathered in a transversal and hierarchical
+        relationships.
+      type: object
+      required:
+        - scheme_id
+        - scheme_label
+      properties:
+        #——————————————————————————
+        'scheme_id':
+          description: 'ID of the SKOS concept scheme'
+          type: string
+          format: uuid
+        #——————————————————————————
+        'scheme_code':
+          description: 'Short abstract code that identifies uniquely the concept scheme'
+          type: string
+          minLength: 2
+          maxLength: 30
+        #——————————————————————————
+        'scheme_label':
+          description: 'Short code for the concept scheme'
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryEntry'
+          minItems: 1
+        #——————————————————————————
+        'scheme_role':
+          description: >
+            Underlines a particular use for this Scheme, e.g. "licence"
+          type: string
+        #——————————————————————————
+        'scheme_uri':
+          description: 'Web page that document the SKOS concept scheme'
+          type: string
+          format: uri
+        #——————————————————————————
+        'scheme_icon':
+          description: 'URI towards a graphical resource that describes the concept scheme'
+          type: string
+          format: uri
+        #——————————————————————————
+        'top_concepts':
+          description: 'List of the highest level concepts in the concept scheme'
+          type: array
+          items:
+            $ref: '#/components/schemas/SkosConcept'
+
+    #---------------------------------------------------------------------------
+    'SkosConcept':
+      description: >
+        A SKOS concept is an element in a controlled vocabulary such as a
+        thesaurus. It offers to link concepts in hierarchical (broader/narrower)
+        or neighbouring relationships.
+        A set of SKOS concepts is gathered in one concept scheme.
+        If a SKOS concept appears in two different concept schemes, it should be
+        duplicated as there are chances the context is slightly different and the
+        meaning will be hard to unify.
+      type: object
+      required:
+        - concept_id
+        - concept_code
+        - skos_scheme_class
+        - pref_label
+      properties:
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # Identification
+        #——————————————————————————
+        'concept_id':
+          description: ID of the SKOS concept
+          type: string
+          format: uuid
+        #——————————————————————————
+        'concept_code':
+          description: Short abstract code that identifies uniquely the concept
+          type: string
+          minLength: 2
+          maxLength: 30
+        #——————————————————————————
+        'concept_uri':
+          description: Web page that document the SKOS concept
+          type: string
+          format: uri
+        #——————————————————————————
+        'concept_icon':
+          description: URI towards a graphical resource that describes the concept
+          type: string
+          format: uri
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # Labels
+        #——————————————————————————
+        'pref_label':
+          description: Preferred lexical label for the resource, one for each language
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryEntry'
+          minItems: 1
+        #——————————————————————————
+        'alt_labels':
+          description: List of alternative labels (in each language)
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryList'
+        #——————————————————————————
+        'hidden_labels':
+          description: List of alternative orthographs for the label (in each language)
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryList'
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # Classification
+        #——————————————————————————
+        'of_scheme':
+          allOf:
+            - $ref: '#/components/schemas/SkosScheme'
+            - description: >
+                Reference to the constrained vocabulary, thesaurus or classification scheme
+              type: object
+        #——————————————————————————
+        'concept_role':
+          description: >
+            Underlines a particular use for this Concept, e.g. a potential
+            value for a property (e.g. "metadata.theme", "metadata.keywords",
+            "metadata.licence")
+          type: string
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # Relationships
+        #——————————————————————————
+        'broader_concepts':
+          description: >
+            References to the 'parent' SKOS concepts with a broader scope
+            than the current concept
+          type: array
+          items:
+            $ref: '#/components/schemas/SkosConcept'
+          # beware to avoid graph loops with narrower (children) or
+          # siblingly (neighbours) concepts !
+        #——————————————————————————
+        'narrower_concepts':
+          description: >
+            References to the 'children' SKOS concepts with a narrower scope
+            than the current concept
+          type: array
+          items:
+            $ref: '#/components/schemas/SkosConcept'
+          # beware to avoid graph loops with broader (parents) or
+          # siblingly (neighbours) concepts !
+        #——————————————————————————
+        'siblings_concepts':
+          description: >
+            References to the SKOS concepts that are neighbouring meanings
+            of the current concept
+          type: array
+          items:
+            $ref: '#/components/schemas/SkosConcept'
+          # beware to avoid graph loops with broader (children) or
+          # narrower (children) concepts !
+        #——————————————————————————
+        'relative_concepts':
+          description: >
+            References to the SKOS concepts that can be associated in a
+            non-transitive relationship
+          type: array
+          items:
+            $ref: '#/components/schemas/SkosConcept'
+        #—•—•—•—•—•—•—•—•—•—•—•—•—•
+        # Documentation
+        #——————————————————————————
+        'scope_note':
+          description: >
+            Contextual information about the intended meaning of the concept,
+            especially as an indication of how the use of the concept
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryEntry'
+        #——————————————————————————
+        'concept_definition':
+          description: 'Complete explanation of the intended meaning of a concept'
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryEntry'
+        #——————————————————————————
+        'concept_example':
+          description: 'Example of the use of a concept'
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryEntry'
+
+    #---------------------------------------------------------------------------
+    'Language':
+      description: >
+        Lowercase ISO-639 language code followed by the
+        uppercase 2 letter ISO 3166-1 alpha-2 country code,
+        both joined by an hyphen-minus sign, or alternatively the
+        lowercase ISO-639 language code alone
+      type: string
+      pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+      enum:
+        ['cs', 'da', 'de', 'en', 'el', 'es', 'fr', 'hu', 'it', 'no', 'pl', 'pt', 'ro', 'ru', 'sk']
+
+      # norm: https://www.rfc-editor.org/rfc/bcp/bcp47.txt
+      # source for enum: https://app.swaggerhub.com/apis/nologo/thesaurus/1.0.0#/default/get_thesaurus_v1
+
+      # !SKOS!
+
+  #TODO : thesaurus : tableau de valeurs simples ou couples {label: "Texte à
+  #       afficher pour l'utilisateur", "valeur": "ValeurAssociee"}
+
+  #=============================================================================
+  responses:
+    #---------------------------------------------------------------------------
+    'Error400BadRequest':
+      description: The JSON is not valid.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [400]
+              'message':
+                type: string
+                enum: ['The JSON is not valid.']
+    #---------------------------------------------------------------------------
+    'Error401Unauthorized':
+      description: The request requires a user authentication.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [401]
+              'message':
+                type: string
+                enum: ['The request requires a user authentication.']
+    #---------------------------------------------------------------------------
+    'Error403Forbidden':
+      description: The access is not allowed.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [403]
+              'message':
+                type: string
+                enum: ['The access is not allowed.']
+    #---------------------------------------------------------------------------
+    'Error404NotFound':
+      description: The resource was not found.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [404]
+              'message':
+                type: string
+                enum: ['The resource was not found.']
+    #---------------------------------------------------------------------------
+    'Error405MethodNotAllowed':
+      description: Request method is not supported for the requested resource.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [405]
+              'message':
+                type: string
+                enum: [
+                    'Request method is not supported for the requested
+                    resource.',
+                  ]
+    #---------------------------------------------------------------------------
+    'Error406NotAcceptable':
+      description: Headers sent in the request are not compatible with the service.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [406]
+              'message':
+                type: string
+                enum: [
+                    'Headers sent in the request are not compatible with the
+                    service.',
+                  ]
+    #---------------------------------------------------------------------------
+    'Error408RequestTimeout':
+      description: >
+        The client did not produce a request within the time that the server was
+        prepared to wait. The client may repeat the request without
+        modifications at any later time.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [408]
+              'message':
+                type: string
+                enum: [
+                    'The client did not produce a request within the time that
+                    the server was prepared to wait. The client may repeat the
+                    request without modifications at any later time.',
+                  ]
+    #---------------------------------------------------------------------------
+    'Error410Gone':
+      description: >
+        The requested resource is no longer available and will not be available
+        again. The resource should be purged from the client system.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [410]
+              'message':
+                type: string
+                enum: [
+                    'The requested resource is no longer available and will not
+                    be available again. The resource should be purged from the
+                    client system.',
+                  ]
+    #---------------------------------------------------------------------------
+    'Error423Locked':
+      description: The resource that is being accessed is locked.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [423]
+              'message':
+                type: string
+                enum: ['The resource that is being accessed is locked.']
+    #---------------------------------------------------------------------------
+    'Error429TooManyRequests':
+      description: The user has sent too many requests in a short period.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [429]
+              'message':
+                type: string
+                enum: ['The user has sent too many requests in a short period.']
+    #---------------------------------------------------------------------------
+    'Error500InternalServerError':
+      description: An unexpected error occured.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [500]
+              'message':
+                type: string
+                enum: ['An unexpected error occured.']
+    #---------------------------------------------------------------------------
+    'Error503ServiceUnavailable':
+      description: The server is currently unable to handle the request.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              'status_code':
+                type: integer
+                enum: [503]
+              'message':
+                type: string
+                enum: ['The server is currently unable to handle the request.']
+
+  #=============================================================================
+  securitySchemes:
+    authRudi:
+      type: oauth2
+      description: >
+        This API uses OAuth 2 with the implicit grant flow.
+        #[More info](https://api.example.com/docs/auth)
+      flows:
+        implicit:
+          authorizationUrl: https://api.example.com/oauth2/authorize
+          scopes:
+            public: No token required
+            portal: RUDI Portal actions
+            backadmin: Actions accessible from the backoffice UI/admin
+            dev: Local access for an Producer Node application
+#•••••••••••••••••••••••••••••••••••[ EOF ]••••••••••••••••••••••••••••••••••••#

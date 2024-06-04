@@ -6,27 +6,22 @@ const fun = 'init'
 // -------------------------------------------------------------------------------------------------
 import { existsSync, mkdirSync } from 'fs'
 
+import rudiLogger, { Facility, Transport } from '@aqmo.org/rudi_logger'
 import winston from 'winston'
 import 'winston-daily-rotate-file'
-// require('winston-syslog').Syslog
-import rudiLogger from '@aqmo.org/rudi_logger'
 
 const { combine, timestamp, printf, colorize, simple } = winston.format
-const syslogLevels = winston.config.syslog.levels
-Object.assign(
-  {
-    fatal: 0,
-    warn: 4,
-    trace: 7,
-  },
-  syslogLevels
-)
-
+const syslogLevels = {
+  fatal: 0,
+  warn: 4,
+  trace: 7,
+  ...winston.config.syslog.levels,
+}
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { getGitHash, getAppOptions, OPT_NODE_ENV } from './appOptions.js'
-import { consoleLog, consoleErr, LOG_DATE_FORMAT, separateLogs } from '../utils/jsUtils.js'
+import { LOG_DATE_FORMAT, consoleErr, consoleLog, separateLogs } from '../utils/jsUtils.js'
+import { OPT_NODE_ENV, getAppOptions, getGitHash } from './appOptions.js'
 import {
   getAppName,
   getIniValue,
@@ -82,7 +77,7 @@ const SYSLOG_SECTION = 'syslog'
 
 // const SYSLOG_LVL = getIniValue(SYSLOG_SECTION, '◊log_level', 'info')
 // const SYSLOG_NODE_NAME = getIniValue(SYSLOG_SECTION, 'syslog_node_name')
-const SYSLOG_PROTOCOL = getIniValue(SYSLOG_SECTION, 'syslog_protocol', 'unix')
+export const SYSLOG_PROTOCOL = getIniValue(SYSLOG_SECTION, 'syslog_protocol', 'unix')
 const SYSLOG_FACILITY = getIniValue(SYSLOG_SECTION, 'syslog_facility', 'local4')
 const SYSLOG_HOST = getIniValue(SYSLOG_SECTION, 'syslog_host')
 const SYSLOG_PORT = getIniValue(SYSLOG_SECTION, 'syslog_port', 514) // default: 514
@@ -127,17 +122,6 @@ if (SHOULD_SYSLOG_IN_FILE) {
 // Winston logger creation : LOG FILE
 // -------------------------------------------------------------------------------------------------
 
-// datedRotatingFile.on('rotate', function (oldFilename, newFilename) {
-//   // perform an action when rotation takes place
-// })
-/*
-// - New transport : MongoDB
-const options ={
-  db: `${DB_LOGS_URL}`,
-  collection: 'logs'
-}
-const transportMongoDb = new winston.transports.MongoDB(options)
- */
 winston.addColors({
   error: 'bold red',
   warn: 'italic magenta',
@@ -211,7 +195,7 @@ if (SHOULD_FILELOG) {
   // - Write all logs with level `debug`
   loggerOpts.transports.push(
     new winston.transports.File({
-      name: 'combinedlogs',
+      name: 'combinedLogs',
       filename: `${LOG_DIR}/${LOG_FILE}`,
       maxsize: MAX_SIZE,
       maxFiles: 5,
@@ -328,23 +312,25 @@ export const initFFLogger = () => {
 
 // export const sysLogger = winston.createLogger(syslogOpts)
 function getRudiLoggerOptions() {
-  var facility = 20
+  let facility = Facility.Local4
   if (SYSLOG_FACILITY.substr(0, 5) === 'local') {
-    facility = 16 + Number(SYSLOG_FACILITY.substr(5, 1))
+    facility = Facility.Local0 + Number(SYSLOG_FACILITY.substr(5, 1))
   }
-  var transports = 2
-  var path = SYSLOG_HOST
+  let transports
+  let path = SYSLOG_HOST
   switch (SYSLOG_PROTOCOL) {
     case 'tcp':
-      transports = 1
+      transports = Transport.Tcp
       break
     case 'udp':
-      transports = 2
+      transports = Transport.Udp
       break
     case 'unix':
-      transports = 4
+      transports = Transport.Unix
       path = SYSLOG_SOCKET
       break
+    default:
+      transports = Transport.Udp
   }
   const rudiLoggerOpts = {
     log_server: { path: path, port: SYSLOG_PORT, facility: facility, transport: transports },

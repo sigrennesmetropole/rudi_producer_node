@@ -6,29 +6,30 @@ const mod = 'redirect'
 // External dependancies
 // -----------------------------------------------------------------------------
 
-const { v4 } = require('uuid')
-const axios = require('axios')
+import axios from 'axios'
+const { delete: del, get, post, put } = axios
+
+import { v4 as uuid4 } from 'uuid'
 
 // -----------------------------------------------------------------------------
 // Internal dependancies
 // -----------------------------------------------------------------------------
-const log = require('../utils/logging')
-const { beautify, nowEpochS } = require('../utils/jsUtils')
-const { SUFFIX_REDIRECT, URL_REDIRECT } = require('../config/confApi')
-const { APP_NAME, PROD_API_SERVER, PROD_API_PREFIX, EXP_TIME } = require('../config/confSystem')
+import { SUFFIX_REDIRECT, URL_REDIRECT } from '../config/confApi.js'
+import { APP_NAME, EXP_TIME, PROD_API_PREFIX, PROD_API_SERVER } from '../config/confSystem.js'
+import { beautify, nowEpochS } from '../utils/jsUtils.js'
+import { logD, logV, logW } from '../utils/logging.js'
 
-const {
-  forgeToken,
-  createRudiApiToken,
-  JWT_SUB,
+import { AUTH, HEADERS } from '../config/headers.js'
+import { BadRequestError, createRudiHttpError } from '../utils/errors.js'
+import {
+  JWT_CLIENT,
   JWT_EXP,
   JWT_ID,
-  JWT_CLIENT,
+  JWT_SUB,
   REQ_MTD,
   REQ_URL,
-} = require('./jwtController')
-const { createRudiHttpError, BadRequestError } = require('../utils/errors')
-const { HEADERS, AUTH } = require('../config/headers')
+  createRudiApiToken,
+} from './jwtController.js'
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -37,94 +38,81 @@ const { HEADERS, AUTH } = require('../config/headers')
 // -----------------------------------------------------------------------------
 // Redirection controllers
 // -----------------------------------------------------------------------------
-exports.redirectReq = async (req, reply) => {
+export async function redirectReq(req, reply) {
   const fun = 'redirectReq'
   try {
-    log.v(mod, fun, `< ${URL_REDIRECT}/:${SUFFIX_REDIRECT}`)
+    logV(mod, fun, `< ${URL_REDIRECT}/:${SUFFIX_REDIRECT}`)
 
     // Extracting the parameters
-    const method = req.context.config.method
-    const url = req.raw.url
-    const redirectedUrlSuffix = req.raw.url.substring(URL_REDIRECT.length)
+    const method = req.context?.config?.method
+    const redirectedUrlSuffix = req.raw?.url?.substring(URL_REDIRECT.length)
     const body = req.body
-    log.d(mod, fun, beautify(req.raw.url))
-    log.d(mod, fun, beautify(redirectedUrlSuffix))
+    logD(mod, fun, beautify(req.raw?.url))
+    logD(mod, fun, beautify(redirectedUrlSuffix))
 
-    const redirectUrl = PROD_API_SERVER +  redirectedUrlSuffix
-    const partialUrl = '/' + PROD_API_PREFIX +  redirectedUrlSuffix
-    log.d(mod, fun, `redirected request: ${method} ${redirectUrl}`)
+    const redirectUrl = PROD_API_SERVER + redirectedUrlSuffix
+    const partialUrl = '/' + PROD_API_PREFIX + redirectedUrlSuffix
+    logD(mod, fun, `redirected request: ${method} ${redirectUrl}`)
 
     // log.d(mod, fun, `body: ${body}`)
 
     const subject = req[HEADERS][JWT_SUB] || APP_NAME
-    const clientId = req[HEADERS][JWT_CLIENT] || v4()
+    const clientId = req[HEADERS][JWT_CLIENT] || uuid4()
 
     // Forging the token with the final request
     const jwtPayload = {
       [JWT_EXP]: nowEpochS() + EXP_TIME,
-      [JWT_ID]: v4(),
+      [JWT_ID]: uuid4(),
       [JWT_SUB]: subject,
       [JWT_CLIENT]: clientId,
       [REQ_MTD]: method,
       [REQ_URL]: partialUrl,
     }
-    const jwt = createRudiApiToken(jwtPayload)
-    // log.d(mod, fun, `jwt: ${jwt}`)
 
     // Creating the header
     const reqOpts = {
       [HEADERS]: {
         'User-Agent': 'Rudi-Producer',
         'Content-Type': 'application/json',
-        [AUTH]: `Bearer ${jwt}`,
+        [AUTH]: `Bearer ${createRudiApiToken(jwtPayload)}`,
       },
     }
 
-    let answer
     try {
       switch (method) {
         case 'GET':
         case 'get':
-          // log.d(mod, fun, `reqOpts: ${beautify(reqOpts)}`)
-          const answer = await axios.get(redirectUrl, reqOpts)
-          // log.d(mod, fun, `answer: ${beautify(answer.data)}`)
-          return answer.data
+          return (await get(redirectUrl, reqOpts))?.data
         case 'DELETE':
         case 'delete':
         case 'DEL':
         case 'del':
-          answer = await axios.delete(redirectUrl, reqOpts)
-          // log.d(mod, fun, `answer: ${beautify(answer.data)}`)
-          return answer.data
+          return (await del(redirectUrl, reqOpts))?.data
         case 'POST':
         case 'post':
-          answer = await axios.post(redirectUrl, body, reqOpts)
-          // log.d(mod, fun, `answer: ${beautify(answer.data)}`)
-          return answer.data
+          return (await post(redirectUrl, body, reqOpts))?.data
         case 'PUT':
         case 'put':
-          answer = await axios.put(redirectUrl, body, reqOpts)
-          // log.d(mod, fun, `answer: ${beautify(answer.data)}`)
-          return answer.data
-
+          return (await put(redirectUrl, body, reqOpts))?.data
         default:
           throw new BadRequestError(`Method unkown: ${method}`)
       }
     } catch (err) {
-      if (err.response && err.response.data) {
-        const errData = err.response ? err.response.data : err
-        log.w(mod, fun, `Error sending request ${method} ${redirectedUrlSuffix}: ${beautify(errData)}`)
-        const rudiHttpError  = createRudiHttpError(errData.statusCode, errData.message)
-        throw rudiHttpError
+      if (err.response?.data) {
+        const errData = err.response.data || err
+        logW(
+          mod,
+          fun,
+          `Error sending request ${method} ${redirectedUrlSuffix}: ${beautify(errData)}`
+        )
+        throw createRudiHttpError(errData.statusCode, errData.message)
       } else {
-        log.w(mod, fun, `Error sending request ${method} ${redirectedUrlSuffix}: ${err}`)
+        logW(mod, fun, `Error sending request ${method} ${redirectedUrlSuffix}: ${err}`)
         throw err
       }
     }
-
-    return 'ok'
   } catch (err) {
-    log.w(mod, fun, err)
+    logW(mod, fun, err)
     throw err
   }
 }
@@ -132,4 +120,3 @@ exports.redirectReq = async (req, reply) => {
 // -----------------------------------------------------------------------------
 // Helper functions
 // -----------------------------------------------------------------------------
-async function redirect(httpMethod, urlSuffix, body) {}

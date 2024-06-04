@@ -18,107 +18,108 @@ const { pick } = _
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  DB_ID,
-  API_METADATA_ID,
-  API_ORGANIZATION_ID,
+  API_ACCESS_CONDITION,
   API_CONTACT_ID,
-  API_DATA_PRODUCER_PROPERTY,
   API_DATA_CONTACTS_PROPERTY,
-  API_MEDIA_PROPERTY,
-  API_METAINFO_PROPERTY,
-  API_METAINFO_PROVIDER_PROPERTY,
-  API_METAINFO_CONTACTS_PROPERTY,
-  API_GEOGRAPHY,
-  API_GEO_GEOJSON_PROPERTY,
-  API_GEO_BBOX_PROPERTY,
-  API_GEO_BBOX_WEST,
-  API_GEO_BBOX_EAST,
-  API_GEO_BBOX_NORTH,
-  API_GEO_BBOX_SOUTH,
-  API_MEDIA_ID,
-  API_PURPOSE,
-  API_LANGUAGES_PROPERTY,
   API_DATA_DESCRIPTION_PROPERTY,
   API_DATA_DETAILS_PROPERTY,
-  DB_CREATED_AT,
-  DB_UPDATED_AT,
-  DICT_LANG,
+  API_DATA_PRODUCER_PROPERTY,
   API_FILE_STATUS_UPDATE,
   API_FILE_STORAGE_STATUS,
-  API_STORAGE_STATUS,
-  API_METAINFO_VERSION_PROPERTY,
-  API_MEDIA_TYPE,
+  API_GEO_BBOX_EAST,
+  API_GEO_BBOX_NORTH,
+  API_GEO_BBOX_PROPERTY,
+  API_GEO_BBOX_SOUTH,
+  API_GEO_BBOX_WEST,
+  API_GEO_GEOJSON_PROPERTY,
+  API_GEOGRAPHY,
   API_INTEGRATION_ERROR_ID,
-  API_ACCESS_CONDITION,
+  API_LANGUAGES_PROPERTY,
   API_LICENCE,
-  API_LICENCE_TYPE,
-  LicenceTypes,
-  API_LICENCE_CUSTOM_URI,
   API_LICENCE_CUSTOM_LABEL,
+  API_LICENCE_CUSTOM_URI,
+  API_LICENCE_TYPE,
+  API_MEDIA_ID,
+  API_MEDIA_PROPERTY,
+  API_MEDIA_TYPE,
+  API_METADATA_ID,
+  API_METAINFO_CONTACTS_PROPERTY,
+  API_METAINFO_PROPERTY,
+  API_METAINFO_PROVIDER_PROPERTY,
+  API_METAINFO_VERSION_PROPERTY,
+  API_ORGANIZATION_ID,
+  API_PURPOSE,
+  API_STATUS_PROPERTY,
+  API_STORAGE_STATUS,
+  DB_CREATED_AT,
+  DB_ID,
+  DB_UPDATED_AT,
+  DICT_LANG,
+  LicenceTypes,
 } from '../db/dbFields.js'
 
 import {
-  URL_PREFIX_PUBLIC,
-  URL_PUB_METADATA,
-  OBJ_METADATA,
-  OBJ_MEDIA,
-  PARAM_ID,
   ACT_INIT,
-  MONGO_ERROR,
-  QUERY_FIELDS,
+  API_VERSION,
   COUNT_LABEL,
   LIST_LABEL,
+  MONGO_ERROR,
+  OBJ_MEDIA,
+  OBJ_METADATA,
+  PARAM_ID,
+  QUERY_COUNT_BY,
+  QUERY_FIELDS,
+  QUERY_FILTER,
   QUERY_LIMIT,
   QUERY_OFFSET,
-  QUERY_SORT_BY,
-  QUERY_FILTER,
   QUERY_SEARCH_TERMS,
-  QUERY_COUNT_BY,
+  QUERY_SORT_BY,
   STATUS_CODE,
-  API_VERSION,
-} from '../config/confApi.js'
+  URL_PREFIX_PUBLIC,
+  URL_PUB_METADATA,
+} from '../config/constApi.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
+import {
+  BadRequestError,
+  InternalServerError,
+  NotFoundError,
+  ObjectNotFoundError,
+  ParameterExpectedError,
+  RudiError,
+} from '../utils/errors.js'
 import { bboxToGeoJsonPolygon } from '../utils/geo.js'
+import { accessProperty, accessReqParam } from '../utils/jsonAccess.js'
 import {
   beautify,
   deepClone,
-  isNotEmptyArray,
   isEmptyArray,
+  isNotEmptyArray,
   isNothing,
   nowISO,
 } from '../utils/jsUtils.js'
-import { logD, logE, logI, logT, logW } from '../utils/logging.js'
+import { logD, logE, logI, logT, logV, logW } from '../utils/logging.js'
 import {
   contactNotFound,
   missingObjectProperty,
   organizationNotFound,
   parameterExpected,
 } from '../utils/msg.js'
-import {
-  NotFoundError,
-  BadRequestError,
-  InternalServerError,
-  ParameterExpectedError,
-  ObjectNotFoundError,
-  RudiError,
-} from '../utils/errors.js'
-import { accessProperty, accessReqParam } from '../utils/jsonAccess.js'
 
 // -------------------------------------------------------------------------------------------------
 // Data models
 // -------------------------------------------------------------------------------------------------
-import { isEveryMediaAvailable, Metadata } from '../definitions/models/Metadata.js'
 import { Media, MediaStorageStatus, MediaTypes } from '../definitions/models/Media.js'
+import { isEveryMediaAvailable, Metadata } from '../definitions/models/Metadata.js'
 
 // -------------------------------------------------------------------------------------------------
 // Controllers
 // -------------------------------------------------------------------------------------------------
-import { newOrganization } from './organizationController.js'
 import { newContact } from './contactController.js'
 import { initializeLicences } from './licenceController.js'
+import { newOrganization } from './organizationController.js'
 import { sendMetadataToPortal } from './portalController.js'
 
 import { CallContext } from '../definitions/constructors/callContext.js'
@@ -127,25 +128,27 @@ import Themes from '../definitions/thesaurus/Themes.js'
 import {
   doesObjectExistWithRudiId,
   getContactDbIdWithJson,
+  getDbObjectList,
+  getDbObjectListAndCount,
   getEnsuredContactWithDbId,
   getEnsuredMediaWithDbId,
   getEnsuredMetadataWithRudiId,
   getEnsuredOrganizationWithDbId,
   getMediaDbIdWithJson,
-  getDbObjectListAndCount,
+  getMetadataWithJson,
+  getObjectWithRudiId,
   getOrganizationDbIdWithJson,
   listThemesInMetadata,
   overwriteDbObject,
   searchDbObjects,
-  getObjectWithRudiId,
-  getMetadataWithJson,
 } from '../db/dbQueries.js'
 
-import { parseQueryParameters } from '../utils/parseRequest.js'
-import { readJsonFile } from '../utils/fileActions.js'
+import { isPortalConnectionDisabled, NO_PORTAL_MSG } from '../config/confPortal.js'
 import Contact from '../definitions/models/Contact.js'
 import Organization from '../definitions/models/Organization.js'
 import { StorageStatus } from '../definitions/thesaurus/StorageStatus.js'
+import { readJsonFile } from '../utils/fileActions.js'
+import { parseQueryParameters } from '../utils/parseRequest.js'
 
 // -------------------------------------------------------------------------------------------------
 // Atomic treatments of properties: RUDI -> DB
@@ -154,7 +157,7 @@ import { StorageStatus } from '../definitions/thesaurus/StorageStatus.js'
 export const organizationRudiToDbFormat = async (rudiProducer, path, shouldCreateIfNotFound) => {
   const fun = 'organizationRudiToDbFormat'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     if (!rudiProducer) throw new ParameterExpectedError('rudiProducer', mod, fun)
     let organizationDbId
     try {
@@ -163,7 +166,7 @@ export const organizationRudiToDbFormat = async (rudiProducer, path, shouldCreat
       if (e[STATUS_CODE] === 400) throw new BadRequestError(e.message, mod, 'org.get', path)
       throw e
     }
-    // logD(mod, fun, `organizationDbId: -> ${organizationDbId} `)
+    logD(mod, fun, `organizationDbId: -> ${organizationDbId} `)
 
     if (!organizationDbId) {
       if (!shouldCreateIfNotFound) {
@@ -190,7 +193,7 @@ export const organizationRudiToDbFormat = async (rudiProducer, path, shouldCreat
 export const contactListRudiToDbFormat = async (rudiContactList, path, shouldCreateIfNotFound) => {
   const fun = 'contactListRudiToDbFormat'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     if (!rudiContactList) throw new ParameterExpectedError('rudiContactList', mod, fun)
 
     const contactDbIds = []
@@ -234,7 +237,7 @@ export const contactListRudiToDbFormat = async (rudiContactList, path, shouldCre
 export const mediaListRudiToDbFormat = async (rudiMediaList, shouldCreateIfNotFound) => {
   const fun = 'mediaListRudiToDbFormat'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // logD(mod, fun, `rudiMediaList: ${beautify(rudiMediaList)}`)
     if (!rudiMediaList) throw new ParameterExpectedError('rudiMediaList', mod, fun)
 
@@ -309,66 +312,30 @@ export const mediaListRudiToDbFormat = async (rudiMediaList, shouldCreateIfNotFo
   }
 }
 
-// function customMerger(value, srcValue, key) {
-//   const fun = 'customMerger'
-//   logV(mod, fun, `'${key}': ${beautify(srcValue)} -> ${beautify(value)}`)
-//   if (Array.isArray(srcValue)) return srcValue
-//   return undefined
-// }
-
-// // Parameter 'dbMetadata' gets mutated!
-// async function metadataCustomMerge(dbMetadata, dbReadyModMetadata) {
-//   const fun = 'metadataCustomMerge'
-//   logT(mod, fun, ``)
-//   // logD(mod, fun, `dbMetadata: ${beautify(dbMetadata)}`)
-
-//   //   const dataDates = dbMetadata[API_DATA_DATES_PROPERTY]
-//   //   const metaDates = dbMetadata[API_METAINFO_PROPERTY][API_METAINFO_DATES_PROPERTY]
-//   //  const modDataDates = dbReadyModMetadata[API_DATA_DATES_PROPERTY]
-//   //   const modMetaDates = !dbReadyModMetadata[API_METAINFO_PROPERTY]
-//   //     ? {}
-//   //     : dbReadyModMetadata[API_METAINFO_PROPERTY][API_METAINFO_DATES_PROPERTY]
-
-//   //   _.extend(dataDates, modDataDates)
-//   //   _.extend(metaDates, modMetaDates)
-
-//   await mergeWith(dbMetadata, dbReadyModMetadata, customMerger)
-
-//   // dbMetadata[API_DATA_DATES_PROPERTY] = dataDates
-//   // dbMetadata[API_METAINFO_PROPERTY][API_METAINFO_DATES_PROPERTY] = metaDates
-
-//   // logD(mod, fun, `dbMetadata updated: ${beautify(dbMetadata)}`)
-//   return dbMetadata
-// }
-
 // -------------------------------------------------------------------------------------------------
 // Atomic treatments of properties: DB -> RUDI
 // -------------------------------------------------------------------------------------------------
 
 export const organizationDbToRudiFormat = async (producerDbId) => {
   const fun = 'organizationDbToRudiFormat'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   if (!producerDbId) throw new ParameterExpectedError('producerDbId', mod, fun)
 
   const dbOrganization = await getEnsuredOrganizationWithDbId(producerDbId)
   logD(mod, fun, `dbOrganization -> ${beautify(dbOrganization)}`)
-  // const cleanedOrganization = dbRwk.unmongoosify(dbOrganization)
-  // logD(mod, fun, `${producerDbId} -> ${beautify(cleanedOrganization)}`)
   return dbOrganization
 }
 
 export const contactListDbToRudiFormat = async (contactsDbIds) => {
   const fun = 'contactListDbToRudiFormat'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   logD(mod, fun, `contactsDbIds: ${beautify(contactsDbIds)}`)
   if (!contactsDbIds) throw new ParameterExpectedError('contactsDbIds', mod, fun)
 
   const contacts = []
   await Promise.all(
     contactsDbIds.map(async (contactDbId) => {
-      // logD(mod, fun, `contactDbId: ${contactDbId}`)
       const contact = await getEnsuredContactWithDbId(contactDbId)
-      // contacts.push(dbRwk.unmongoosify(contact))
       contacts.push(contact)
       logD(mod, fun, `${contactDbId} -> ${beautify(contact)}`)
     })
@@ -378,16 +345,14 @@ export const contactListDbToRudiFormat = async (contactsDbIds) => {
 
 export const mediaListDbToRudiFormat = async (mediaDbIds) => {
   const fun = 'mediaListDbToRudiFormat'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   logD(mod, fun, `mediaDbIds: ${beautify(mediaDbIds)}`)
   if (!mediaDbIds) throw new ParameterExpectedError('mediaDbIds', mod, fun)
 
   const mediaList = []
   await Promise.all(
     mediaDbIds.map(async (mediaDbId) => {
-      // logD(mod, fun, `contactDbId: ${contactDbId}`)
       const dbMedia = await getEnsuredMediaWithDbId(mediaDbId)
-      // contacts.push(dbRwk.unmongoosify(contact))
       mediaList.push(dbMedia)
       logD(mod, fun, `${mediaDbId} -> ${beautify(dbMedia)}`)
     })
@@ -411,7 +376,7 @@ const SHOULD_CREATE_IF_NOT_FOUND = true
  */
 export const rudiToDbFormat = async (rudiMetadata, shouldBeStrict, shouldClone) => {
   const fun = 'rudiToDbFormat'
-  logT(mod, fun, ``)
+  logT(mod, fun)
 
   if (!rudiMetadata) throw new InternalServerError(parameterExpected(fun, 'rudiMetadata'))
 
@@ -553,24 +518,24 @@ export const rudiToDbFormat = async (rudiMetadata, shouldBeStrict, shouldClone) 
   }
 }
 function checkLicence(metadata) {
-  if (!metadata[API_ACCESS_CONDITION] || !metadata[API_ACCESS_CONDITION][API_LICENCE]) return
-  if (!metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_TYPE]) return
+  if (!metadata?.[API_ACCESS_CONDITION]?.[API_LICENCE]?.[API_LICENCE_TYPE]) return
   const licenceType = metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_TYPE]
   if (licenceType === LicenceTypes.Standard) {
     delete metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_URI]
     delete metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL]
-  } else {
-    if (typeof metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] === 'string')
-      metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] = [
-        { lang: 'fr', text: metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] },
-      ]
+  } else if (
+    typeof metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] === 'string'
+  ) {
+    metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] = [
+      { lang: 'fr', text: metadata[API_ACCESS_CONDITION][API_LICENCE][API_LICENCE_CUSTOM_LABEL] },
+    ]
   }
 }
 
 function stripTimestamps(metadata) {
   const fun = 'stripTimestamps'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     metadata[DB_CREATED_AT] = undefined
     metadata[DB_UPDATED_AT] = undefined
   } catch (err) {
@@ -580,13 +545,13 @@ function stripTimestamps(metadata) {
 function toMDBLanguage(metadata, field) {
   const fun = 'toMDBLanguage'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const prop = metadata[field]
     if (!Array.isArray(prop)) {
       logW(mod, fun, `Field '${field}' should be an array: ${beautify(prop)}`)
       return
     }
-    prop.map((entry) => {
+    prop.forEach((entry) => {
       if (entry[DICT_LANG]) entry[DICT_LANG] = entry[DICT_LANG].substring(0, 2)
     })
   } catch (err) {
@@ -607,7 +572,7 @@ function toMDBLanguage(metadata, field) {
  */
 export const setGeography = (metadata) => {
   const fun = 'setGeography'
-  // logT(mod, fun, ``)
+  // logT(mod, fun)
   const geography = metadata[API_GEOGRAPHY]
   if (isNothing(geography)) {
     // No 'geography' property => exit
@@ -678,7 +643,7 @@ export const setGeography = (metadata) => {
 export const upsertMetadata = async (rudiMetadata) => {
   const fun = 'upsertMetadata'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const rudiId = accessProperty(rudiMetadata, API_METADATA_ID)
     const existsMetadata = await doesObjectExistWithRudiId(OBJ_METADATA, rudiId)
 
@@ -696,17 +661,18 @@ export const upsertMetadata = async (rudiMetadata) => {
 export const newMetadata = async (rudiMetadata) => {
   const fun = 'newMetadata'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // logD(mod, fun, `incoming object: ${beautify(rudiMetadata)}`)
     if (!rudiMetadata) throw new ParameterExpectedError('rudiMetadata', mod, fun)
 
     // Special treatment!
     const dbReadyObject = await rudiToDbFormat(rudiMetadata, true)
-    // logI(mod, fun, `dbReadyObject: ${beautify(dbReadyObject)}`)
+    logI(mod, fun, `dbReadyObject: ${beautify(dbReadyObject)}`)
     const dbMetadata = new Metadata(dbReadyObject)
     await dbMetadata.save()
 
-    const { metadata: finalMetadata, areAllMediaAvailable } = await updateMetadataState(dbMetadata)
+    const { metadata: finalMetadata, areAllMediaAvailable } =
+      await updateMetadataStorageState(dbMetadata)
 
     logI(mod, fun, `finalMetadata: ${beautify(finalMetadata)}`)
     if (areAllMediaAvailable) sendToPortal(finalMetadata)
@@ -721,7 +687,7 @@ export const newMetadata = async (rudiMetadata) => {
 export const overwriteMetadata = async (incomingRudiMetadata) => {
   const fun = 'overwriteMetadata'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     if (!incomingRudiMetadata) throw new ParameterExpectedError('incomingRudiMetadata', mod, fun)
     // logD(mod, fun, `edited metadata: ${beautify(incomingRudiMetadata)}\n`)
@@ -729,7 +695,8 @@ export const overwriteMetadata = async (incomingRudiMetadata) => {
     const dbReadyEditedMetadata = await rudiToDbFormat(incomingRudiMetadata, true)
     const dbMetadata = await overwriteDbObject(OBJ_METADATA, dbReadyEditedMetadata)
 
-    const { metadata: finalMetadata, areAllMediaAvailable } = await updateMetadataState(dbMetadata)
+    const { metadata: finalMetadata, areAllMediaAvailable } =
+      await updateMetadataStorageState(dbMetadata)
     if (areAllMediaAvailable) sendToPortal(finalMetadata)
 
     return finalMetadata
@@ -747,34 +714,29 @@ export const overwriteMetadata = async (incomingRudiMetadata) => {
  * @param {string?} newState
  * @return {Boolean} True if all media were commited and metadata can be sent to Portal
  */
-const updateMetadataState = async (dbMetadata, newState = StorageStatus.Online) => {
-  const fun = 'updateMetadataState'
+const updateMetadataStorageState = async (dbMetadata, newState = StorageStatus.Online) => {
+  const fun = 'updateMetadataStorageState'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const metadata = await getMetadataWithJson(dbMetadata)
 
-    const areAllMediaAvailable = await isEveryMediaAvailable(metadata)
+    const areAllMediaAvailable = isEveryMediaAvailable(metadata)
     if (areAllMediaAvailable) {
       metadata[API_STORAGE_STATUS] = newState
     } else {
       metadata[API_STORAGE_STATUS] = StorageStatus.Pending
     }
-    // console.log('T (updateMetadataState) API_STORAGE_STATUS:', metadata[API_STORAGE_STATUS])
     if (dbMetadata[API_STORAGE_STATUS] !== metadata[API_STORAGE_STATUS]) {
       dbMetadata[API_STORAGE_STATUS] = metadata[API_STORAGE_STATUS]
       if (!dbMetadata[API_INTEGRATION_ERROR_ID]) await dbMetadata.save()
     }
     if (metadata[API_INTEGRATION_ERROR_ID]) {
       delete metadata[API_INTEGRATION_ERROR_ID]
-      dbMetadata[API_INTEGRATION_ERROR_ID] = null
       await dbMetadata.save()
       logD(mod, fun, 'Integration error flag removed')
     }
-    logD(
-      mod,
-      fun,
-      `Metadata is ${areAllMediaAvailable ? '' : 'not '}sendable: ${dbMetadata[API_METADATA_ID]}`
-    )
+    const msg = `Metadata is ${areAllMediaAvailable ? '' : 'not '}sendable: ${dbMetadata[API_METADATA_ID]}`
+    logD(mod, fun, msg)
     return { metadata, areAllMediaAvailable } // OK to send
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
@@ -790,7 +752,7 @@ const updateMetadataState = async (dbMetadata, newState = StorageStatus.Online) 
 export const commitMedia = async (req, res) => {
   const fun = 'commitMedia'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const mediaId = accessReqParam(req, PARAM_ID)
     const { metadataId, commitId } = req.body
     logD(mod, fun, `commitId: ${commitId}`)
@@ -816,7 +778,8 @@ export const commitMedia = async (req, res) => {
 
     await dbMedia.save()
 
-    const { metadata: finalMetadata, areAllMediaAvailable } = await updateMetadataState(dbMetadata)
+    const { metadata: finalMetadata, areAllMediaAvailable } =
+      await updateMetadataStorageState(dbMetadata)
 
     const result = {
       media: pick(dbMedia, [API_MEDIA_ID, API_FILE_STORAGE_STATUS, API_FILE_STATUS_UPDATE]),
@@ -844,7 +807,8 @@ export const commitMedia = async (req, res) => {
 export const sendManyMetadataToPortal = async (req) => {
   const fun = 'sendAllMetadataToPortal'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
+    if (isPortalConnectionDisabled()) return NO_PORTAL_MSG
     const listIds = req.body
 
     if (!!listIds && !Array.isArray(listIds)) {
@@ -876,7 +840,7 @@ export const sendManyMetadataToPortal = async (req) => {
     } else {
       listIds.map((id) =>
         sendMetadataToPortal(id).then((res) => {
-          if (res) logI(mod, fun, `'Update request received by the portal for metadata '${id}'`)
+          if (res) logI(mod, fun, `Update request received by the portal for metadata '${id}'`)
         })
       )
     }
@@ -893,7 +857,7 @@ export const sendToPortal = (metadata) => {
     logT(mod, fun, `${metaId}`)
     return sendMetadataToPortal(metaId)
       .then((res) => {
-        if (res) logI(mod, fun, `'Update request received by the portal for metadata '${metaId}'`)
+        if (res) logI(mod, fun, `Update request received by the portal for metadata '${metaId}'`)
       })
       .catch((err) => logE(mod, fun, `Sending to portal failed for metadata '${metaId}': ${err}`))
     // logV(mod, fun, `Sent request to portal: ${metaId}`)
@@ -905,7 +869,7 @@ export const sendToPortal = (metadata) => {
 export const searchMetadata = async (req, reply) => {
   const fun = 'searchMetadata'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     let parsedParameters
     try {
@@ -1006,20 +970,15 @@ export const getSingleMetadata = async (req, reply) => {
 }
 
 /**
- * Reinit themes with stored data values for this field
+ * Reinitialize themes with stored data values for this field
  */
 export const initThemes = async (req, reply) => {
   const fun = 'initThemes'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const valuesInStoredData = await listThemesInMetadata()
     logD(mod, fun, beautify(valuesInStoredData))
-    await Promise.all(
-      valuesInStoredData.map((val) => {
-        logD(mod, fun, val)
-        Themes.isValid(val, true)
-      })
-    )
+    await Promise.all(valuesInStoredData.map((val) => Themes.isValid(val, true)))
     return valuesInStoredData
   } catch (err) {
     const error = err.name === MONGO_ERROR ? new BadRequestError(err) : new NotFoundError(error)
@@ -1032,4 +991,19 @@ export const setFlagIntegrationKO = async (metadata, reportId) => {
   await metadata.save()
   // metadata = await getObjectWithJson(OBJ_METADATA, metadata)
   // return metadata
+}
+
+export const updateAllMetadataStatus = async (req, reply) => {
+  const fun = 'updateAllMetadataStatus'
+  const filter = req?.query?.status == 'empty' ? { [API_STATUS_PROPERTY]: null } : {}
+  logI(mod, `${fun}.filter`, beautify(filter))
+  const metadataList = await getDbObjectList(OBJ_METADATA, { [QUERY_FILTER]: filter })
+  for (const metadata of metadataList) {
+    logI(mod, `${fun}.metadata`, metadata)
+    metadata.save().catch((err) => {
+      throw RudiError.treatError(mod, fun, err)
+    })
+    logV(mod, `${fun}.metadata`, metadata)
+  }
+  return { updated: metadataList.length }
 }

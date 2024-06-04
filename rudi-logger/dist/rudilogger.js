@@ -38,7 +38,7 @@ const CONFIG_FILENAME_ENV = 'RUDI_LOGGER_CONFIG';
 /**
  * A default and global variable pointing to the first logger created.
  */
-var g_logger = undefined;
+let g_logger;
 /*
   PRIVATE ENTERPRISE NUMBERS (last updated 2021-11-11)
   https://www.iana.org/assignments/enterprise-numbers/enterprise-numbers
@@ -108,12 +108,12 @@ class RudiLogger {
             throw new RudiLoggerException("Invalid domain (too short)");
         }
         this.domain = ROOT_DOMAIN + '/' + domain;
-        this.version = version ? version : '0.1';
+        this.version = version ?? '0.1';
         this.local = null;
         this.config = this._readConfiguration(config);
         const udom = domain.toUpperCase();
         this.messageIndex = 0;
-        this.msgidPrefix = 'RP' + udom[0] + udom[1] + udom[2] + (0, uuid_1.v4)().substr(0, 8) + '.';
+        this.msgidPrefix = 'RP' + udom[0] + udom[1] + udom[2] + (0, uuid_1.v4)().substring(0, 8) + '.';
         this.slclient = this._openSyslog();
         // Set a globally defined logger.
         if (g_logger === undefined)
@@ -125,9 +125,9 @@ class RudiLogger {
      * @returns {object}        - A dictionnary with the full configuration
      */
     _openConfiguration() {
-        var u_config = {};
+        let u_config = {};
         try {
-            var configFile = CONFIG_FILENAME;
+            let configFile = CONFIG_FILENAME;
             const envConfigFile = process.env[CONFIG_FILENAME_ENV];
             if (typeof envConfigFile !== 'undefined')
                 configFile = envConfigFile;
@@ -192,7 +192,7 @@ class RudiLogger {
             rfc3164: false,
             level: Severity.Debug
         };
-        var u_config = (config === undefined) ? this._openConfiguration() : config;
+        const u_config = (config === undefined) ? this._openConfiguration() : config;
         if ((typeof u_config.log_server) !== 'undefined') {
             const cfg = u_config.log_server;
             if ((typeof cfg.path) == 'string')
@@ -225,7 +225,7 @@ class RudiLogger {
      * @returns {syslog_Client}        - The syslog backend.
      */
     _openSyslog() {
-        var ipList = [];
+        const ipList = [];
         (0, interfaces_1.findInterfaces)(ipList);
         const data = { 'origin': {
                 'ip': ipList,
@@ -254,10 +254,7 @@ class RudiLogger {
         console.log('RudiLogger: ' + this.domain + ': error: ' + error);
     }
     _sysClose() {
-        var c = this;
-        setTimeout(() => {
-            c.notice('RudiLog closed', 'syslog');
-        }, 10000);
+        setTimeout(() => this.notice('RudiLog closed', 'syslog'), 10000);
     }
     /**
      * Creates a unique message ID.
@@ -269,7 +266,7 @@ class RudiLogger {
      */
     _buildId(cid) {
         this.messageIndex++;
-        var r = this.msgidPrefix + this.messageIndex;
+        let r = this.msgidPrefix + this.messageIndex;
         if (cid === undefined)
             r += Number(new Date());
         else
@@ -283,8 +280,8 @@ class RudiLogger {
      * @returns {object}      - A syslog context.
      */
     _getContext(context, raw) {
-        var auth = undefined;
-        var operation = undefined;
+        let auth;
+        let operation;
         if (context !== undefined && context !== null) {
             if (context.auth !== undefined) {
                 auth = {
@@ -301,9 +298,8 @@ class RudiLogger {
                 };
             }
         }
-        var content = raw;
-        //if (typeof raw !== 'object') content = JSON.stringify(raw);
-        return { auth: auth, operation: operation, content: content };
+        const content = raw;
+        return { auth, operation, content };
     }
     /**
      * The main log function.
@@ -361,7 +357,7 @@ class RudiLogger {
      * @param {number} ncount - The minimum number of ping to send.
      */
     ping(ncount) {
-        var count = 0;
+        let count = 0;
         const c = this;
         const logf = function (count, ncount) {
             count += 1;

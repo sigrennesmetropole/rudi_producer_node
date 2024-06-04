@@ -65,7 +65,7 @@ let longestOptName = 0
 let longestCliOpt = 0
 let longestEnvOpt = 0
 let longestText = 0
-Object.keys(OPTIONS).map((key) => {
+Object.keys(OPTIONS).forEach((key) => {
   longestOptName = Math.max([longestOptName, key.length])
   longestCliOpt = Math.max([longestCliOpt, OPTIONS[key].cli.length])
   longestEnvOpt = Math.max([longestEnvOpt, OPTIONS[key].env.length])
@@ -83,7 +83,7 @@ export const loadAppOptions = () => {
   console.log('\n' + SEP_LINE) ///////////////////////////////////////////////////////////////////////
 
   console.log(' Options to run this app: ')
-  Object.keys(OPTIONS).map((opt) =>
+  Object.keys(OPTIONS).forEach((opt) =>
     console.log(
       `    cli: ${OPTIONS[opt].cli.padEnd(longestCliOpt, ' ')}` +
         ` | env: ${OPTIONS[opt].env.padEnd(longestEnvOpt, ' ')}` +
@@ -95,8 +95,8 @@ export const loadAppOptions = () => {
   // Extract command line arguments
   // -------------------------------------------------------------------------------------------------
   const cliOptionsValues = {}
-  process.argv.map((cliArg) => {
-    Object.keys(OPTIONS).map((appOpt) => {
+  process.argv.forEach((cliArg) => {
+    Object.keys(OPTIONS).forEach((appOpt) => {
       const appOptForCli = OPTIONS[appOpt].cli + '='
       if (OPTIONS[appOpt].cli && cliArg.startsWith(appOptForCli))
         cliOptionsValues[appOpt] = cliArg.substring(appOptForCli.length)
@@ -107,7 +107,7 @@ export const loadAppOptions = () => {
   // Definitive conf values
   // -------------------------------------------------------------------------------------------------
   console.log(' Extracted conf values:')
-  Object.keys(OPTIONS).map((opt) => {
+  Object.keys(OPTIONS).forEach((opt) => {
     if (cliOptionsValues[opt]) {
       APP_OPTIONS[opt] = cliOptionsValues[opt]
       console.log('    (cli) ' + opt.padEnd(longestOptName) + ' => ' + APP_OPTIONS[opt])

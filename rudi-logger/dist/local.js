@@ -104,8 +104,8 @@ class LocalLogger {
      */
     _createLogFile() {
         const datestr = new Date().toLocaleString('fr', { timeZone: 'Europe/Paris' }).
-            replace(', ', '_').replace(/:/g, '.').replace(/([0-9]*)\/([0-9]*)\/([0-9]*)/g, '$3-$2-$1');
-        var logfilename = this.config.directory + this.config.prefix + datestr + '.jslog';
+            replace(', ', '_').replace(/:/g, '.').replace(/(\d*)\/(\d*)\/(\d*)/g, '$3-$2-$1');
+        const logfilename = this.config.directory + this.config.prefix + datestr + '.jslog';
         try {
             if (this.fdesc) {
                 this.fdesc.close();
@@ -123,8 +123,7 @@ class LocalLogger {
     _updateLogs() {
         this._createLogFile();
         this.log('Updating logging file...', { severity: syslog_1.Severity.Notice });
-        var _this = this;
-        setTimeout(function () { _this._updateLogs(); }, this.config.logRotationSec * 1000);
+        setTimeout(() => this._updateLogs(), this.config.logRotationSec * 1000);
     }
     /**
      * Generate header according to the severity.
@@ -136,34 +135,17 @@ class LocalLogger {
     _translate(severity, color) {
         if (severity === undefined)
             return '';
-        var header = '';
         switch (severity) {
-            case syslog_1.Severity.Emergency:
-                color ? header = 'EMERGENCY!'.emergency : header = 'emergency';
-                break;
-            case syslog_1.Severity.Alert:
-                color ? header = 'alert!'.alert : header = 'alert';
-                break;
-            case syslog_1.Severity.Critical:
-                color ? header = 'critical!'.critical : header = 'critical';
-                break;
-            case syslog_1.Severity.Error:
-                color ? header = 'error'.error : header = 'error';
-                break;
-            case syslog_1.Severity.Warning:
-                color ? header = 'warning'.warn : header = 'warning';
-                break;
-            case syslog_1.Severity.Notice:
-                color ? header = 'note'.notice : header = 'note';
-                break;
-            case syslog_1.Severity.Informational:
-                color ? header = 'info'.info : header = 'info';
-                break;
-            case syslog_1.Severity.Debug:
-                color ? header = 'debug'.debug : header = 'debug';
-                break;
+            case syslog_1.Severity.Emergency: return color ? 'EMERGENCY!'.emergency : 'emergency';
+            case syslog_1.Severity.Alert: return color ? 'alert!'.alert : 'alert';
+            case syslog_1.Severity.Critical: return color ? 'critical!'.critical : 'critical';
+            case syslog_1.Severity.Error: return color ? 'error'.error : 'error';
+            case syslog_1.Severity.Warning: return color ? 'warning'.warn : 'warning';
+            case syslog_1.Severity.Notice: return color ? 'note'.notice : 'note';
+            case syslog_1.Severity.Informational: return color ? 'info'.info : 'info';
+            case syslog_1.Severity.Debug: return color ? 'debug'.debug : 'debug';
+            default: return '';
         }
-        return header;
     }
     /**
      * Log a new message.
@@ -174,7 +156,7 @@ class LocalLogger {
     log(message, options) {
         const date = new Date();
         const datestr = date.toLocaleString('fr');
-        options = (options === undefined) ? {} : options;
+        options = options ?? {};
         if (this.fdesc) {
             const datalog = {
                 date: date,
@@ -224,20 +206,20 @@ class LocalLogger {
         }
         /* Simply loop over all files in the directory, and create a JSON description
          */
-        var entries = [];
+        let entries = [];
         try {
             const dir = fs.opendirSync(this.config.directory);
             this.log("Open dir " + dir.path, { severity: syslog_1.Severity.Debug });
-            var dirent;
+            let dirent;
             while (dirent = dir.readSync()) {
-                var n = dirent.name;
+                const n = dirent.name;
                 this.log(n, { severity: syslog_1.Severity.Debug });
-                var fst = fs.statSync(this.config.directory + n);
-                var url = req.protocol + '://' + req.hostname + req.originalUrl;
-                if (url.substr(url.length - 1) != '/')
+                const fst = fs.statSync(this.config.directory + n);
+                let url = req.protocol + '://' + req.hostname + req.originalUrl;
+                if (!url.endsWith('/'))
                     url += '/';
-                if (n.match(this.myLogRe) && fst.size > 0) {
-                    var e = { 'date': fst.ctime, 'size': fst.size, 'name': n, 'url': url + n };
+                if (RegExp(this.myLogRe).exec(n) && fst.size > 0) {
+                    const e = { 'date': fst.ctime, 'size': fst.size, 'name': n, 'url': url + n };
                     entries.push(e);
                 }
             }
@@ -247,9 +229,8 @@ class LocalLogger {
             this.log("Could not open log dir: " + err, { severity: syslog_1.Severity.Warning });
         }
         ;
-        entries = entries.sort(function (a, b) { return (a.date > b.date) ? 1 : (a.date < b.date) ? -1 : 0; });
-        var directories = { entries: entries };
-        res.send(directories);
+        entries.sort((a, b) => (a.date > b.date) ? 1 : (a.date < b.date) ? -1 : 0);
+        res.send({ entries });
     }
     /**
      * Serves the content of a log file from in the log directory in Json.
@@ -267,26 +248,24 @@ class LocalLogger {
             res.status(401).send('Read access not set for user (' + user + ':' + access + ')');
             return;
         }
-        var content = {};
-        var fname = req.params.name;
+        let content = {};
+        const fname = req.params.name;
         this.log("Request file " + fname, { severity: syslog_1.Severity.Debug });
         try {
             if (!fname.match(this.myLogRe)) {
                 content = "{ 'error': 'incorrect file name', 'filename':'" + fname + "' }";
             }
             else {
-                var pathname = this.config.directory + fname;
-                var fdat = fs.readFileSync(pathname, "utf8");
-                var elist = [];
-                var flist = fdat.split('\n');
-                for (var index in flist) {
-                    var line = flist[index];
+                const pathname = this.config.directory + fname;
+                const fdat = fs.readFileSync(pathname, "utf8");
+                const elist = [];
+                const flist = fdat.split('\n');
+                for (const index in flist) {
+                    const line = flist[index];
                     if (line == "{" || line == "")
                         continue;
                     try {
-                        var entry = JSON.parse(line);
-                        //if ('message' in entry) entry = entry['message'];
-                        //if ('level' in entry) delete entry['level'];
+                        const entry = JSON.parse(line);
                         elist.push(entry);
                     }
                     catch (err) {

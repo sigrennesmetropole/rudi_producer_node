@@ -4,15 +4,15 @@ const mod = 'sysConf'
 // -----------------------------------------------------------------------------
 // External dependecies
 // -----------------------------------------------------------------------------
-require('winston')
+import 'winston'
 
 // -----------------------------------------------------------------------------
 // Internal dependecies
 // -----------------------------------------------------------------------------
-const fa = require('../utils/fileActions')
-const utils = require('../utils/jsUtils')
+import { readIniFile } from '../utils/fileActions.js'
+import { NOT_FOUND, consoleLog, quietAccess, separateLogs } from '../utils/jsUtils.js'
 
-utils.separateLogs()
+separateLogs()
 
 // -----------------------------------------------------------------------------
 // Constants: local ini file configuration settings
@@ -57,7 +57,7 @@ const _expires = 'expires'
 const SECURITY_SECTION = 'security'
 const _profiles = 'profiles'
 const _expTime = 'exp_time'
-exports.DEFAULT_EXP = 6000
+export const DEFAULT_EXP = 6000
 
 // -----------------------------------------------------------------------------
 // Constants: user and local configuration
@@ -65,8 +65,8 @@ exports.DEFAULT_EXP = 6000
 // Getting user conf file value
 // if null, local conf file value
 // if null , default value
-const USER_CONF = fa.readIniFile(userConfFile)
-const LOCAL_CONF = fa.readIniFile(defConfFile)
+const USER_CONF = readIniFile(userConfFile)
+const LOCAL_CONF = readIniFile(defConfFile)
 
 // -----------------------------------------------------------------------------
 // Helper functions
@@ -77,63 +77,48 @@ const LOCAL_CONF = fa.readIniFile(defConfFile)
 //    if null get local conf file value
 //    if null get default value
 function getIniValue(section, field) {
-  const userValue = utils.quietAccess(USER_CONF[section], field)
-  const localValue = utils.quietAccess(LOCAL_CONF[section], field)
+  const userValue = quietAccess(USER_CONF[section], field)
+  const localValue = quietAccess(LOCAL_CONF[section], field)
 
-  if (userValue != utils.NOT_FOUND) return userValue
-  if (localValue != utils.NOT_FOUND) return localValue
-  return utils.NOT_FOUND
+  if (userValue != NOT_FOUND) return userValue
+  if (localValue != NOT_FOUND) return localValue
+  return NOT_FOUND
 }
 
-// -----------------------------------------------------------------------------
-// Extracting and exporting sys configuration
-// -----------------------------------------------------------------------------
-
-// Server
-exports.LISTENING_ADDR = getIniValue(SERVER_SECTION, _serverAddress)
-exports.LISTENING_PORT = getIniValue(SERVER_SECTION, _serverPort)
+export const LISTENING_ADDR = getIniValue(SERVER_SECTION, _serverAddress)
+export const LISTENING_PORT = getIniValue(SERVER_SECTION, _serverPort)
 
 // RUDI API server
 const PROD_API_ADDR = getIniValue(PROD_API_SECTION, _prodApiAddress)
 const PROD_API_PORT = getIniValue(PROD_API_SECTION, _prodApiPort)
-exports.PROD_API_PREFIX = getIniValue(PROD_API_SECTION, _prodApiSuffix)
-exports.PROD_API_SERVER = 'http://' + PROD_API_ADDR + ':' + PROD_API_PORT + '/' + this.PROD_API_PREFIX
+export const PROD_API_PREFIX = getIniValue(PROD_API_SECTION, _prodApiSuffix)
+export const PROD_API_SERVER =
+  'http://' + PROD_API_ADDR + ':' + PROD_API_PORT + '/' + PROD_API_PREFIX
 
-// DB
-exports.DB_NAME = getIniValue(DB_SECTION, _dbName)
+export const DB_NAME = getIniValue(DB_SECTION, _dbName)
 const DB_URL_PREFIX = getIniValue(DB_SECTION, _dbUrl)
-exports.DB_URL = `${DB_URL_PREFIX}${this.DB_NAME}`
+export const DB_URL = `${DB_URL_PREFIX}${DB_NAME}`
 
-// Logs
-exports.APP_NAME = getIniValue(LOG_SECTION, _appName)
-exports.LOG_DIR = getIniValue(LOG_SECTION, _logDir)
-exports.LOG_FILE = getIniValue(LOG_SECTION, _logFileName)
-exports.OUT_LOG = `${this.LOG_DIR}/${this.LOG_FILE}`
-exports.SYMLINK_NAME = `${this.APP_NAME}-current.log`
-exports.LOG_LVL = getIniValue(LOG_SECTION, _logLevel)
-exports.LOG_EXP = getIniValue(LOG_SECTION, _expires)
+export const APP_NAME = getIniValue(LOG_SECTION, _appName)
+export const LOG_DIR = getIniValue(LOG_SECTION, _logDir)
+export const LOG_FILE = getIniValue(LOG_SECTION, _logFileName)
+export const OUT_LOG = `${LOG_DIR}/${LOG_FILE}`
+export const SYMLINK_NAME = `${APP_NAME}-current.log`
+export const LOG_LVL = getIniValue(LOG_SECTION, _logLevel)
+export const LOG_EXP = getIniValue(LOG_SECTION, _expires)
 
 // Security
 const profileList = getIniValue(SECURITY_SECTION, _profiles)
-exports.PROFILES = fa.readIniFile(profileList)
-exports.EXP_TIME = getIniValue(SECURITY_SECTION, _expTime) || this.DEFAULT_EXP
+export const PROFILES = readIniFile(profileList)
+export const EXP_TIME = getIniValue(SECURITY_SECTION, _expTime) || DEFAULT_EXP
 
-exports.PUB_KEY = 'pub_key'
-exports.PRV_KEY = 'prv_key'
+export const PUB_KEY = 'pub_key'
+export const PRV_KEY = 'prv_key'
 
 const fun = 'export'
-// const now = utils.nowLocaleFormatted()
 
-utils.consoleLog(mod, fun, `APP_NAME: ${this.APP_NAME}`)
-utils.consoleLog(mod, fun, `LISTENING_ADDR: ${this.LISTENING_ADDR}`)
-utils.consoleLog(mod, fun, `LISTENING_PORT: ${this.LISTENING_PORT}`)
-// utils.consoleLog(mod, fun, `OUT_LOG: ${this.OUT_LOG}`)
-// utils.consoleLog(mod, fun, `LOG_LVL: ${this.LOG_LVL}`)
-// utils.consoleLog(mod, fun, `LOG_EXP: ${this.LOG_EXP}`)
-// utils.consoleLog(mod, fun, `DB_NAME: ${this.DB_NAME}`)
-// utils.consoleLog(mod, fun, `DB_URL: ${this.DB_URL}`)
+consoleLog(mod, fun, `APP_NAME: ${APP_NAME}`)
+consoleLog(mod, fun, `LISTENING_ADDR: ${LISTENING_ADDR}`)
+consoleLog(mod, fun, `LISTENING_PORT: ${LISTENING_PORT}`)
 
-// console.log('OPTION: '+util.inspect(exports));
-
-exports.getHost = () => `http://${this.LISTENING_ADDR}:${this.LISTENING_PORT}`
-
+export const getHost = () => `http://${LISTENING_ADDR}:${LISTENING_PORT}`

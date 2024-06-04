@@ -15,13 +15,12 @@ const os_1 = require("os");
  */
 function findInterfaces(ipList) {
     // Look for network interfaces.
-    var interfaces = (0, os_1.networkInterfaces)();
-    for (var dev in interfaces) {
-        var iface = interfaces[dev]; // For all devices
+    const interfaces = (0, os_1.networkInterfaces)();
+    for (const dev in interfaces) {
+        const iface = interfaces[dev]; // For all devices
         if (iface === undefined)
             continue;
-        for (var conn of iface) {
-            //console.log(conn);
+        for (const conn of iface) {
             if (conn.internal || !conn.cidr)
                 continue;
             if (conn.family !== 'IPv4')

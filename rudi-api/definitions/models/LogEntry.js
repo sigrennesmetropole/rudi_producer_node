@@ -14,23 +14,24 @@ import { v4 } from 'uuid'
 // -------------------------------------------------------------------------------------------------
 import {
   DB_CREATED_AT,
-  LOG_ID,
-  LOG_TIME,
-  LOG_MSG,
-  LOG_LVL,
-  LOG_USR,
-  LOG_FUN,
-  LOG_MOD,
   DB_UPDATED_AT,
   DICT_LANG,
+  LOG_FUN,
+  LOG_ID,
+  LOG_LVL,
+  LOG_MOD,
+  LOG_MSG,
+  LOG_TIME,
+  LOG_USR,
 } from '../../db/dbFields.js'
 
-import { VALID_UUID, VALID_EPOCH_MS } from '../schemaValidators.js'
+import { VALID_EPOCH_MS, VALID_UUID } from '../schemaValidators.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 import { LOG_DATE_FORMAT, consoleErr } from '../../utils/jsUtils.js'
+
 import { LOG_EXP } from '../../config/confLogs.js'
 
 // const dayS = 60 * 60 * 24
@@ -168,7 +169,7 @@ LogEntry.initialize = async () => {
     const indexes = await collection.getIndexes()
     await Promise.all(
       Object.entries(indexes).map(async (key) => {
-        if (key === `${SEARCH_INDEX},_fts,text,_ftsx,1`) await collection.dropIndex(SEARCH_INDEX)
+        if (key == `${SEARCH_INDEX},_fts,text,_ftsx,1`) await collection.dropIndex(SEARCH_INDEX)
       })
     )
     // (Re)creating the indexes

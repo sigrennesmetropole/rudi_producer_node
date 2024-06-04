@@ -3,11 +3,14 @@ const fs = require('fs')
 const ini = require('ini')
 
 // Internal dependencies
-const { getCompletedUrl } = require('../utils/utils')
+const { pathJoin } = require('../utils/utils')
+
 const { getBackOptions, OPT_USER_CONF } = require('./backOptions')
 
 // Load default conf
-const defaultConfigFile = './rudi_console_proxy.ini'
+const defaultConfigFile = './prodmanager-conf-default.ini'
+const defaultCustomConfigFile = './prodmanager-conf-custom.ini' // if not set
+
 let defaultConfFileContent
 try {
   defaultConfFileContent = fs.readFileSync(defaultConfigFile, 'utf-8')
@@ -16,7 +19,7 @@ try {
 }
 
 // Load custom conf
-const customConfigFile = getBackOptions(OPT_USER_CONF, './rudi_console_proxy_custom.ini')
+const customConfigFile = getBackOptions(OPT_USER_CONF, defaultCustomConfigFile)
 let customConfFileContent
 try {
   customConfFileContent = fs.readFileSync(customConfigFile, 'utf-8')
@@ -29,12 +32,10 @@ const config = ini.parse(defaultConfFileContent)
 
 // eslint-disable-next-line guard-for-in
 for (const section in customConfig) {
-  // console.log('CONF', section);
   const customParams = customConfig[section]
   if (customParams) {
     if (!config[section]) config[section] = {}
     for (const param in customParams) {
-      // console.log('CONF', param);
       if (customParams[param]) config[section][param] = customParams[param]
     }
   }
@@ -51,11 +52,11 @@ exports.getConf = (section, subSection) => {
 }
 
 // Shortcuts to access popular conf values
-exports.getRudiApi = (suffix) => getCompletedUrl(config.rudi_api.rudi_api_url, suffix)
-exports.getAdminApi = (suffix) => getCompletedUrl(config.rudi_api.admin_api, suffix)
+exports.getRudiApi = (...args) => pathJoin(config.rudi_api.rudi_api_url, ...args)
+exports.getAdminApi = (...args) => pathJoin(config.rudi_api.admin_api, ...args)
 
-exports.getRudiMediaUrl = (suffix) => getCompletedUrl(config.rudi_media.rudi_media_url, suffix)
-exports.getMediaDwnlUrl = (id) => this.getRudiMediaUrl(`/download/${id}`)
+exports.getRudiMediaUrl = (...args) => pathJoin(config.rudi_media.rudi_media_url, ...args)
+exports.getMediaDwnlUrl = (id) => this.getRudiMediaUrl('download', id)
 
 exports.getConsoleFormUrl = () => config.rudi_console.console_form_url
 

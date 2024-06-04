@@ -1,6 +1,6 @@
 # Rudi console<!-- omit in toc -->
 
-Ce projet est la "console" de Rudi. Il en gère les formulaires et la publication des résultat. Désolé j'ai pas eu le temps de vraiment relire ce document...
+Ce projet est la "console" de Rudi. Il en gère les formulaires et la publication des résultat. 
 
 Développeur :
 
@@ -96,7 +96,7 @@ Tout d'abord pour commencer à developper il faut créer un dossier `dev` à la 
   "MEDIA": {
     "POST": "https://data-rudi.aqmo.org/media/post",
     "connector": "https://data-rudi.aqmo.org/media/download",
-    "key": "Basic XXXXXXXXXXX"
+    "key": "Basic conVkaXByb2Q6c3lzYWRtaW5pc2dyZWF0IQ=="
   }
 }
 ```

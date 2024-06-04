@@ -1,59 +1,57 @@
-'use strict';
+'use strict'
 
 /**
  * JS code for the form pages
  * @author Florian Desmortreux
  */
-import '../lib/HtmlFormTemplate.js';
-import { ActionMixin, BaseCardsBlock, SetValueError } from '../lib/MaterialInputs.js';
+import '../lib/HtmlFormTemplate.js'
+import { ActionMixin, BaseCardsBlock, SetValueError } from '../lib/MaterialInputs.js'
 
-import { HttpRequest, JsonHttpRequest } from './Http.js';
-import { getCookie } from './utils.js';
-import OverlayManager from './OverlayManager.js';
+import { HttpRequest, JsonHttpRequest } from './Http.js'
+import OverlayManager from './OverlayManager.js'
+import { getCookie, pathJoin } from './utils.js'
 
-export const STYLE_ERR = 'banner-error';
-export const STYLE_WRN = 'banner-warning';
-export const STYLE_NRM = 'banner-normal';
-export const STYLE_BLD = 'banner-bold';
-export const STYLE_END = 'banner-end';
-export const STYLE_THN = 'banner-light';
+export const STYLE_ERR = 'banner-error'
+export const STYLE_WRN = 'banner-warning'
+export const STYLE_NRM = 'banner-normal'
+export const STYLE_BLD = 'banner-bold'
+export const STYLE_END = 'banner-end'
+export const STYLE_THN = 'banner-light'
+
+export const uuidv4 = () => crypto.randomUUID()
 
 const importJSON = (url, error_msg) =>
   JsonHttpRequest.get(url)
     .send()
     .catch((e) => {
-      throw new Error(error_msg, { cause: e });
-    });
+      throw new Error(error_msg, { cause: e })
+    })
 
 // Import JSON
-const LexR = await importJSON('./js/LexicalResources.json', 'No lexical resources');
-const conf = await importJSON('./config.json', 'No config');
+const LexR = await importJSON('./js/LexicalResources.json', 'No lexical resources')
+const conf = await importJSON('./config.json', 'No config')
 
 export const getConf = (param, silent) => {
-  if (conf[param]) return conf[param];
-  const errMsg = `[Rudi/getConf] Configuration not found for '${param}'`;
-  if (!silent) throw new Error(errMsg);
-  if (conf?.dev) console.warn(errMsg);
-};
+  if (conf[param]) return conf[param]
+  const errMsg = `[Rudi/getConf] Configuration not found for '${param}'`
+  if (!silent) throw new Error(errMsg)
+  if (conf?.dev) console.warn(errMsg)
+}
 
-export const uuidv4 = () => crypto.randomUUID();
-
-// if (consoleConf.dev && !consoleConf.consoleToken) console.error('No dev consoleToken was provided');
-
-export const getPManagerHeaders = () => {
-  const consoleToken = getCookie('consoleToken');
-  // if (conf.dev) console.debug('T (getPManagerHeaders) consoleToken:', consoleToken);
-  return { Authorization: `Bearer ${consoleToken}` };
-};
+export const IS_DEV = getConf('dev', true) || getConf('env', 'dev')
+export const LOCAL_URL = getConf('local')
+export const PM_URL = getConf('pm_url')
+export const MEDIA_URL = getConf('media_url')
 
 export const isPManagerReachable = async () => {
   try {
-    return 'test' === (await HttpRequest.get(`${getConf('pm_url')}/open/test`).send());
+    return 'test' === (await HttpRequest.get(pathJoin(PM_URL, '/open/test')).send())
   } catch (e) {
-    console.error(e);
-    return false;
+    console.error(e)
+    return false
   }
-};
+}
+
 // ---- Lifecycle ----
 
 /**
@@ -63,113 +61,123 @@ export const isPManagerReachable = async () => {
  * @param {*} originalValue the original value of edit mode
  */
 function keepNotInTemplate(template, outputValue, originalValue) {
-  if (!originalValue || !template || originalValue instanceof Array) return;
+  if (!originalValue || !template || originalValue instanceof Array) return
   else if (originalValue instanceof Object) {
     for (let key in originalValue) {
       if (
         !Object.prototype.hasOwnProperty.call(outputValue, key) &&
         !Object.prototype.hasOwnProperty.call(template, key)
       )
-        outputValue[key] = originalValue[key];
+        outputValue[key] = originalValue[key]
       else if (outputValue instanceof Object)
-        keepNotInTemplate(template[key], outputValue[key], originalValue[key]);
+        keepNotInTemplate(template[key], outputValue[key], originalValue[key])
     }
   }
 }
 
 export class RudiForm {
   constructor(customForm, language) {
-    // console.debug('T (RudiForm) customForm:', customForm);
-
     // Load template
-    this.state = 'loading';
-    this.resultOverlay = OverlayManager.addOverlay(document.createElement('pre'));
-    this.resultOverlay.setAttribute('tabindex', 0);
-    this.customForm = customForm;
-    this.language = language;
-    this.lexR = LexR[language];
-    this.silentClear = false;
-    this.msgNode = undefined;
+    this.state = 'loading'
+    this.customForm = customForm
+    this.language = language
+    this.lexR = LexR[language]
+    this.silentClear = false
+    this.msgNode = undefined
+    this.pmHeaders = undefined
+    this.resultOverlay = OverlayManager.addOverlay(document.createElement('pre'))
+    this.resultOverlay.setAttribute('tabindex', 0)
 
+    this.init()
+  }
+  init() {
+    if (IS_DEV) {
+      // Retrieve the authentification cookie
+      try {
+        this.pmHeaders = { Authorization: `Bearer ${getCookie('consoleToken')}` }
+      } catch (e) {
+        return this.fail('auth')
+      }
+    }
     // Display loading state
-    this.addMessage(this.lexR['loading/start'], STYLE_NRM);
+    this.addMessage(this.lexR['loading/start'])
 
     // form events
     this.customForm.addEventListener('clear', (e) => {
       if (!this.silentClear) {
-        let clear = window.confirm(this.lexR[this.state + '/clearing']);
-        if (clear && this.state == 'edit') this.state = 'edit/canceled';
+        let clear = window.confirm(this.lexR[this.state + '/clearing'])
+        if (clear && this.state == 'edit') this.state = 'edit/canceled'
 
-        if (!clear) e.preventDefault();
+        if (!clear) e.preventDefault()
       }
-    });
+    })
 
     // Allow to select result with ctrl+a
     this.resultOverlay.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.key == 'a') {
-        e.preventDefault();
-        let range = document.createRange(); //range object
-        range.selectNodeContents(this.resultOverlay); //sets Range
+        e.preventDefault()
+        let range = document.createRange() //range object
+        range.selectNodeContents(this.resultOverlay) //sets Range
 
-        let sel = window.getSelection();
-        sel.removeAllRanges(); //remove all ranges from selection
-        sel.addRange(range); //add Range to a Selection.
+        let sel = window.getSelection()
+        sel.removeAllRanges() //remove all ranges from selection
+        sel.addRange(range) //add Range to a Selection.
       }
-    });
+    })
 
     // Handle form event
-    customForm.addEventListener('required', (event) => {
-      let formElement = event.detail;
-      formElement.setAttribute('error', this.lexR['error_msg/required']);
-    });
+    this.customForm.addEventListener('required', (event) => {
+      let formElement = event.detail
+      formElement.setAttribute('error', this.lexR['error_msg/required'])
+    })
   }
-
   /**
    * Load a template in the form
    * @param {Promise} template the promise of the template
    * @param {String} language the language for the form
    * @returns the loaded template
    */
-  async load(template, language = this.language) {
+  async load(promisedTemplate, language = this.language) {
     try {
-      this.language = language;
-      this.lexR = LexR[language];
-      // Await template if necesary
+      this.language = language
+      this.lexR = LexR[language]
+      // Await template if necessary
       try {
-        template = await template;
+        this.template = await promisedTemplate
       } catch (e) {
-        this.fail();
-        throw e;
+        if (IS_DEV) console.error('load', e)
+        // this.fail()
+        throw e
       }
 
-      this.state = 'critic';
+      this.state = 'critic'
 
-      if (!template) {
-        this.fail();
-        throw new Error('No Template');
+      if (!this.template) {
+        this.fail()
+        if (IS_DEV) console.error('No Template')
+        return
       }
 
       // Apply template
-      propagateAttribute(template.htmlJsonTemplate);
+      propagateAttribute(this.template.htmlJsonTemplate)
       try {
         let fragmentSets = [
-          template?.fragmentSet?.[this.language],
-          template?.fragmentSet?.enums
-        ].filter((v) => v != undefined);
-        this.customForm.setTemplate(template, fragmentSets.length ? fragmentSets : undefined);
+          this.template?.fragmentSet?.[this.language],
+          this.template?.fragmentSet?.enums
+        ].filter((v) => v != undefined)
+        this.customForm.setTemplate(this.template, fragmentSets.length ? fragmentSets : undefined)
       } catch (e) {
-        this.fail();
-        throw e;
+        this.fail()
+        throw e
       }
 
-      this.actions = this.addHeaderActions();
-      // if (conf.dev) console.debug('T (Rudi.load) actions', this.actions);
-      this.state = 'create';
+      this.actions = this.addHeaderActions()
+      this.state = 'create'
 
-      return template;
+      return this.template
     } catch (e) {
-      this.addMessage(e, 'red');
-      // this.fail();
+      this.addErrorMsg(e)
+      this.fail()
     }
   }
 
@@ -178,27 +186,27 @@ export class RudiForm {
    * @returns an object with the actions
    */
   addHeaderActions() {
-    this.headerActions = this.customForm.htmlController.header_actions;
+    this.headerActions = this.customForm.htmlController.header_actions
 
     const showBtn = icon_flat_btn('code', this.lexR['btn/show_value'], () =>
       this.showResultOverlay()
-    );
-    this.headerActions.appendChild(showBtn);
+    )
+    this.headerActions.appendChild(showBtn)
 
     const reduceBtn = icon_flat_btn('keyboard_arrow_down', this.lexR['btn/show_required'], () =>
       this.reduce()
-    );
-    this.headerActions.appendChild(reduceBtn);
+    )
+    this.headerActions.appendChild(reduceBtn)
 
     const showDisabledBtn = icon_flat_btn('visibility_off', this.lexR['btn/show_disabled'], () =>
       this.showDisabled()
-    );
-    this.headerActions.appendChild(showDisabledBtn);
+    )
+    this.headerActions.appendChild(showDisabledBtn)
 
-    const clearBtn = icon_flat_btn('delete', this.lexR['btn/clear_form'], () => this.clear());
-    this.headerActions.appendChild(clearBtn);
+    const clearBtn = icon_flat_btn('delete', this.lexR['btn/clear_form'], () => this.clear())
+    this.headerActions.appendChild(clearBtn)
 
-    return { showBtn, reduceBtn, showDisabledBtn, clearBtn };
+    return { showBtn, reduceBtn, showDisabledBtn, clearBtn }
   }
 
   /**
@@ -211,33 +219,34 @@ export class RudiForm {
    *                    only mode
    * @param {String} apiUrl from where to fetch data
    */
-  async parseGetParam(apiUrl) {
-    var param = new URL(window.location.href).searchParams;
-    var updateId = param.get('update');
-    var readOnlyId = param.get('read-only');
+  async getEditModeAndFillData(apiUrl) {
+    const here = 'RudiForm.getEditModeAndFillData'
+    const param = new URL(window.location.href).searchParams
+    const updateId = param.get('update')
+    const readOnlyId = param.get('read-only')
+    this.isUpdate = !!updateId
 
-    this.silentClear = true;
-    const pmHeaders = await getPManagerHeaders();
-    let value;
+    this.silentClear = true
+    let value
+
     try {
       if (updateId) {
-        this.state = 'edit/fetch';
-        value = await JsonHttpRequest.get(`${apiUrl}/${updateId}`, pmHeaders).send();
-        // console.debug('T (parseGetParam) this.customForm.value:', value.access_condition.licence); // OK 1
-        this.edit(value);
+        this.state = 'edit/fetch'
+        value = await JsonHttpRequest.get(pathJoin(apiUrl, updateId), this.pmHeaders).send()
+        this.edit(value)
       } else if (readOnlyId) {
-        this.state = 'readonly/fetch';
-        value = await JsonHttpRequest.get(`${apiUrl}/${readOnlyId}`, pmHeaders).send();
-        this.customForm.readOnly();
-        this.setValue(value);
-      }
+        this.state = 'readonly/fetch'
+        value = await JsonHttpRequest.get(pathJoin(apiUrl, readOnlyId), this.pmHeaders).send()
+
+        this.customForm.readOnly()
+        this.setValue(value)
+      } else if (IS_DEV) console.log(`T [${here}] Creating a new metadata`)
     } catch (e) {
-      console.error(e);
-      this.fail();
-      return;
+      console.error(`E [${here}]`, e)
+      return this.fail(updateId ? 'edit/fetch' : 'readonly/fetch')
     }
 
-    this.silentClear = false;
+    this.silentClear = false
   }
 
   /**
@@ -245,13 +254,10 @@ export class RudiForm {
    * @param {*} outputValue the value to fill the form with
    */
   edit(outputValue) {
-    if (!outputValue) throw 'No value';
-    this.originalValue = outputValue;
-    // console.debug('T (edit) outputValue:', outputValue);
-    // console.debug('T (edit) outputValue:', outputValue.access_condition.licence); // OK 2
-
-    this.state = 'edit';
-    this.setValue(outputValue);
+    if (!outputValue) throw new Error('No value')
+    this.originalValue = outputValue
+    this.state = 'edit'
+    this.setValue(outputValue)
   }
 
   /**
@@ -259,8 +265,8 @@ export class RudiForm {
    * @param {Boolean} state false to remove read only mode
    */
   readOnly(state = true) {
-    this.state = state ? 'readonly' : 'create';
-    this.customForm.readOnly(state);
+    this.state = state ? 'readonly' : 'create'
+    this.customForm.readOnly(state)
   }
 
   /**
@@ -269,104 +275,88 @@ export class RudiForm {
    * @param {Boolean} silent, clear the form without asking (false by default)
    */
   setValue(outputValue, silent = false) {
-    // console.debug('T (setValue)');
-    const formValue = this.parseFormValue(outputValue); // OK 3.0
-    // console.debug('T (setValue) formValue:', formValue.access_condition.licence); // OK 3.1
-    // console.debug('T (setValue) Before assignation, formValue:', formValue?.available_formats[0]);
-    // console.debug('T (setValue) Before assignation, formValue:',formValue.access_condition.licence);
-
-    this.silentClear = silent || this.silentClear;
+    const formValue = this.parseInitialValue ? this.parseInitialValue(outputValue) : outputValue // OK 3.0
+    this.silentClear = silent || this.silentClear
     try {
-      this.customForm.value = formValue; // KO!!
-      // console.debug('T (setValue) Assignation succeeded, formValue:',this.customForm.value.access_condition.licence); // KO
+      this.customForm.value = formValue // KO!!
     } catch (e) {
-      // console.debug('T (setValue) Assignation failed, this.customForm.value:', this.customForm.value.access_condition);
-      if (!e.length) console.error(e);
-      else {
-        if (Symbol.iterator in Object(e)) {
-          for (const err of e) {
-            if (err instanceof SetValueError) {
-              console.error(
-                'Error :',
-                err.message,
-                '\nwith value : ',
-                err.value,
-                '\nin field :',
-                err.target
-              );
-              err.target.setAttribute('error', 'Error with value: ' + JSON.stringify(err.value));
-            } else {
-              console.error(err);
-            }
+      if (!e.length) console.error(e)
+      else if (Symbol.iterator in Object(e)) {
+        for (const err of e) {
+          if (err instanceof SetValueError) {
+            console.error(
+              'Error :',
+              err.message,
+              '\nwith value : ',
+              err.value,
+              '\nin field :',
+              err.target
+            )
+            err.target.setAttribute('error', 'Error with value: ' + JSON.stringify(err.value))
+          } else {
+            console.error(err)
           }
-        } else console.error(e);
-      }
+        }
+      } else console.error(e)
     }
-    this.silentClear = false;
-
-    // console.debug('T (setValue) formValue:', formValue.access_condition.confidentiality);
-    // console.debug('T (setValue) this.customForm.value:', this.customForm.value.access_condition.confidentiality);
+    this.silentClear = false
   }
 
   /**
-   * Give the value of the form parsed by the parseOutputValue
+   * Give the value of the form parsed by the parseUserInput
    * @param keep default true, if is edit mode keep values from the original value that are not in submitTemplate
    * @returns output value, or undefined if not complete
    */
   getValue(keep = true) {
-    let value, parsedValue;
+    let value, parsedValue
     try {
-      value = this.customForm.value;
-      // console.debug('T (getValue) this.customForm.value:', this.customForm.value);
+      value = this.customForm.value
     } catch (e) {
-      console.error(e);
-      return;
+      console.error(e)
+      return
     }
     try {
-      parsedValue = this.parseOutputValue(value, this.originalValue);
+      parsedValue = this.parseUserInput(value, this.originalValue)
     } catch (e) {
-      console.error('getValue', e);
-      throw new Error('Error in parseOutputValue', { cause: e });
+      console.error('getValue', e)
+      throw new Error('Error in parseUserInput', { cause: e })
     }
     if (this.originalValue && keep)
-      keepNotInTemplate(this.customForm.submitTemplate, parsedValue, this.originalValue);
-    return parsedValue;
+      keepNotInTemplate(this.customForm.submitTemplate, parsedValue, this.originalValue)
+    return parsedValue
   }
 
   // ---- Actions ----
 
   /** Use OverlayManager to display form value in an overlay */
   showResultOverlay() {
-    let value;
+    let value
     try {
-      value = this.customForm.value;
+      value = this.customForm.value
     } catch (e) {
-      value = e;
+      value = e
     }
-    // console.debug('T (showResultOverlay) value:', value);
+    value = this.parseUserInput(value, this.originalValue)
 
-    value = this.parseOutputValue(value, this.originalValue);
-    // console.debug('T (showResultOverlay) parsed outputValue:', value);
-
-    this.resultOverlay.textContent = JSON.stringify(value, undefined, 4);
-    this.resultOverlay.show();
-    this.resultOverlay.focus();
+    this.resultOverlay.textContent = JSON.stringify(value, undefined, 4)
+    this.resultOverlay.show()
+    this.resultOverlay.focus()
   }
 
   /** Toogle between showing required fields only and showing all fields */
   reduce() {
     if (this.customForm.toggleAttribute('reduced'))
-      this.actions.reduceBtn?.setIcon('keyboard_arrow_up', this.lexR['btn/show_all']);
-    else this.actions.reduceBtn?.setIcon('keyboard_arrow_down', this.lexR['btn/show_required']);
-    this.updateLayout();
+      this.actions.reduceBtn?.setIcon('keyboard_arrow_up', this.lexR['btn/show_all'])
+    else this.actions.reduceBtn?.setIcon('keyboard_arrow_down', this.lexR['btn/show_required'])
+    this.updateLayout()
   }
 
   /** Toogle between showing disabled fields and hidding them */
   showDisabled() {
     if (this.customForm.toggleAttribute('showdisabled'))
-      this.actions.showDisabledBtn.setIcon('visibility', this.lexR['btn/hide_disabled']);
-    else this.actions.showDisabledBtn.setIcon('visibility_off', this.lexR['btn/show_disabled']);
-    this.updateLayout();
+      this.actions.showDisabledBtn.setIcon('visibility', this.lexR['btn/hide_disabled'])
+    else this.actions.showDisabledBtn.setIcon('visibility_off', this.lexR['btn/show_disabled'])
+    this.updateLayout()
   }
 
   /**
@@ -374,15 +364,17 @@ export class RudiForm {
    * @param {Boolean} silent, clear the form without asking (false by default)
    */
   clear(silent = false) {
-    this.silentClear = silent;
+    this.silentClear = silent
     if (this.customForm.clear() && this.state == 'edit') {
-      this.end();
+      this.end()
     }
-    this.silentClear = false;
+    this.silentClear = false
   }
 
   /** Called when layout is modified */
-  updateLayout() {}
+  updateLayout() {
+    console.log('whatamidoinghere?')
+  }
 
   /**
    * Called when getting output value
@@ -390,77 +382,117 @@ export class RudiForm {
    * @param {Object|undefined} originalValue if is in edit mode
    */
   // eslint-disable-next-line no-unused-vars
-  parseOutputValue = (formValue, originalValue) => formValue;
+  parseUserInput = (formValue, originalValue) =>
+    this.parseUserInputLocal ? this.parseUserInputLocal(formValue, originalValue) : formValue
 
   /**
    * Called when getting form value
    * @param {Object} form_value the value from the form
    */
-  parseFormValue = (outputValue) => outputValue;
-
-  end() {
-    this.customForm.readOnly();
-    this.addMessage(this.lexR[this.state + '/end'], STYLE_END).scrollIntoView({
-      block: 'center'
-    });
-  }
-
-  fail(critic = false) {
-    if (critic) this.state = 'critic';
-    this.customForm.textContent = '';
-    let message = this.lexR[this.state + '/fail'] || '';
-    this.addMessage(message, STYLE_ERR).scrollIntoView({ block: 'center' });
-    this.state = 'fail';
-  }
+  parseInitialValue = (outputValue) =>
+    this.parseInitialValueLocal ? this.parseInitialValueLocal(outputValue) : outputValue
 
   /** Add a message on top of the form */
-  addMessage(message, style) {
+  addMessage(message, style = STYLE_NRM) {
+    const here = 'addMessage'
     try {
-      if (style == STYLE_ERR) console.error(message);
+      this.msgNode = document.getElementById('MessageBanner')
+      if (!message) {
+        console.error('ERR10 no message')
+        return this.msgNode
+      }
+      if (this.state == 'fail' || this.state == 'critic') {
+        console.error(
+          'ERR11 already failed before this, will not display new error message:',
+          message
+        )
+        return this.msgNode
+      }
+      if (style == STYLE_ERR) console.error(`E [${here}] An error occurred:`, message)
+      else console.log('Action:', message)
+
       // else console.debug(message);
-      this.msgNode = document.getElementById('MessageBanner');
-      this.msgNode.innerHTML = !style ? message : `<span class="${style}">${message}</span>`;
-      return this.msgNode;
+      if (style != STYLE_ERR)
+        this.msgNode.innerHTML = !style ? message : `<span class="${style}">${message}</span>`
+      else this.msgNode.innerHTML += `<br/><span class="${style}">${message}</span>`
+      return this.msgNode
     } catch (err) {
-      console.error('T (addMessage) ERR', err);
+      console.error(`E (${here})`, err)
     }
+  }
+
+  addErrorMsg(message, cleanPreviousMessages = false) {
+    const here = 'addErrorMsg'
+    this.msgNode = document.getElementById('MessageBanner')
+    if (!message) {
+      console.error('ERR10 no message')
+      return this.msgNode
+    }
+    if (this.state == 'fail' || this.state == 'critic') {
+      console.error(
+        'ERR11 already failed before this, will not display new error message:',
+        message
+      )
+      return this.msgNode
+    }
+    console.error(`E [${here}] An error occurred:`, message)
+    this.msgNode = document.getElementById('MessageBanner')
+    const errMsg = `<span class="${STYLE_ERR}">${message}</span>`
+    if (cleanPreviousMessages) this.msgNode.innerHTML = errMsg
+    else this.msgNode.innerHTML += `<br/>${errMsg}`
+    return this.msgNode
+  }
+
+  end(state = this.state) {
+    this.customForm.readOnly()
+    const msg = this.lexR[state + '/end']
+    console.info('end:', msg)
+    this.addMessage(msg, STYLE_END)?.scrollIntoView({ block: 'center' })
+    this.state = 'ok'
+  }
+
+  fail(state = this.state, cleanPreviousMessages = false) {
+    this.customForm.textContent = ''
+    let message = this.lexR[state + '/fail'] || state
+    this.addErrorMsg(message, cleanPreviousMessages) // .scrollIntoView({ block: 'center' });
+    this.state = 'fail'
   }
 }
 
 /* ---- OTHER FUNCTIONS ----- */
-
 /**
  * Take a HtmlJsonTemplate and for each element and/or child
  *  - if has a child with attr required, give element the required attr
  *  - if all child has attr hidden, give element the hidden attr
  * Used in styling to kwown which element contains at least a required
  * elements and if it has only hidden elements.
- * @param {Object|Array} template
+ * @param {Object|Array} htmlJsonTemplate
  */
-function propagateAttribute(template) {
-  function recur(element) {
-    if (!element.children) return;
-    let isRequired = false;
-    let hasOnlyDisabledChild = true;
-    let hasReadOnlyChild = false;
-    for (let child of element.children) {
-      if (child.children) recur(child);
-      if (child.tag.charAt(0) == 'h') continue;
-      let attr = child.attr;
+export function propagateAttribute(htmlJsonTemplate) {
+  if (htmlJsonTemplate instanceof Array)
+    for (let child of htmlJsonTemplate) propagateRecursively(child)
+  else propagateRecursively(htmlJsonTemplate)
+}
 
-      if (attr?.required && !attr?.disabled) isRequired = true;
-      if (!attr?.disabled) hasOnlyDisabledChild = false;
-      if (attr?.readonly) hasReadOnlyChild = true;
-    }
-    if (!element.attr) element.attr = {};
-    if (isRequired) element.attr.required = isRequired;
-    if (hasOnlyDisabledChild) element.attr.disabled = hasOnlyDisabledChild;
-    if (hasReadOnlyChild) element.attr.readonly = hasReadOnlyChild;
+function propagateRecursively(element) {
+  // if (IS_DEV) console.debug('T [propagateRecursively]', element)
+  if (!element.children) return
+  let isRequired = false
+  let hasOnlyDisabledChild = true
+  let hasReadOnlyChild = false
+  for (let child of element.children) {
+    if (child.children) propagateRecursively(child)
+    if (child.tag.charAt(0) == 'h') continue
+    let attr = child.attr
+
+    if (attr?.required && !attr?.disabled) isRequired = true
+    if (!attr?.disabled) hasOnlyDisabledChild = false
+    if (attr?.readonly) hasReadOnlyChild = true
   }
-
-  if (template instanceof Array) {
-    for (let child of template) recur(child);
-  } else recur(template);
+  if (!element.attr) element.attr = {}
+  if (isRequired) element.attr.required = isRequired
+  if (hasOnlyDisabledChild) element.attr.disabled = hasOnlyDisabledChild
+  if (hasReadOnlyChild) element.attr.readonly = hasReadOnlyChild
 }
 
 /**
@@ -472,31 +504,31 @@ function propagateAttribute(template) {
  * @returns the button
  */
 function icon_flat_btn(name, tooltip, onclick) {
-  let btn = document.createElement('button');
-  btn.classList.add('icon-flat');
-  btn.setAttribute('type', 'button');
+  let btn = document.createElement('button')
+  btn.classList.add('icon-flat')
+  btn.setAttribute('type', 'button')
 
   if (tooltip) {
-    btn.classList.add('top-tooltip');
-    btn.setAttribute('data-tooltip', tooltip);
+    btn.classList.add('top-tooltip')
+    btn.setAttribute('data-tooltip', tooltip)
   }
-  let icon = document.createElement('i');
-  icon.classList.add('material-icons');
-  icon.textContent = name;
-  btn.appendChild(icon);
+  let icon = document.createElement('i')
+  icon.classList.add('material-icons')
+  icon.textContent = name
+  btn.appendChild(icon)
   btn.setIcon = (name, tooltip) => {
-    icon.textContent = name;
-    if (tooltip) btn.setAttribute('data-tooltip', tooltip);
-    else if (tooltip == null) btn.toggleAttribute('data-tooltip', false);
-  };
+    icon.textContent = name
+    if (tooltip) btn.setAttribute('data-tooltip', tooltip)
+    else if (tooltip == null) btn.toggleAttribute('data-tooltip', false)
+  }
   btn.onclick = () => {
-    onclick(btn);
-  };
+    onclick(btn)
+  }
 
-  return btn;
+  return btn
 }
 
-var formCardBlockStyle = `
+const formCardBlockStyle = `
 /* ---- Form Cards Block ----*/
 
 :host {
@@ -522,7 +554,7 @@ var formCardBlockStyle = `
     display: none;
 }
 
-`;
+`
 
 /**
  * A from field which is himself a form that generate a value and display it
@@ -530,85 +562,85 @@ var formCardBlockStyle = `
  */
 class FormCardsBlock extends ActionMixin(BaseCardsBlock) {
   constructor() {
-    super(document.createElement('action-icon'), formCardBlockStyle);
+    super(document.createElement('action-icon'), formCardBlockStyle)
 
     // Create custom-form
-    this.customForm = document.createElement('custom-form');
-    this.customForm.setAttribute('slot', 'form');
+    this.customForm = document.createElement('custom-form')
+    this.customForm.setAttribute('slot', 'form')
     this.customForm.addEventListener('submit', () => {
-      let value;
+      let value
       try {
-        value = this.customForm.value;
+        value = this.customForm.value
       } catch {
-        return;
+        return
       }
-      this.addCard(value);
-      this.customForm.clear();
-      this.customForm.focus();
-    });
+      this.addCard(value)
+      this.customForm.clear()
+      this.customForm.focus()
+    })
 
     // Create slot
-    this.slotWrapper = document.createElement('div');
-    this.slotWrapper.classList.add('slot_wrapper');
+    this.slotWrapper = document.createElement('div')
+    this.slotWrapper.classList.add('slot_wrapper')
     this.slotWrapper.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+      e.stopPropagation()
+    })
     this.slotWrapper.addEventListener('keyup', (e) => {
-      if (e.key == 'Escape') this.#hideSlotWrapper();
-      e.stopPropagation();
-    });
-    this.formSlot = document.createElement('slot');
-    this.formSlot.setAttribute('name', 'form');
-    this.slotWrapper.append(this.formSlot);
+      if (e.key == 'Escape') this.#hideSlotWrapper()
+      e.stopPropagation()
+    })
+    this.formSlot = document.createElement('slot')
+    this.formSlot.setAttribute('name', 'form')
+    this.slotWrapper.append(this.formSlot)
 
     // Init action-icon
-    this.action.textContent = 'add';
+    this.action.textContent = 'add'
     this.action.addEventListener('click', () => {
-      this.#showSlotWrapper();
-    });
+      this.#showSlotWrapper()
+    })
 
     // Append element
-    let cardsWrapper = document.createElement('div');
-    cardsWrapper.classList.add('cards_wrapper');
-    cardsWrapper.appendChild(this.displaySlot);
-    cardsWrapper.appendChild(this.action);
-    this.content.appendChild(cardsWrapper);
-    this.content.appendChild(this.slotWrapper);
+    let cardsWrapper = document.createElement('div')
+    cardsWrapper.classList.add('cards_wrapper')
+    cardsWrapper.appendChild(this.displaySlot)
+    cardsWrapper.appendChild(this.action)
+    this.content.appendChild(cardsWrapper)
+    this.content.appendChild(this.slotWrapper)
 
     // Events
-    this.bindEventTo(this.content);
+    this.bindEventTo(this.content)
     this.addEventListener('focusout', (event) => {
       if (!this.contains(event.relatedTarget) && !this.shadowRoot.contains(event.relatedTarget)) {
-        this.#hideSlotWrapper();
+        this.#hideSlotWrapper()
       }
-    });
+    })
   }
 
   #showSlotWrapper() {
-    this.slotWrapper.toggleAttribute('open', true);
-    this.customForm.focus();
+    this.slotWrapper.toggleAttribute('open', true)
+    this.customForm.focus()
   }
 
   #hideSlotWrapper() {
-    this.slotWrapper.toggleAttribute('open', false);
-    this.customForm.clear();
+    this.slotWrapper.toggleAttribute('open', false)
+    this.customForm.clear()
   }
 
   setTemplate(...args) {
-    this.customForm.setTemplate(...args);
+    this.customForm.setTemplate(...args)
   }
 
   createCard(value) {
-    let card = super.createCard(value);
+    let card = super.createCard(value)
 
-    let [content] = this.customForm.getDisplay(value);
-    card.appendChild(content);
-    return card;
+    let [content] = this.customForm.getDisplay(value)
+    card.appendChild(content)
+    return card
   }
 
   connectedCallback() {
-    this.appendChild(this.customForm);
+    this.appendChild(this.customForm)
   }
 }
 
-customElements.define('form-cards-block', FormCardsBlock);
+customElements.define('form-cards-block', FormCardsBlock)

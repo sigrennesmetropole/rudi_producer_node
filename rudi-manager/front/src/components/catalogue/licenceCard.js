@@ -61,7 +61,7 @@ export default function LicenceCard({ obj, editMode }) {
             role : <small className="text-muted"> {obj.concept_role}</small>
           </p>
           <p className="card-text">
-            uri :{' '}
+            uri :
             <small className="text-muted">
               <a href={obj.concept_uri}> {obj.concept_uri}</a>
             </small>

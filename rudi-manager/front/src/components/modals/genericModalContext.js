@@ -1,5 +1,5 @@
-import React from 'react'
 import PropTypes from 'prop-types'
+import React from 'react'
 
 import GenericModal, { useGenericModal, useGenericModalOptions } from './genericModal'
 
@@ -49,7 +49,7 @@ export const DefaultConfirmOption = {
   buttons: [{ text: 'Oui', action: () => {} }],
 }
 
-export const getOptOk = (label, action = () => {}, caption) => {
+export const getOptOk = (label, action = () => {}, caption=null) => {
   const opt = DefaultOkOption
   opt.text = [label]
   opt.buttons = [{ text: 'Ok', action: () => action() }]

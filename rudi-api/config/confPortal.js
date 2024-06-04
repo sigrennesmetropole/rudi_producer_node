@@ -1,10 +1,12 @@
 const mod = 'confPortal'
 
 // -------------------------------------------------------------------------------------------------
-// Internal dependecies
+// Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { quietAccess, NOT_FOUND, toBase64, separateLogs } from '../utils/jsUtils.js'
-import { RudiError } from '../utils/errors.js'
+import { NOT_FOUND, quietAccess, separateLogs, toBase64 } from '../utils/jsUtils.js'
+
+import { ConfigurationError, RudiError } from '../utils/errors.js'
+
 import { readIniFile } from '../utils/fileActions.js'
 import { logD } from '../utils/logging.js'
 
@@ -16,6 +18,8 @@ separateLogs('Portal conf', true) //////////////////////////////////////////////
 export const PARAM_TOKEN = 'token'
 export const FIELD_TOKEN = 'access_token'
 export const JWT_USER = 'user_name'
+
+export const NO_PORTAL_MSG = 'No portal connected'
 
 // -------------------------------------------------------------------------------------------------
 // Constants: Portal configuration
@@ -65,7 +69,9 @@ const getPortalIniValue = (section, field, defaultVal) => {
 
     if (userValue != NOT_FOUND) return userValue
     if (localValue != NOT_FOUND) return localValue
-    return typeof defaultVal === 'undefined' ? NOT_FOUND : defaultVal
+    if (typeof defaultVal === 'undefined') {
+      throw new ConfigurationError(`${section}.${field}`, PORTAL_CUSTOM_CONF_FILE)
+    } else return defaultVal
   } catch (err) {
     throw RudiError.treatError(mod, 'getPortalIniValue', err)
   }
@@ -101,21 +107,23 @@ const PASSW_B64 =
 // consoleLog(mod, 'readPortalConf', `PASSW_B64: ${PASSW_B64}`)
 const SHOULD_CONTROL_EXT_REQUESTS = getPortalIniValue(
   PORTAL_SECTION,
-  'should_control_public_requests'
+  'should_control_public_requests',
+  false
 )
 
 export const getCredentials = () => [LOGIN, PASSW_B64]
 export const shouldControlExtRequest = () => SHOULD_CONTROL_EXT_REQUESTS
 
 // ----- API
-const API_PORTAL_URL = getPortalIniValue(PORTAL_SECTION, 'portal_url', false)
+const API_PORTAL_URL = PORTAL_CUSTOM_CONF?.[PORTAL_SECTION]?.portal_url
 export const isPortalConnectionDisabled = () => !API_PORTAL_URL
-export const getPortalBaseUrl = () => API_PORTAL_URL
+export const getPortalBaseUrl = () => API_PORTAL_URL || NO_PORTAL_MSG
 
 const API_GET_URL = getPortalIniValue(PORTAL_SECTION, 'get_url', '')
 const API_SEND_URL = getPortalIniValue(PORTAL_SECTION, 'put_url', '')
 
 export const getPortalMetaUrl = (id, additionalParameters) => {
+  if (isPortalConnectionDisabled()) return NO_PORTAL_MSG
   const reqUrl = !id
     ? `${API_PORTAL_URL}/${API_GET_URL.replace('/{{id}}', '')}`
     : `${API_PORTAL_URL}/${API_GET_URL.replace('{{id}}', id)}`

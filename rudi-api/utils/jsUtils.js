@@ -5,16 +5,16 @@ const mod = 'utils'
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
-import { inspect } from 'util'
 import objectPath from 'object-path'
+import { inspect } from 'util'
 
 import _ from 'lodash'
-const { floor, pick } = _
+const { pick } = _
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { TRACE } from '../config/confApi.js'
+import { TRACE } from '../config/constApi.js'
 
 // -------------------------------------------------------------------------------------------------
 // Basic logging
@@ -43,11 +43,34 @@ export const separateLogs = (insertStr, shouldDisplayDate) => {
 separateLogs('Booting', true)
 
 // -------------------------------------------------------------------------------------------------
+// Integer
+// -------------------------------------------------------------------------------------------------
+export const isInt = (n) => Number.isInteger(n)
+export const isPositiveInt = (n) => isInt(n) && n >= 0
+
+// -------------------------------------------------------------------------------------------------
 // String
 // -------------------------------------------------------------------------------------------------
+/* eslint no-extend-native: ["error", { "exceptions": ["String"] }] */
+String.prototype.merge = function (...args) {
+  const argNb = args.length
+  if (argNb == 0) return ''
+  let finalString = `${args[0]}`
+  for (let i = 1; i < argNb; i++) {
+    const str = `${args[i]}`
+    const mergableStr = str.startsWith(this) ? str : `${this}${str}`
+    finalString = !finalString.endsWith(this)
+      ? finalString + mergableStr
+      : finalString.substring(0, finalString.length - 1) + mergableStr
+  }
+  return finalString
+}
+
+export const pathJoin = (...args) => '/'.merge(...args)
+
 export const isString = (str) => typeof str === 'string'
 
-export const padWithEqualSignBase4 = (str) => pad(str, 4, '=')
+export const padWithEqualSignBase4 = (str) => padEndModulo(str, 4, '=')
 export const toBase64 = (str) => convertEncoding(str, 'utf-8', 'base64')
 export const toBase64url = (str) => convertEncoding(str, 'utf-8', 'base64url')
 export const toPaddedBase64url = (str) => padWithEqualSignBase4(toBase64url(str))
@@ -66,20 +89,13 @@ export const convertEncoding = (data, fromEncoding, toEncoding) =>
  * @param {String} padSign The character used for the padding
  * @returns
  */
-export const pad = (str, base, padSign) => {
+export const padEndModulo = (str, base, padSign) => {
   const fun = 'pad'
   // consoleLog(mod, fun, `base = ${base}, sign = '${padSign}'`)
   try {
     padSign = padSign?.substring(0, 1)
     const modulo = str.length % base
-    if (modulo === 0) return str
-
-    let padding = padSign
-    for (let i = modulo; i > base; i++) {
-      padding = `${padding}${padSign}`
-    }
-    // consoleLog(mod, fun, `padding: ${padding}`)
-    return `${str}${padding}`
+    return modulo === 0 ? str : str.padEnd(str.length + base - modulo, padSign)
   } catch (err) {
     consoleErr(mod, fun, err)
     throw err
@@ -93,16 +109,27 @@ export const shorten = (str, len) => {
 }
 
 export const padA1 = (num) => {
-  var norm = Math.floor(Math.abs(num))
+  const norm = Math.floor(Math.abs(num))
   return (norm < 10 ? '0' : '') + norm
 }
 
-export const padZerosLeft = (number, nbZeros = 2) => String(number).padStart(nbZeros, '0')
+export const padZerosLeft = (number, nbZeros = 2) => `${number}`.padStart(nbZeros, '0')
 
+/**
+ * Split an input string with an array of single characters
+ * @param {string} inputStr the input string
+ * @param {string[]} splitterArray an array of single characters
+ * @param {boolean} shouldTrim true if each chunk should be trimmed
+ * @returns the splitted string
+ */
+export const multiSplit = (inputStr, splitterArray, shouldTrim = true) => {
+  const splitters = splitterArray.map((d) => d[0]).join('')
+  const rgxStr = shouldTrim ? `(?:\\s*[${splitters}]\\s*)+` : `[${splitters}]+`
+  return `${inputStr}`.split(RegExp(rgxStr))
+}
 // -------------------------------------------------------------------------------------------------
 // Dates
 // -------------------------------------------------------------------------------------------------
-export const nowISO = () => new Date().toISOString()
 
 export const toISOLocale = (date) => {
   if (!date) date = new Date()
@@ -129,74 +156,46 @@ export const toISOLocale = (date) => {
   )
 }
 
-export const nowEpochMs = () => new Date().getTime()
-export const nowEpochS = () => floor(nowEpochMs() / 1000)
+export const timeEpochMs = (delayMs = 0) => new Date().getTime() + delayMs
+export const timeEpochS = (delayS = 0) => Math.floor(new Date().getTime() / 1000) + delayS
+
+export const dateToIso = (date) => {
+  const fun = 'dateToIso'
+  try {
+    return (date ? new Date(date) : new Date()).toISOString()
+  } catch (err) {
+    consoleErr(mod, fun, `input: ${date} -> err: ${err}`)
+    throw new Error(`input: ${date} -> err: ${err}`)
+  }
+}
+export const nowISO = () => dateToIso()
 
 export const dateEpochSToIso = (utcSeconds) => {
   const fun = 'dateEpochSToIso'
   try {
-    return dateEpochMsToIso(utcSeconds * 1000)
+    return utcSeconds ? dateEpochMsToIso(utcSeconds * 1000) : nowISO()
   } catch (err) {
     consoleErr(mod, fun, `input: ${utcSeconds} -> err: ${err}`)
+    throw new Error(`input: ${utcSeconds} -> err: ${err}`)
   }
 }
 
 export const dateEpochMsToIso = (utcMs) => {
   const fun = 'dateEpochMsToIso'
   try {
-    return new Date(utcMs).toISOString()
+    return utcMs ? new Date(utcMs).toISOString() : nowISO()
   } catch (err) {
     consoleErr(mod, fun, `input: ${utcMs} -> err: ${err}`)
+    throw new Error(`input: ${utcMs} -> err: ${err}`)
   }
 }
+
 // const [date, month, year] = new Date().toLocaleDateString('fr-FR').split('/')
 // const [h, m, s] = new Date().toLocaleTimeString('fr-FR').split(/:| /)
 // return `${year}/${month}/${date} ${h}:${m}:${s}`
 
-// -------------------------------------------------------------------------------------------------
-// Strings
-// -------------------------------------------------------------------------------------------------
-/**
- * Split an input string with an array of single characters
- * @param {*} inputStr the input string
- * @param {*} singleCharDelimiterArray an array of single characters
- * @param {*} shouldTrim true if each chunk should be trimmed
- * @returns the splitted string
- */
-export const multiSplit = (inputStr, singleCharDelimiterArray, shouldTrim) => {
-  if (!Array.isArray(singleCharDelimiterArray) && singleCharDelimiterArray.length > 0)
-    throw new Error('Wrong use, second parameter should be an array')
+export const dateToEpochMs = (date) => new Date(date).getUTCMilliseconds()
 
-  // Converts input delimiters array elements into string
-  const delimiters = []
-  singleCharDelimiterArray.map((c) => {
-    if (`${c}`.length !== 1)
-      throw new Error('Wrong use, second parameter should be an array of single character strings')
-    delimiters.push(`${c}`)
-  })
-
-  // Examine input string, one character at a time
-  const result = []
-  let chunk = ''
-  for (let i = 0; i < inputStr.length; i++) {
-    let isDelimiter = false
-    // Check if the current input character is a delimiter
-    for (let j = 0; j < delimiters.length; j++) {
-      if (inputStr[i] === delimiters[j]) {
-        // Current input character is a delimiter
-        if (shouldTrim) chunk = chunk.trim()
-        if (chunk.length > 0) result.push(chunk)
-        chunk = ''
-        isDelimiter = true
-        break
-      }
-    }
-    if (!isDelimiter) chunk += inputStr[i]
-  }
-  if (shouldTrim) chunk = chunk.trim()
-  if (chunk.length > 0) result.push(chunk)
-  return result
-}
 // -------------------------------------------------------------------------------------------------
 // Arrays
 // -------------------------------------------------------------------------------------------------
@@ -204,6 +203,7 @@ export const isArray = (anArray) => Array.isArray(anArray)
 export const isNotEmptyArray = (anArray) => Array.isArray(anArray) && anArray.length > 0
 export const isEmptyArray = (anArray) => Array.isArray(anArray) && anArray.length === 0
 export const getLast = (array) => (Array.isArray(array) ? array[array.length - 1] : null)
+
 // -------------------------------------------------------------------------------------------------
 // Objects
 // -------------------------------------------------------------------------------------------------
@@ -272,7 +272,6 @@ export const filterOnValue = async (obj, predicate) => {
   return result
 }
 
-export const getSubProp = (obj, propArray) => objectPath.get(obj, propArray)
 export const setSubProp = (obj, propArray, value) => objectPath.set(obj, propArray, value)
 
 // -------------------------------------------------------------------------------------------------
@@ -283,16 +282,6 @@ export const isEmpty = (prop) => {
   return prop == '' || prop == '{}' || prop == '[]' || strProp == '{}' || strProp == '[]'
 }
 
-/*
-  TRUE:
-    !null
-    !undefined
-    !''
-
-  FALSE:
-    !{}
-    ![]
-*/
 export const isNothing = (prop) => {
   return !prop || isEmpty(prop)
 }
@@ -306,13 +295,15 @@ export const isNothing = (prop) => {
  */
 export const beautify = (jsonObject, option) => {
   try {
-    return `${JSON.stringify(jsonObject, null, option).replace(/\\"/g, '"')}${
-      option != null ? '\n' : ''
-    }`
+    return isString(jsonObject)
+      ? jsonObject
+      : `${JSON.stringify(jsonObject, null, option).replace(/\\"/g, '"')}${option != null ? '\n' : ''}`
   } catch (err) {
-    return `${inspect(jsonObject)}`
+    return `${jsonToString(jsonObject)}`
   }
 }
+
+export const jsonToString = (jsonObject) => inspect(jsonObject, false, 5, true)
 
 /**
  * Clone a (JSON) object through JSON.stringify then JSON.parse (beware, it can be slow)
@@ -320,22 +311,15 @@ export const beautify = (jsonObject, option) => {
  * @returns {JSON} The deep (dissociated) clone of the input object
  * @throws parameter 'jsonObject' is undefined, null or empty
  */
-export const deepClone = (jsonObject) => {
-  return JSON.parse(JSON.stringify(jsonObject))
-}
+export const deepClone = (jsonObject) => JSON.parse(JSON.stringify(jsonObject))
 
 export const logWhere = (srcMod, srcFun) =>
-  !srcMod ? srcFun : !srcFun ? srcMod : `${srcMod} . ${srcFun}`
+  srcMod && srcFun ? `${srcMod} . ${srcFun}` : srcMod || srcFun
 
-export const displayStr = (srcMod, srcFun, msg) =>
-  `[ ${logWhere(srcMod, srcFun)} ] ${msg !== '' ? msg : '<-'}`
+export const displayStr = (srcMod, srcFun, msg = '<-') => `[ ${logWhere(srcMod, srcFun)} ] ${msg}`
 
-export const consoleLog = (srcMod, srcFun, msg) =>
+export const consoleLog = (srcMod, srcFun, msg = '<-') =>
   console.log('D', nowLocaleFormatted(), displayStr(srcMod, srcFun, msg))
 
-export const consoleErr = (srcMod, srcFun, msg) =>
-  console.error(
-    'E',
-    nowLocaleFormatted(),
-    displayStr(srcMod, srcFun, !msg ? undefined : msg[TRACE] || msg)
-  )
+export const consoleErr = (srcMod, srcFun, msg = 'No error message :(') =>
+  console.error('E', nowLocaleFormatted(), displayStr(srcMod, srcFun, msg[TRACE] || msg))

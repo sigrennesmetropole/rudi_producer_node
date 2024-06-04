@@ -8,19 +8,19 @@ import {
   readPublicKeyFile,
   tokenStringToJwtObject,
   verifyToken,
-} from '@aqmo.org/jwt_lib'
+} from '@aqmo.org/jwt-lib'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 
-import { decodeBase64url } from '../utils/jsUtils.js'
+import { beautify, decodeBase64url } from '../utils/jsUtils.js'
 import { accessProperty } from '../utils/jsonAccess.js'
 
 import { logT } from '../utils/logging.js'
 
 import { getProfile } from '../config/confSystem.js'
-import { ForbiddenError, UnauthorizedError, RudiError } from '../utils/errors.js'
+import { ForbiddenError, RudiError, UnauthorizedError } from '../utils/errors.js'
 
 // -------------------------------------------------------------------------------------------------
 // Constants
@@ -29,8 +29,8 @@ const PUB_KEY = 'pub_key'
 const SUB_ACL = 'routes'
 const REQ_ROUTE_ALL = 'all'
 
-import { JWT_SUB, JWT_CLIENT, REQ_MTD, REQ_URL } from '../utils/crypto.js'
-import { ROUTE_NAME } from '../config/confApi.js'
+import { ROUTE_NAME } from '../config/constApi.js'
+import { JWT_CLIENT, JWT_SUB, REQ_MTD, REQ_URL } from '../config/constJwt.js'
 // -------------------------------------------------------------------------------------------------
 // Controllers
 // -------------------------------------------------------------------------------------------------
@@ -101,16 +101,18 @@ export const getHashAlgo = (algo) => {
 
 export const checkRudiProdPermission = async (req, isCheckOptional) => {
   const fun = 'checkRudiProdPermission'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   try {
     let token
     try {
-      // logI(mod, fun, `req: ${beautify(req.headers?.authorization)}`)
+      // logI(mod, fun, `! req: ${beautify(req.headers)}`)
       token = extractJwt(req)
     } catch (err) {
       // logE(mod, fun, `err: ${err}`)
       if (isCheckOptional) throw err
-      const error = new UnauthorizedError(err.message)
+      const msgStr = `${err.message}`
+      const msg = msgStr.endsWith('.') ? msgStr.slice(0, -1) : msgStr
+      const error = new UnauthorizedError(`${msg} when requesting ${req.url}`)
       throw RudiError.treatError(mod, fun, error)
     }
     // logD(mod, fun, `token: ${token}`)
@@ -120,7 +122,7 @@ export const checkRudiProdPermission = async (req, isCheckOptional) => {
     // Check the ACL (= does the subject have permission to enter this route?)
     // logD(mod, fun, `req: ${beautify(req.context.config[ROUTE_NAME])}`)
 
-    const reqRouteName = accessProperty(req.routeConfig, ROUTE_NAME)
+    const reqRouteName = accessProperty(req.routeOptions?.config, ROUTE_NAME)
     checkSubjPermission(subject, reqRouteName)
     return { subject, clientId }
     // return 'ok'
@@ -131,7 +133,7 @@ export const checkRudiProdPermission = async (req, isCheckOptional) => {
 
 function checkSubjPermission(subject, reqRouteName) {
   const fun = 'checkSubjPermission'
-  logT(mod, fun, ``)
+  logT(mod, fun)
 
   const subjProfile = getProfile(subject)
   const subjAcl = accessProperty(subjProfile, SUB_ACL)
@@ -162,8 +164,6 @@ const getPubKey = (subject) => {
 export const verifyRudiProdToken = async (token, reqMethod, reqUrl) => {
   const fun = 'verifyRudiProdToken'
   try {
-    // logD(mod, fun, ``)
-
     // Retrieve the public key
     const { payload } = tokenStringToJwtObject(token)
     // logD(mod, fun, beautify(payload))
@@ -174,7 +174,7 @@ export const verifyRudiProdToken = async (token, reqMethod, reqUrl) => {
     try {
       verifyToken(pubKey, token)
     } catch (e) {
-      throw new ForbiddenError(e.message)
+      throw new ForbiddenError(beautify(e.message || e))
     }
 
     // Check the current route
@@ -195,7 +195,9 @@ export const verifyRudiProdToken = async (token, reqMethod, reqUrl) => {
     return { subject, clientId }
   } catch (err) {
     // logW(mod, fun, err)
-    const error = new ForbiddenError(`JWT is not a valid RUDI Producer JWT: ${err.message}`)
+    const error = new ForbiddenError(
+      `JWT is not a valid RUDI Producer JWT: ${beautify(err.message || err)}`
+    )
     throw RudiError.treatError(mod, fun, error)
   }
 }

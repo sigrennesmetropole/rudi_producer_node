@@ -10,23 +10,23 @@ const { pick } = _
 // -------------------------------------------------------------------------------------------------
 // Constants
 // -------------------------------------------------------------------------------------------------
-import { API_METADATA_ID, API_DATA_NAME_PROPERTY } from '../db/dbFields.js'
-import { HEADERS, HD_URL, HD_METHOD, HD_AUTH } from '../config/headers.js'
+import { HD_METHOD, HD_URL } from '../config/constHeaders.js'
+import { API_DATA_NAME_PROPERTY, API_METADATA_ID } from '../db/dbFields.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { displayStr, logWhere, beautify, shorten, consoleErr } from './jsUtils.js'
+import { beautify, consoleErr, displayStr, logWhere, shorten } from './jsUtils.js'
 
 import {
-  wConsoleLogger as wLogger,
-  sysLogger,
-  getLogLevel,
-  SHOULD_SYSLOG,
   SHOULD_LOG_CONSOLE,
+  SHOULD_SYSLOG,
+  getLogLevel,
+  sysLogger,
+  wConsoleLogger as wLogger,
 } from '../config/confLogs.js'
 
-import { makeLogInfo, LogEntry } from '../definitions/models/LogEntry.js'
+import { LogEntry, makeLogInfo } from '../definitions/models/LogEntry.js'
 
 // -------------------------------------------------------------------------------------------------
 // Constants
@@ -126,13 +126,7 @@ export const displaySyslog = (srcMod, srcFun, msg) => {
 function sysLog(level, msg, location, context, cid, info) {
   try {
     if (SHOULD_SYSLOG)
-      sysLogger[level](
-        msg,
-        location,
-        context,
-        cid ? cid : context ? context.id : null,
-        info ? info : context ? context.detailsStr : null
-      )
+      sysLogger[level](msg, location, context, cid || context?.id, info || context?.detailsStr)
     else () => null
   } catch (err) {
     logE(mod, 'sysLog', err)
@@ -187,23 +181,39 @@ export const sysTrace = (msg, location, context, info, cid) =>
 // -------------------------------------------------------------------------------------------------
 // Fastify logger
 // -------------------------------------------------------------------------------------------------
-function FFLogger(...args) {
-  this.level = args?.level
+const stringifyMsg = (msg) => (typeof msg == 'string' ? msg : `${beautify(msg)}`)
+export class FFLogger {
+  constructor(level = 'warn') {
+    this.level = level
+  }
+
+  fatal(msg) {
+    return sysAlert(stringifyMsg(msg))
+  }
+  error(msg) {
+    return sysError(stringifyMsg(msg))
+  }
+  warn(msg) {
+    return sysWarn(stringifyMsg(msg))
+  }
+  info(msg) {
+    return sysInfo(stringifyMsg(msg))
+  }
+  debug(msg) {
+    return sysDebug(stringifyMsg(msg))
+  }
+  trace(msg) {
+    return sysTrace(
+      typeof msg == 'string' ? msg : msg?.err ? `ERR ${msg.err.code} ${msg.err.message}` : `${msg}`
+    )
+  }
+  log(msg) {
+    return sysLog(this.level, stringifyMsg(msg))
+  }
+  child() {
+    return new FFLogger()
+  }
 }
-FFLogger.prototype.fatal = (msg) => sysAlert(typeof msg == 'string' ? msg : `${beautify(msg)}`)
-FFLogger.prototype.error = (msg) => sysError(typeof msg == 'string' ? msg : `${beautify(msg)}`)
-FFLogger.prototype.warn = (msg) => sysWarn(typeof msg == 'string' ? msg : `${beautify(msg)}`)
-FFLogger.prototype.info = () => {}
-// FFLogger.prototype.info = (msg) => sysInfo(typeof msg == 'string' ? msg : `${beautify(msg)}`)
-FFLogger.prototype.debug = (msg) => sysDebug(typeof msg == 'string' ? msg : `${beautify(msg)}`)
-FFLogger.prototype.trace = (msg) =>
-  sysTrace(
-    typeof msg == 'string' ? msg : msg?.err ? `ERR ${msg.err.code} ${msg.err.message}` : `${msg}`
-  )
-
-FFLogger.prototype.child = () => new FFLogger()
-
-export const fastifyLogger = (...args) => new FFLogger(args)
 
 // -------------------------------------------------------------------------------------------------
 // Syslog functions: specific macros
@@ -212,7 +222,7 @@ export const fastifyLogger = (...args) => new FFLogger(args)
 export const sysOnError = (statusCode, errMsg, context, details) => {
   const fun = 'sysOnError'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     logE(mod, fun, errMsg) //`Error ${err.statusCode} (${err.name}): ${err.message}`)
     const errCode = parseInt(statusCode)
     let sysLogErr = isNaN(errCode) || errCode >= 500 ? sysCrit : sysError
@@ -233,15 +243,13 @@ export const sysOnError = (statusCode, errMsg, context, details) => {
 export const logHttpAnswer = (loggedMod, loggedFun, httpAnswer) => {
   const fun = 'logHttpAnswer'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // d(mod, fun, `${loggedMod}.${loggedFun} : ${httpAnswer}`)
     if (httpAnswer.config) {
-      const resExtract = pick(httpAnswer.config, [HD_METHOD, HEADERS, HD_URL])
+      const resExtract = pick(httpAnswer.config, [HD_METHOD, 'headers', HD_URL])
       resExtract[HD_URL] = resExtract.url ? shorten(resExtract[HD_URL], 70) : undefined
-      resExtract[HEADERS][HD_AUTH] =
-        resExtract[HEADERS] && resExtract[HEADERS][HD_AUTH]
-          ? shorten(resExtract[HEADERS][HD_AUTH], 30)
-          : undefined
+      if (resExtract?.headers?.Authorization)
+        resExtract.headers.Authorization = shorten(resExtract.headers.Authorization, 30)
       const redactedRes = `HTTP answer: ${beautify(resExtract)}`
       logD(loggedMod, loggedFun, redactedRes)
       // sysInfo(redactedRes) // TODO ?

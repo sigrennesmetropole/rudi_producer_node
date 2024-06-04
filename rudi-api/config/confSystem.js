@@ -1,24 +1,25 @@
 const mod = 'sysConf'
 // -------------------------------------------------------------------------------------------------
-// External dependecies
+// External dependencies
 // -------------------------------------------------------------------------------------------------
 
 // -------------------------------------------------------------------------------------------------
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  getAppOptions,
-  getGitHash,
-  OPT_USER_CONF,
   ENV_USER_CONF,
   OPT_API_URL,
+  OPT_USER_CONF,
+  getAppOptions,
+  getGitHash,
 } from './appOptions.js'
-import { TRACE, TRACE_MOD, TRACE_FUN, TRACE_ERR } from './confApi.js'
+import { TRACE, TRACE_ERR, TRACE_FUN, TRACE_MOD } from './constApi.js'
 
 // -------------------------------------------------------------------------------------------------
-// Internal dependecies
+// Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { consoleLog, consoleErr, quietAccess, NOT_FOUND, separateLogs } from '../utils/jsUtils.js'
+import { NOT_FOUND, consoleErr, consoleLog, quietAccess, separateLogs } from '../utils/jsUtils.js'
+
 import { readIniFile } from '../utils/fileActions.js'
 
 separateLogs('Loading sys conf', true) ///////////////////////////////////////////////////////////
@@ -33,11 +34,6 @@ let CURRENT_APP_HASH
 // -------------------------------------------------------------------------------------------------
 // if (utils.isNotEmptyObject(appOptions))
 //   consoleLog(mod, 'commandLineOptions', utils.beautify(appOptions))
-
-// -------------------------------------------------------------------------------------------------
-// Extract environment variables
-// -------------------------------------------------------------------------------------------------
-const RUDI_API_USER_ENV = process.env[ENV_USER_CONF]
 
 // -------------------------------------------------------------------------------------------------
 // Constants
@@ -64,7 +60,9 @@ const getUserConf = () => {
     consoleLog(
       mod,
       fun,
-      getAppOptions(OPT_USER_CONF) ? 'cli' : `Conf file: ${RUDI_API_USER_ENV ? 'env' : 'ini'}`
+      getAppOptions(OPT_USER_CONF)
+        ? 'cli'
+        : `Conf file: ${process.env[ENV_USER_CONF] ? 'env' : 'ini'}`
     )
     return readIniFile(USER_CONF_FILE)
   } catch (err) {
@@ -94,15 +92,19 @@ const LOCAL_CONF = getLocalConf()
 //    if null get default value
 export const getIniValue = (section, field, defaultVal, customConf, defaultConf) => {
   try {
-    const userConf = customConf ? customConf : USER_CONF
-    const localConf = defaultConf ? defaultConf : LOCAL_CONF
+    const userConf = customConf || USER_CONF
+    const localConf = defaultConf || LOCAL_CONF
 
     const userValue = quietAccess(userConf[section], field)
     const localValue = quietAccess(localConf[section], field)
 
     if (userValue != NOT_FOUND) return userValue
     if (localValue != NOT_FOUND) return localValue
-    return typeof defaultVal === 'undefined' ? NOT_FOUND : defaultVal
+    if (typeof defaultVal === 'undefined')
+      throw new Error(
+        `The parameter '${section}.${field}' is incorrectly set in file '${USER_CONF_FILE}'`
+      )
+    else return defaultVal
   } catch (err) {
     consoleErr(mod, 'getIniValue', err)
     throw err
@@ -118,9 +120,14 @@ const FLAGS_SECTION = 'flags'
 
 const SHOULD_CONTROL_PRIVATE_REQUESTS = getIniValue(
   FLAGS_SECTION,
-  'should_control_private_requests'
+  'should_control_private_requests',
+  true
 )
-const SHOULD_CONTROL_PUBLIC_REQUESTS = getIniValue(FLAGS_SECTION, 'should_control_public_requests')
+const SHOULD_CONTROL_PUBLIC_REQUESTS = getIniValue(
+  FLAGS_SECTION,
+  'should_control_public_requests',
+  false
+)
 
 export const shouldControlPrivateRequests = () => SHOULD_CONTROL_PRIVATE_REQUESTS
 export const shouldControlPublicRequests = () => SHOULD_CONTROL_PUBLIC_REQUESTS
@@ -138,10 +145,9 @@ const API_URL = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl
 export const getAppName = () => APP_NAME
 export const getServerAddress = () => LISTENING_ADDR
 export const getServerPort = () => LISTENING_PORT
-export const getHost = (suffix) =>
-  `http://${LISTENING_ADDR}:${LISTENING_PORT}${suffix ? suffix : ''}`
+export const getHost = (suffix) => `http://${LISTENING_ADDR}:${LISTENING_PORT}${suffix || ''}`
 
-export const getApiUrl = (suffix) => `${API_URL}${suffix ? suffix : ''}`
+export const getApiUrl = (suffix) => `${API_URL}${suffix || ''}`
 
 // ----- DB section
 const DB_SECTION = 'database'
@@ -161,9 +167,17 @@ const PROFILES = readIniFile(profilesConfFile)
 
 export const getProfile = (subject) => {
   if (!subject)
-    throw { code: 403, name: 'Forbidden', message: `No subject provided for profile access` }
+    throw new Error({
+      code: 403,
+      name: 'Forbidden',
+      message: `No subject provided for profile access`,
+    })
   if (!PROFILES[subject])
-    throw { code: 403, name: 'Forbidden', message: `Profile not found for subject: ${subject}` }
+    throw new Error({
+      code: 403,
+      name: 'Forbidden',
+      message: `Profile not found for subject: ${subject}`,
+    })
   return PROFILES[subject]
 }
 

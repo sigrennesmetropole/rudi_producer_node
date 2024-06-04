@@ -80,6 +80,7 @@ export default function CatalogueUser({ editMode }) {
                 next={fetchMoreData}
                 hasMore={hasMore}
                 loader={<h4>Loading...</h4>}
+                endMessage={<i>Aucune donnée supplémentaire</i>}
               >
                 {userList.map((user) => (
                   <UserCard

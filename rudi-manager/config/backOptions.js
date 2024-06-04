@@ -46,7 +46,7 @@ exports.OPTIONS = {
 console.log('--------------------------------------------------------------')
 
 console.log('Options to run this app: ')
-Object.keys(this.OPTIONS).map((opt) =>
+Object.keys(this.OPTIONS).forEach((opt) =>
   console.log(
     '    cli: ' +
       this.OPTIONS[opt].cli +
@@ -63,9 +63,9 @@ console.log('--------------------------------------------------------------')
 // console.log('= Extract command line arguments =');
 // console.log(process.argv);
 const cliOptionsValues = {}
-process.argv.map((cliArg) => {
+process.argv.forEach((cliArg) => {
   // console.log('• cliArg: ' + cliArg);
-  Object.keys(this.OPTIONS).map((appOpt) => {
+  Object.keys(this.OPTIONS).forEach((appOpt) => {
     if (this.OPTIONS[appOpt].cli) {
       const appOptForCli = this.OPTIONS[appOpt].cli + '='
       // console.log('• appOptForCli: ' + appOptForCli);
@@ -83,7 +83,7 @@ process.argv.map((cliArg) => {
 // ------------------------------------------------------------------------------------------------
 console.log('Extracted conf values:')
 const backOptionsValues = {}
-Object.keys(this.OPTIONS).map((opt) => {
+Object.keys(this.OPTIONS).forEach((opt) => {
   if (cliOptionsValues[opt]) {
     backOptionsValues[opt] = cliOptionsValues[opt]
     console.log('    (cli) ' + opt + ' => ' + backOptionsValues[opt])
@@ -107,27 +107,27 @@ console.log('--------------------------------------------------------------')
 exports.getBackOptions = (opt, altValue) =>
   opt ? backOptionsValues[opt] || altValue : backOptionsValues
 
-exports.getHashFun = (req, res, next) => {
-  try {
-    const hashId = this.getBackOptions(this.OPT_GIT_HASH)
-    res
-      .status(200)
-      .send(hashId || require('child_process').execSync('git rev-parse --short HEAD'))
-  } catch (err) {
-    console.error('WARNING: no --hash option provided + giv rev parse does not work')
-    res.status(200).send('v0_0;')
+exports.getAppTag = () => this.getBackOptions(this.OPT_APP_TAG) || ''
+
+exports.getHash = () => {
+  let gitHash = this.getBackOptions(this.OPT_GIT_HASH)
+  if (!gitHash) {
+    try {
+      gitHash = require('child_process').execSync('git rev-parse --short HEAD')
+    } catch {
+      console.error('WARNING: no --hash option provided + giv rev parse does not work')
+      return 'v0_0;'
+    }
   }
+  return gitHash
 }
 
-exports.getAppTag = (req, res, next) => {
-  try {
-    const appTag = this.getBackOptions(this.OPT_APP_TAG)
-    res.status(200).send(appTag || '')
-  } catch (err) {
-    res.status(200).send('')
-  }
+exports.getTags = () => {
+  const tags = { tag: this.getAppTag() }
+  const gitHash = this.getHash()
+  if (gitHash) tags['hash'] = gitHash
+  return tags
 }
 
 exports.getNodeEnv = () => this.getBackOptions(this.OPT_NODE_ENV)
 exports.isDevEnv = () => this.getNodeEnv() === 'development'
-// exports.getBackPath=()=> this.getBackOptions(this.OPT_BACK_PATH);

@@ -1,5 +1,8 @@
 // ------------------------------------------------------------------------------------------------
 // Extract command line arguments
+
+import { pathJoin } from "../utils/utils"
+
 // ------------------------------------------------------------------------------------------------
 export const OPT_FRONT_PATH = 'PUBLIC_URL'
 // export const OPT_BACK_URL = 'REACT_APP_BACK_URL';
@@ -42,16 +45,10 @@ export const getFrontOptions = (opt, altValue) => {
   console.log('\t- ' + opt + '=' + frontOptions[opt])
   return frontOptions[opt]
 }
-
-export const getBackUrl = (suffix = '') => `${getFrontOptions(OPT_FRONT_PATH)}${suffix}`
+export const getBackUrl = (suffix = '') => '/'.merge(getFrontOptions(OPT_FRONT_PATH), suffix)
 
 if (!getBackUrl().endsWith('/')) frontOptions[OPT_FRONT_PATH] += '/'
 
-// const ensureIsFound = (varName) => {
-//   if (!getFrontOptions(varName))
-//     throw new Error(`This environment variable should be defined: ${varName}`);
-// };
-
-export const getApiFront = (suffix) => (!suffix ? 'incorrect' : `api/front/${suffix}`)
-export const getApiOpen = (suffix) => (!suffix ? 'incorrect' : `api/open/${suffix}`)
-export const getApiData = (suffix) => (!suffix ? 'incorrect' : `api/data/${suffix}`)
+export const getApiFront = (suffix) => (!suffix ? 'incorrect' : pathJoin('api/front',suffix))
+export const getApiOpen = (suffix) => (!suffix ? 'incorrect' : pathJoin('api/open',suffix))
+export const getApiData = (suffix) => (!suffix ? 'incorrect' : pathJoin('api/data',suffix))

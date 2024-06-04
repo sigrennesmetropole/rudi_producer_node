@@ -1,14 +1,14 @@
 import axios from 'axios'
 
-import React, { useState } from 'react'
 import PropTypes from 'prop-types'
+import React, { useState } from 'react'
 
 import Button from 'react-bootstrap/Button'
-import Modal from 'react-bootstrap/Modal'
 import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
-import Row from 'react-bootstrap/Row'
 import InputGroup from 'react-bootstrap/InputGroup'
+import Modal from 'react-bootstrap/Modal'
+import Row from 'react-bootstrap/Row'
 
 import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
 import { VALID_EMAIL, VALID_NOT_EMPTY_USERNAME } from './validation'
@@ -45,8 +45,6 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
     }
     if (!val) val = userInfo[prop]
     if (prop === 'roles') {
-      // if (!userInfo.roles) console.error('T (hasErrors) No roles')
-      // else if (userInfo.roles.length === 0) console.error('T (hasErrors) No role')
       return !(Array.isArray(val) && val.length > 0) ? 'Au moins un rôle doit être défini' : false
     }
 
@@ -58,7 +56,6 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
     validation[prop]?.map((valid) => {
       if (!`${val}`.match(valid[0])) isInvalid = valid[1].replace('{VALUE}', val)
     })
-    // if (isInvalid) console.error(`T (hasErrors) isInvalid: '${prop}'='${val}'`)
     return isInvalid
   }
 
@@ -69,15 +66,11 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
   })
 
   const isValid = (prop) =>
-    !!prop ? !errors[prop] : !errors.username && !errors.email && !errors.roles
+    prop ? !errors[prop] : !errors.username && !errors.email && !errors.roles
 
   const editUserInfo = (prop, val) => {
-    setErrors((errors) => {
-      return { ...errors, [prop]: hasErrors(prop, val) }
-    })
-    setUserInfo((userInfo) => {
-      return { ...userInfo, [prop]: val }
-    })
+    setErrors((errors) => ({ ...errors, [prop]: hasErrors(prop, val) }))
+    setUserInfo((userInfo) => ({ ...userInfo, [prop]: val }))
   }
 
   const isInUserRole = (role, rolesList) =>
@@ -86,10 +79,7 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
   const handleChange = (event) => {
     const prop = event.target.id
     const val = event.target.value
-    // console.log('(handleChange)', prop, '=>', val)
     editUserInfo(prop, val)
-    // if (errors[prop]) console.error('(handleChange) errorDetected:', errors[prop])
-    // console.log('(handleChange) userInfo after:', showObj(userInfo))
   }
 
   const handleRoleChange = (event) => {
@@ -111,16 +101,12 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
     // console.log('(handleRoleChange) usrRoles:', userRoles, '=>', nextUserRoles)
     editUserInfo('roles', nextUserRoles)
   }
-  const resetState = () => {
-    setUserInfo(() => {
-      return {}
-    })
-  }
+  const resetState = () => setUserInfo(() => ({}))
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (isValid()) {
-      await sendUserInfo(userInfo)
+      await sendUserInfo()
       resetState()
       toggleEdit()
       refresh()
@@ -138,8 +124,9 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
         console.error('T (sendUserInfo) No user info!')
         return
       }
+      await axios.post(`${urlUser}`, userInfo)
       // console.log('T (add.sendingUserInfo)', userInfo)
-      const res = await axios.post(`${urlUser}`, userInfo)
+      // const res = await axios.post(`${urlUser}`, userInfo)
       // console.log('T (add.sendUserInfo)', res.data)
     } catch (err) {
       defaultErrorHandler(err)
@@ -194,22 +181,21 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
             <Form.Group className="mb-1" id="formRoles" controlId="roles">
               <Form.Label>Rôles</Form.Label>
               <InputGroup hasValidation>
-                {roleList &&
-                  roleList.map((role) => (
-                    <Form.Check
-                      key={role.role}
-                      label={`${role.role} (${role.desc})`}
-                      id={role.role}
-                      value={isInUserRole(role, userInfo?.roles)}
-                      onChange={handleRoleChange}
-                      isInvalid={hasErrors('roles')}
-                    />
-                  ))}
+                {roleList?.map((role) => (
+                  <Form.Check
+                    key={role.role}
+                    label={`${role.role} (${role.desc})`}
+                    id={role.role}
+                    value={isInUserRole(role, userInfo?.roles)}
+                    onChange={handleRoleChange}
+                    isInvalid={hasErrors('roles')}
+                  />
+                ))}
                 <Form.Control.Feedback type="invalid" tooltip>
                   {errors.roles}
                 </Form.Control.Feedback>
               </InputGroup>
-            </Form.Group>{' '}
+            </Form.Group>
           </Row>
         </Modal.Body>
         <Modal.Footer>
@@ -229,11 +215,11 @@ export default function AddUserModal({ roleList, visible, toggleEdit, refresh })
 }
 
 export const useAddUserModal = () => {
-  const [isVisibleAddModal, setVisible] = useState(false)
+  const [isVisibleAddModal, setIsVisibleAddModal] = useState(false)
   /**
    * toggle l'affichage de la modal
    * @return {void}
    */
-  const toggleAddModal = () => setVisible(!isVisibleAddModal)
+  const toggleAddModal = () => setIsVisibleAddModal(!isVisibleAddModal)
   return { isVisibleAddModal, toggleAddModal }
 }

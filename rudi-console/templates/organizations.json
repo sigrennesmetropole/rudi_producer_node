@@ -1,64 +1,102 @@
 {
-    "htmlJsonTemplate": [
-        {
-            "tag": "form-header",
-            "children": [
-                { "id": "title", "tag": "h1" },
-                { "id": "@header_actions", "tag": "div" }
-            ]
-        },
-        { "tag": "hr" },
-        {
-            "tag": "form-body",
-            "children": [
-                {
-                    "tag": "form-section",
-                    "class": ["row"],
-                    "children": [
-                        { "id": "global", "tag": "h1" },
-                        {
-                            "id": "@organization_id",
-                            "tag": "text-input",
-                            "class": ["col", "s4", "m4", "l6"],
-                            "attr": { "required": true, "disabled": true }
-                        },
-                        { "id": "@organization_name", "tag": "text-input", "class": ["col", "s4", "m4", "l6"], "attr": { "required": true } },
-                        { "id": "@organization_address", "tag": "text-input", "class": ["col", "s4", "m4", "l6"] },
-                        { "id": "@organization_caption", "tag": "text-input", "class": ["col", "s4", "m4", "l6"] },
-                        { "id": "@organization_coordinates", "tag": "text-input", "class": ["col", "s4", "m4", "l6"] },
-                        { "id": "@organization_summary", "tag": "textarea-input", "class": ["col", "s4", "m4", "l6"] }
-                    ]
-                }
-            ]
-        },
-        { "tag": "form-footer", "children": [{ "id": "@submit_btn", "tag": "button" }] }
-    ],
-    "submitTemplate": {
-        "organization_id": "organization_id",
-        "organization_name": "organization_name",
-        "organization_address": "organization_address",
-        "organization_caption": "organization_caption",
-        "organization_coordinates": "organization_coordinates",
-        "organization_summary": "organization_summary"
+  "htmlJsonTemplate": [
+    {
+      "tag": "form-header",
+      "children": [
+        { "id": "title", "tag": "h1" },
+        { "id": "@header_actions", "tag": "div" }
+      ]
     },
-    "fragmentSet": {
-        "fr": {
-            "title": { "textContent": "Producteur De Données" },
-            "global": { "textContent": "Général" },
-            "submit_btn": { "textContent": "Valider" },
-            "organization_id": {
-                "attr": {
-                    "label": "Identifiant de l'organisation",
-                    "helper": "Identifiant de l'organisation qui a produit le jeu de données ou la métadonnée dans RUDI"
-                }
+    { "tag": "hr" },
+    {
+      "tag": "form-body",
+      "children": [
+        {
+          "tag": "form-section",
+          "class": ["row"],
+          "children": [
+            { "id": "global", "tag": "h1" },
+            {
+              "id": "@organization_id",
+              "tag": "text-input",
+              "class": ["col", "s4", "m4", "l6"],
+              "attr": { "required": true, "disabled": true }
             },
-            "organization_name": { "attr": { "label": "Nom de l'organisation", "helper": "Nom de l'organisation " } },
-            "organization_address": { "attr": { "label": "Adresse", "helper": "Adresse de l'organisation" } },
-            "organization_caption": {
-                "attr": { "label": "Nom complet", "helper": "Nom explicite de l'organisation (pour les acronymes et noms alternatifs)" }
+            {
+              "id": "@organization_name",
+              "tag": "text-input",
+              "class": ["col", "s4", "m4", "l6"],
+              "attr": { "required": true }
             },
-            "organization_coordinates": { "attr": { "label": "Coordonnées géographiques", "helper": "Latitude et longitude de l'organisation (2 nombres décimaux séparés par une virgule)" } },
-            "organization_summary": { "attr": { "label": "Description de l'organisation", "helper": "Description de l'organisation" } }
+            {
+              "id": "@organization_address",
+              "tag": "text-input",
+              "class": ["col", "s4", "m4", "l6"]
+            },
+            {
+              "id": "@organization_caption",
+              "tag": "text-input",
+              "class": ["col", "s4", "m4", "l6"]
+            },
+            {
+              "id": "@organization_coordinates",
+              "tag": "text-input",
+              "class": ["col", "s4", "m4", "l6"]
+            },
+            {
+              "id": "@organization_summary",
+              "tag": "textarea-input",
+              "class": ["col", "s4", "m4", "l6"]
+            }
+          ]
         }
+      ]
+    },
+    { "tag": "form-footer", "children": [{ "id": "@submit_btn", "tag": "button" }] }
+  ],
+  "submitTemplate": {
+    "organization_id": "organization_id",
+    "organization_name": "organization_name",
+    "organization_address": "organization_address",
+    "organization_caption": "organization_caption",
+    "organization_coordinates": "organization_coordinates",
+    "organization_summary": "organization_summary"
+  },
+  "fragmentSet": {
+    "fr": {
+      "title": { "textContent": "Producteur De Données" },
+      "global": { "textContent": "Général" },
+      "submit_btn": { "textContent": "Valider" },
+      "organization_id": {
+        "attr": {
+          "label": "Identifiant de l'organisation",
+          "helper": "Identifiant de l'organisation qui a produit le jeu de données ou la métadonnée dans RUDI"
+        }
+      },
+      "organization_name": {
+        "attr": { "label": "Nom de l'organisation", "helper": "Nom de l'organisation " }
+      },
+      "organization_address": {
+        "attr": { "label": "Adresse", "helper": "Adresse de l'organisation" }
+      },
+      "organization_caption": {
+        "attr": {
+          "label": "Nom complet",
+          "helper": "Nom explicite de l'organisation (pour les acronymes et noms alternatifs)"
+        }
+      },
+      "organization_coordinates": {
+        "attr": {
+          "label": "Coordonnées géographiques",
+          "helper": "Latitude et longitude de l'organisation (2 nombres décimaux séparés par une virgule)"
+        }
+      },
+      "organization_summary": {
+        "attr": {
+          "label": "Description de l'organisation",
+          "helper": "Description de l'organisation"
+        }
+      }
     }
+  }
 }

@@ -11,16 +11,16 @@ const { omit } = _
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  FIELDS_TO_SKIP,
-  DB_PUBLISHED_AT,
   API_COLLECTION_TAG,
   API_CONTACT_ID,
   API_CONTACT_MAIL,
-  API_CONTACT_ROLE,
   API_CONTACT_NAME,
+  API_CONTACT_ROLE,
+  API_CONTACT_SUMMARY,
   API_ORGANIZATION_NAME,
   DB_CREATED_AT,
-  API_CONTACT_SUMMARY,
+  DB_PUBLISHED_AT,
+  FIELDS_TO_SKIP,
 } from '../../db/dbFields.js'
 
 // -------------------------------------------------------------------------------------------------
@@ -30,7 +30,9 @@ import { VALID_EMAIL } from '../schemaValidators.js'
 import { UuidV4Schema } from '../schemas/Identifiers.js'
 
 import { logW } from '../../utils/logging.js'
+
 import { RudiError } from '../../utils/errors.js'
+
 import { makeSearchable } from '../../db/dbActions.js'
 
 // -------------------------------------------------------------------------------------------------
@@ -115,7 +117,7 @@ Contact.getSearchableFields = () => [
 Contact.initialize = async () => {
   const fun = 'initContact'
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
     await makeSearchable(Contact)
     return `Contact indexes created`
   } catch (err) {

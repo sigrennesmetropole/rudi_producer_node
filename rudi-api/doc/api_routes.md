@@ -8,7 +8,7 @@ These routes are accessible from the internet, and especially the Portal:
 
 - `GET /api/v1/resources`
   - Returns a JSON with a property `total` that gives the total number of elements on the producer node and a property `items` that lists a portion of the total set
-  - Can be used of the optional parameters bellow can refine such request
+  - See optional parameters bellow to refine such request
 - `GET /api/v1/resources/:id`
   - Returns the metadata for the identified resource
 - `GET /api/v1/resources/search`
@@ -37,17 +37,17 @@ These routes are accessible from the internet, and especially the Portal:
 
 Different parameters can be used simultaneously if they are separed by question marks.
 
-https://data-rudi.aqmo.org/api/v1/resources?limit=10&fields=global_id,resource_title&updated_after=2021-07
+https://data-rudi.org/api/v1/resources?limit=10&fields=global_id,resource_title&updated_after=2021-07
 
 ### Quick filters
 
 Metadata can be queried with a simple filter expressed as `parameter=value`.
 
-https://data-rudi.aqmo.org/api/v1/resources?theme=transportation&keywords=bus
+https://data-rudi.org/api/v1/resources?theme=transportation&keywords=bus
 
 Optional parameters and filters can be used simultaneously
 
-https://data-rudi.aqmo.org/api/v1/resources?limit=10&fields=global_id,resource_title,theme&updated_after=2021-07&theme=citizenship
+https://data-rudi.org/api/v1/resources?limit=10&fields=global_id,resource_title,theme&updated_after=2021-07&theme=citizenship
 
 ## Exposed routes with Portal authentification required
 

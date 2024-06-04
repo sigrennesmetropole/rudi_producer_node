@@ -5,4 +5,7 @@ export const VALID_EMAIL = [REGEX_EMAIL, `'{VALUE}' n'est pas un e-mail valide`]
 
 export const VALID_NOT_EMPTY_STRING = [/^.+$/, 'Ce champ ne peut pas être vide']
 export const VALID_NOT_EMPTY_WORD = [/^[\w-]+$/, 'Ce champ contient des caractères invalides']
-export const VALID_NOT_EMPTY_USERNAME = [/^[\w-\.@\ ]+$/, 'Ce champ contient des caractères invalides']
+export const VALID_NOT_EMPTY_USERNAME = [
+  /^[\w-\.@\ ]+$/,
+  'Ce champ contient des caractères invalides',
+]

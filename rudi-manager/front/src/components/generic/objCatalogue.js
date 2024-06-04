@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import InfiniteScroll from 'react-infinite-scroll-component'
 
@@ -49,41 +49,46 @@ export default function ObjCatalogue({
 }) {
   const { defaultErrorHandler } = useDefaultErrorHandler()
 
-  const [isEdit, setEdit] = useState(editMode)
-  useEffect(() => setEdit(editMode), [editMode])
+  const [isEdit, setEdit] = useState(!!editMode)
+  useEffect(() => setEdit(!!editMode), [editMode])
 
-  useEffect(() => getInitialData(), [shouldRefresh])
-
-  const [listObj, setListObj] = useState([])
+  const [objList, setObjList] = useState([])
   const [hasMore, setHasMore] = useState(true)
-  const [currentOffset, setCurrentOffset] = useState(0)
+  const [currentOffset, setCurrentOffset] = useState(-1)
+  const initialRender = useRef(true)
 
   const getApiUrlObj = (suffix) => getApiData(`${objType}${suffix ? `/${suffix}` : ''}`)
-
-  // useEffect(() => getInitialData(), [])
-
   const deleteUrl = (id) => getApiUrlObj(id)
+
   const refresh = () => {
     setHasMore(true)
+    setObjList([])
     getInitialData()
+
+    if (currentOffset === 0) {
+      setCurrentOffset(-1)
+    } else {
+      setCurrentOffset(0)
+    }
   }
+  useEffect(() => refresh(), [shouldRefresh])
+
+  useEffect(() => {
+    if (initialRender.current) initialRender.current = false
+    else if (currentOffset < 0) setCurrentOffset(0)
+    else fetchMoreData()
+  }, [currentOffset])
 
   /**
-   * recup la 1er page des contacts
+   * recup la 1er page
    */
   function getInitialData() {
-    // const params = new URLSearchParams(`limit=${PAGE_SIZE}&offset=0`);
-    // const fetchUrl = getApiUrlObj(`?sort_by=-updateAt&limit=${PAGE_SIZE}&offset=0`);
-    const fetchUrl = getApiUrlObj(
-      `?sort_by=${propSortBy || '-updateAt'}&limit=${PAGE_SIZE}&offset=0`
-    )
-    // console.log('url:', fetchUrl);
     axios
-      .get(fetchUrl)
+      .get(getApiUrlObj(), {
+        params: { sort_by: propSortBy || '-updateAt', limit: PAGE_SIZE, offset: 0 },
+      })
       .then((res) => {
-        setCurrentOffset(PAGE_SIZE)
-        setListObj(res.data)
-        if (listObj.length < PAGE_SIZE) setHasMore(false)
+        if (res.data?.length < PAGE_SIZE) setHasMore(false)
       })
       .catch((err) => (err.response?.status == 401 ? logout() : defaultErrorHandler(err)))
   }
@@ -93,25 +98,14 @@ export default function ObjCatalogue({
    * Récupere la page suivante
    */
   const fetchMoreData = () => {
-    const fetchUrl = getApiUrlObj()
-    // console.log(fetchUrl);
     axios
-      .get(fetchUrl, {
+      .get(getApiUrlObj(), {
         params: { sort_by: propSortBy || '-updateAt', limit: PAGE_SIZE, offset: currentOffset },
       })
       .then((res) => {
-        const partialListObj = res.data
-        setCurrentOffset(currentOffset + PAGE_SIZE)
-        if (partialListObj.length < PAGE_SIZE) {
-          setHasMore(false)
-          // console.log('(fetchMoreData 0) partialListObj.length=', partialListObj.length)
-          // console.log('(fetchMoreData 0) hasMore=', hasMore)
-        } else {
-          // console.log('(fetchMoreData +) partialListObj.length=', partialListObj.length)
-          // console.log('(fetchMoreData +) hasMore=', hasMore)
-
-          setListObj(listObj.concat(partialListObj))
-        }
+        const data = res.data
+        if (data.length < PAGE_SIZE) setHasMore(false)
+        setObjList((listObj) => listObj.concat(data))
       })
       .catch((err) => (err.response?.status == 401 ? logout() : defaultErrorHandler(err)))
   }
@@ -134,12 +128,13 @@ export default function ObjCatalogue({
               ></EditObjCard>
             )}
             <InfiniteScroll
-              dataLength={listObj.length}
-              next={fetchMoreData}
+              dataLength={objList.length}
+              next={() => setCurrentOffset(currentOffset + PAGE_SIZE)}
               hasMore={hasMore}
               loader={<h4>Loading...</h4>}
+              endMessage={<i>Aucune donnée supplémentaire</i>}
             >
-              {listObj.map((obj, i) => (
+              {objList.map((obj) => (
                 <ObjCard
                   editMode={isEdit}
                   hideEdit={hideEdit}
@@ -152,7 +147,7 @@ export default function ObjCatalogue({
                   deleteConfirmMsg={deleteConfirmMsg}
                   deleteMsg={deleteMsg}
                   refresh={refresh}
-                  key={`${obj[propId]}-${i}`}
+                  key={`${obj[propId]}`}
                 ></ObjCard>
               ))}
             </InfiniteScroll>

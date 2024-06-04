@@ -129,8 +129,8 @@ export class LocalLogger {
      */
     private _createLogFile() : void {
         const datestr = new Date().toLocaleString('fr', { timeZone: 'Europe/Paris' }).
-              replace(', ','_').replace(/:/g,'.').replace(/([0-9]*)\/([0-9]*)\/([0-9]*)/g,'$3-$2-$1');
-        var logfilename = this.config.directory + this.config.prefix + datestr + '.jslog';
+              replace(', ','_').replace(/:/g,'.').replace(/(\d*)\/(\d*)\/(\d*)/g,'$3-$2-$1');
+        const logfilename = this.config.directory + this.config.prefix + datestr + '.jslog';
         try {
             if (this.fdesc) { this.fdesc.close(); }
             this.fdesc = fs.createWriteStream(logfilename, { flags:'w' });
@@ -145,8 +145,7 @@ export class LocalLogger {
     private _updateLogs() : void {
         this._createLogFile();
         this.log('Updating logging file...', { severity: Severity.Notice });
-        var _this = this;
-        setTimeout(function() { _this._updateLogs() }, this.config.logRotationSec * 1000);
+        setTimeout(() => this._updateLogs(), this.config.logRotationSec * 1000);
     }
 
     /**
@@ -158,18 +157,17 @@ export class LocalLogger {
      */
     private _translate(severity: number | undefined, color:boolean) : string {
         if (severity === undefined) return '';
-        var header = '';
         switch(severity) {
-        case Severity.Emergency:     color ? header = 'EMERGENCY!'.emergency : header = 'emergency'; break;
-        case Severity.Alert:         color ? header = 'alert!'.alert         : header = 'alert'; break;
-        case Severity.Critical:      color ? header = 'critical!'.critical   : header = 'critical'; break;
-        case Severity.Error:         color ? header = 'error'.error          : header = 'error'; break;
-        case Severity.Warning:       color ? header = 'warning'.warn         : header = 'warning'; break;
-        case Severity.Notice:        color ? header = 'note'.notice          : header = 'note'; break;
-        case Severity.Informational: color ? header = 'info'.info            : header = 'info'; break;
-        case Severity.Debug:         color ? header = 'debug'.debug          : header = 'debug'; break;
+            case Severity.Emergency:     return color ? 'EMERGENCY!'.emergency : 'emergency';
+            case Severity.Alert:         return color ? 'alert!'.alert         : 'alert';
+            case Severity.Critical:      return color ? 'critical!'.critical   : 'critical';
+            case Severity.Error:         return color ? 'error'.error          : 'error';
+            case Severity.Warning:       return color ? 'warning'.warn         : 'warning';
+            case Severity.Notice:        return color ? 'note'.notice          : 'note';
+            case Severity.Informational: return color ? 'info'.info            : 'info';
+            case Severity.Debug:         return color ? 'debug'.debug          : 'debug';
+            default: return ''
         }
-        return header;
     }
 
     /**
@@ -181,7 +179,7 @@ export class LocalLogger {
     log(message: string, options?: MessageOptions) : void {
         const date = new Date();
         const datestr = date.toLocaleString('fr');
-        options = ( options === undefined ) ? {} : options;
+        options = options ?? {};
         if (this.fdesc) {
             const datalog = {
                 date: date,
@@ -231,19 +229,19 @@ export class LocalLogger {
 
         /* Simply loop over all files in the directory, and create a JSON description
          */
-        var entries = [];
+        let entries = [];
         try {
             const dir = fs.opendirSync(this.config.directory);
             this.log("Open dir "+dir.path, { severity: Severity.Debug });
-            var dirent;
+            let dirent;
             while (dirent = dir.readSync()) {
-                var n = dirent.name;
+                const n = dirent.name;
                 this.log(n, { severity: Severity.Debug });
-                var fst = fs.statSync(this.config.directory+n);
-                var url = req.protocol+'://'+req.hostname+req.originalUrl;
-                if (url.substr(url.length - 1) != '/') url += '/';
-                if (n.match(this.myLogRe) && fst.size > 0) {
-                    var e = { 'date': fst.ctime, 'size': fst.size, 'name' : n, 'url':  url + n }
+                const fst = fs.statSync(this.config.directory+n);
+                let url = req.protocol+'://'+req.hostname+req.originalUrl;
+                if (!url.endsWith('/')) url += '/';
+                if (RegExp(this.myLogRe).exec(n) && fst.size > 0) {
+                    const e = { 'date': fst.ctime, 'size': fst.size, 'name' : n, 'url':  url + n }
                     entries.push(e);
                 }
             }
@@ -252,9 +250,8 @@ export class LocalLogger {
         catch(err) {
             this.log("Could not open log dir: "+err, { severity: Severity.Warning });
         };
-        entries = entries.sort(function(a:any,b:any) : number { return (a.date > b.date) ? 1 : (a.date < b.date) ? -1 : 0; });
-        var directories = { entries: entries };
-        res.send(directories);
+        entries.sort((a:any, b:any) : number => (a.date > b.date) ? 1 : (a.date < b.date) ? -1 : 0);
+        res.send({ entries});
     }
 
     /**
@@ -270,25 +267,23 @@ export class LocalLogger {
         if (!access) return;
         if (access[0] != 'r') { res.status(401).send('Read access not set for user ('+user+':'+access+')'); return; }
 
-        var content= {};
-        var fname = req.params.name;
+        let content= {};
+        const fname = req.params.name;
         this.log("Request file "+fname, { severity: Severity.Debug });
         try {
             if (!fname.match(this.myLogRe)) {
                 content = "{ 'error': 'incorrect file name', 'filename':'"+fname+"' }";
             }
             else {
-                var pathname = this.config.directory + fname;
-                var fdat = fs.readFileSync(pathname, "utf8");
-                var elist = [];
-                var flist = fdat.split('\n');
-                for (var index in flist) {
-                    var line = flist[index];
+                const pathname = this.config.directory + fname;
+                const fdat = fs.readFileSync(pathname, "utf8");
+                const elist = [];
+                const flist = fdat.split('\n');
+                for (const index in flist) {
+                    const line = flist[index];
                     if (line == "{" || line == "") continue;
                     try {
-                        var entry = JSON.parse(line);
-                        //if ('message' in entry) entry = entry['message'];
-                        //if ('level' in entry) delete entry['level'];
+                        const entry = JSON.parse(line);
                         elist.push(entry);
                     }
                     catch(err) {

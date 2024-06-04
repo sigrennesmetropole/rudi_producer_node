@@ -16,41 +16,41 @@ const { omit } = _
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  FIELDS_TO_SKIP,
   API_COLLECTION_TAG,
-  API_MEDIA_ID,
-  API_MEDIA_TYPE,
-  API_MEDIA_NAME,
-  API_MEDIA_CONNECTOR,
-  API_MEDIA_INTERFACE_CONTRACT,
-  API_FILE_MIME,
-  API_FILE_SIZE,
-  API_FILE_CHECKSUM,
-  API_FILE_STRUCTURE,
-  API_FILE_ENCODING,
-  API_FILE_STORAGE_STATUS,
-  API_MEDIA_CONNECTOR_PARAMS,
-  API_MEDIA_CAPTION,
-  API_MEDIA_DATES,
   API_DATES_CREATED,
   API_DATES_EDITED,
+  API_FILE_CHECKSUM,
+  API_FILE_ENCODING,
+  API_FILE_MIME,
+  API_FILE_SIZE,
   API_FILE_STATUS_UPDATE,
+  API_FILE_STORAGE_STATUS,
+  API_FILE_STRUCTURE,
+  API_MEDIA_CAPTION,
+  API_MEDIA_CONNECTOR,
+  API_MEDIA_CONNECTOR_PARAMS,
+  API_MEDIA_DATES,
+  API_MEDIA_ID,
+  API_MEDIA_INTERFACE_CONTRACT,
+  API_MEDIA_NAME,
+  API_MEDIA_TYPE,
   API_MEDIA_VISUAL,
+  FIELDS_TO_SKIP,
 } from '../../db/dbFields.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import ReferenceDatesSchema, { checkDates } from '../schemas/ReferenceDates.js'
 import { ConnectorParameter } from '../schemas/ConnectorParameters.js'
+import ReferenceDatesSchema, { checkDates } from '../schemas/ReferenceDates.js'
 
-import { VALID_URI } from '../schemaValidators.js'
-import { UuidV4Schema } from '../schemas/Identifiers.js'
+import { makeSearchable } from '../../db/dbActions.js'
+import { BadRequestError, RudiError } from '../../utils/errors.js'
 import { isNotEmptyObject, nowISO } from '../../utils/jsUtils.js'
 import { logD, logV, logW } from '../../utils/logging.js'
 import { missingField } from '../../utils/msg.js'
-import { BadRequestError, RudiError } from '../../utils/errors.js'
-import { makeSearchable } from '../../db/dbActions.js'
+import { VALID_URI } from '../schemaValidators.js'
+import { UuidV4Schema } from '../schemas/Identifiers.js'
 
 import { get as getEncodings } from '../thesaurus/Encodings.js'
 import { getFileTypesWithCrypt } from '../thesaurus/FileTypes.js'
@@ -77,6 +77,12 @@ export const MediaStorageStatus = {
 
 export const InterfaceContract = {
   Dwnld: 'dwnl',
+  Page: 'page',
+  Api: 'api',
+  // Wms: 'wms',
+  // Wfs: 'wfs',
+  // Wmts: 'wmts',
+  Geo: 'geoservice',
 }
 
 const commonSchemaOptions = {
@@ -188,7 +194,7 @@ const MediaSchema = new mongoose.Schema(
 MediaSchema.pre('save', function (next) {
   const mod = 'MediaSchema'
   const fun = 'pre save hook'
-  // logT(mod, fun, ``)
+  // logT(mod, fun)
   try {
     const connector = this[API_MEDIA_CONNECTOR]
     if (!connector?.url)
@@ -201,10 +207,10 @@ MediaSchema.pre('save', function (next) {
       this[API_FILE_STORAGE_STATUS] = this[API_FILE_STORAGE_STATUS] || MediaStorageStatus.Available
       // Set status_update date
       this[API_FILE_STATUS_UPDATE] = this[API_FILE_STATUS_UPDATE] || nowISO()
-      // Set connector interface_contract to 'external'
-      this[API_MEDIA_CONNECTOR][API_MEDIA_INTERFACE_CONTRACT] = 'external'
+      // Set connector interface_contract to 'dwnl'
+      this[API_MEDIA_CONNECTOR][API_MEDIA_INTERFACE_CONTRACT] = InterfaceContract.Dwnld
     }
-    if (!!this[API_MEDIA_NAME]) {
+    if (this[API_MEDIA_NAME]) {
       const nameBefore = this[API_MEDIA_NAME]
       const nameAfter = sanitize(this[API_MEDIA_NAME])
       if (nameBefore !== nameAfter) {
@@ -309,7 +315,7 @@ FileSchema.pre('save', function (next) {
     if (!isNotEmptyObject(this[API_FILE_CHECKSUM]))
       throw new BadRequestError(missingField(API_FILE_CHECKSUM), mod, fun, [API_FILE_CHECKSUM])
 
-    logD(mod, fun, 'checking MEDIA_DATES')
+    // logD(mod, fun, 'checking MEDIA_DATES')
     checkDates(
       this[API_MEDIA_DATES],
       API_DATES_CREATED,
@@ -386,7 +392,7 @@ MediaSchema.pre('save', async function (next) {
 
   const media = this
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
     if (!media[API_MEDIA_NAME]) media[API_MEDIA_NAME] = media[API_MEDIA_ID]
   } catch (err) {
     logV(mod, fun, `pre save checks KO: ${err}`)

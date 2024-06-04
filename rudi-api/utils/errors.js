@@ -12,7 +12,14 @@ const DEFAULT_MESSAGE = 'Rudi producer node - API Server Error'
 const IS_RUDI_ERROR = 'is_rudi_error'
 const ERR_ID = 'errId'
 
-import { TRACE, STATUS_CODE, TRACE_MOD, TRACE_FUN, TRACE_ERR, ERR_PATH } from '../config/confApi.js'
+import {
+  ERR_PATH,
+  STATUS_CODE,
+  TRACE,
+  TRACE_ERR,
+  TRACE_FUN,
+  TRACE_MOD,
+} from '../config/constApi.js'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
@@ -34,12 +41,12 @@ export class RudiError extends Error {
     // logT(mod, fun, `${beautify(errTrace)}`)
     // const lastTrace = getLast(errTrace)
     // if (lastTrace) logD(lastTrace.mod, lastTrace.fun, lastTrace.err)
-    // else logT(mod, fun, ``)
+    // else logT(mod, fun)
     super(message || DEFAULT_MESSAGE)
     this[IS_RUDI_ERROR] = true
     this[STATUS_CODE] = code || 500
     this.name = name || 'Internal Server Error'
-    this.error = description || 'An unexpected error occured'
+    this.error = description || 'An unexpected error occurred'
     this.type = this.constructor.name
     this[TRACE] = errTrace || []
     this.setId()
@@ -200,7 +207,7 @@ export class RudiError extends Error {
   static treatCommunicationError(ctxMod, ctxFun, comError, errPrefix) {
     const fun = 'treatCommunicationError'
     try {
-      logT(mod, fun, ``)
+      logT(mod, fun)
 
       let error
       const errFlag = `${errPrefix ? errPrefix + ' ' : ''}`
@@ -259,20 +266,12 @@ export class RudiError extends Error {
         }
       } else if (comError.message) {
         const errMsg = comError.message
-        if (errMsg === 'Request failed with status code 400') {
-          logT(mod, fun, `${errFlag}error message 400: ${beautify(comError)}`)
-          error = new BadRequestError(errMsg)
-        } else if (errMsg === 'Request failed with status code 401') {
-          logT(mod, fun, `${errFlag}error message 401: ${beautify(comError)}`)
-          error = new UnauthorizedError(errMsg)
-        } else if (errMsg === 'Request failed with status code 403') {
-          logT(mod, fun, `${errFlag}error message 403: ${beautify(comError)}`)
-          error = new ForbiddenError(errMsg)
-        } else if (errMsg === 'Request failed with status code 404') {
-          logT(mod, fun, `${errFlag}error message 404: ${beautify(comError)}`)
-          error = new NotFoundError(errMsg)
+        if (errMsg.startsWith('Request failed with status code ')) {
+          const errCode = `${errMsg}`.substring(32, 35)
+          logT(mod, fun, `${errFlag}error message ${errCode}: ${beautify(comError)}`)
+          error = RudiError.createRudiHttpError(errCode, errMsg)
         } else {
-          logT(mod, fun, `${errFlag}error message: ${beautify(comError)}`)
+          logT(mod, fun, `${errFlag}error message: ${beautify(errMsg)}`)
           error = new RudiError(errMsg)
         }
       } else {
@@ -285,7 +284,7 @@ export class RudiError extends Error {
             error = new BadRequestError(comError)
           } else if (comError === 'Error 401: Request failed with status code 401') {
             error = new UnauthorizedError(comError)
-          } else if (comError === 'Error 403: Request failed with status code 401') {
+          } else if (comError === 'Error 403: Request failed with status code 403') {
             error = new ForbiddenError(comError)
           } else {
             error = new RudiError(comError)
@@ -341,7 +340,7 @@ export class UnauthorizedError extends RudiError {
       errMessage,
       401,
       'Unauthorized',
-      'The request requires an user authentication',
+      'The request requires a user authentication',
       undefined,
       ctxMod,
       ctxFun
@@ -412,6 +411,20 @@ export class InternalServerError extends RudiError {
 export class ParameterExpectedError extends InternalServerError {
   constructor(param, ctxMod, ctxFun) {
     super(`${parameterExpected(ctxFun, param)}`, ctxMod, ctxFun)
+  }
+}
+
+export class ConfigurationError extends RudiError {
+  constructor(param, fileName, ctxMod, ctxFun) {
+    super(
+      `The parameter '${param}' is incorrectly set in file '${fileName}'`,
+      500,
+      'Configuration Error',
+      'Configuration Error',
+      undefined,
+      ctxMod,
+      ctxFun
+    )
   }
 }
 

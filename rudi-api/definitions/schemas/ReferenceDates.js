@@ -53,7 +53,7 @@ function toEpoch(dateStr) {
 export function checkDates(datesObj, firstDateProp, secondDateProp, shouldInitialize) {
   const fun = 'checkDates'
   try {
-    // logT(mod, fun, ``)
+    // logT(mod, fun)
     if (!datesObj) return
 
     if (!datesObj[secondDateProp]) {

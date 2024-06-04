@@ -270,7 +270,7 @@ components:
             $ref: 'https://raw.githubusercontent.com/zit0un/HttpErrorsOAS3/main/schemas/HttpError400_BadRequest.yaml'
     #---------------------------------------------------------------------------
     'Error401Unauthorized':
-      description: The request requires an user authentication.
+      description: The request requires a user authentication.
       content:
         application/json:
           schema:
@@ -778,7 +778,7 @@ components:
         #——————————————————————————
         'dependencies':
           description: >
-            Dependecies are other concepts that were used as sources for the 
+            dependencies are other concepts that were used as sources for the
             present concept (such ones are listed as parents) or that use
             the present concept as source (these are listed as children)
           type: object

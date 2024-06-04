@@ -1,12 +1,12 @@
 const mod = 'parseUrl'
-import mongoose from 'mongoose'
 
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
+import mongoose from 'mongoose'
 
 // -------------------------------------------------------------------------------------------------
-// Constants
+// Imported Constants
 // -------------------------------------------------------------------------------------------------
 import {
   ACT_EXT_SEARCH,
@@ -34,7 +34,7 @@ import {
   QUERY_UPDATED_AFTER_CAML,
   QUERY_UPDATED_BEFORE,
   QUERY_UPDATED_BEFORE_CAML,
-} from '../config/confApi.js'
+} from '../config/constApi.js'
 
 import {
   API_DATA_DATES_PROPERTY,
@@ -56,6 +56,20 @@ import {
   DB_UPDATED_AT,
 } from '../db/dbFields.js'
 
+// -------------------------------------------------------------------------------------------------
+// Internal dependencies
+// -------------------------------------------------------------------------------------------------
+import { beautify, isNotEmptyArray } from './jsUtils.js'
+
+import { logD, logT, logW } from './logging.js'
+
+import { BadRequestError, RudiError } from './errors.js'
+
+import { getModelPropertyNames, getNestedObject, getObjectModel } from '../db/dbQueries.js'
+
+// -------------------------------------------------------------------------------------------------
+// Local constants
+// -------------------------------------------------------------------------------------------------
 const QUERY_RESERVED_WORDS = [
   QUERY_CONFIRM,
   QUERY_COUNT_BY,
@@ -87,24 +101,16 @@ const DATA_DATES = `${API_DATA_DATES_PROPERTY}.`
 const META_DATES = `${API_METAINFO_PROPERTY}.${API_METAINFO_DATES}.`
 
 // -------------------------------------------------------------------------------------------------
-// Internal dependecies
-// -------------------------------------------------------------------------------------------------
-import { beautify, isNotEmptyArray } from './jsUtils.js'
-import { logD, logT, logW } from './logging.js'
-import { BadRequestError, RudiError } from './errors.js'
-import { getModelPropertyNames, getNestedObject, getObjectModel } from '../db/dbQueries.js'
-
-// -------------------------------------------------------------------------------------------------
 // Functions
 // -------------------------------------------------------------------------------------------------
 // eslint-disable-next-line complexity
 export const parseQueryParameters = async (objectType, fullUrl) => {
   const fun = 'parseQueryParameters'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     // identify object model
-    const Model = getObjectModel(objectType)
-    const modelProperties = getModelPropertyNames(Model)
+    const ObjModel = getObjectModel(objectType)
+    const modelProperties = getModelPropertyNames(ObjModel)
     // logD(mod, fun, beautify(modelProperties))
     const returnedFilter = {
       [QUERY_LIMIT]: DEFAULT_QUERY_LIMIT,
@@ -299,15 +305,13 @@ export const parseQueryParameters = async (objectType, fullUrl) => {
                 [EXT_OBJ_VAL]: value,
               })
           }
+        } else if (searching) {
+          logD(mod, fun, `Search term found: ${beautify(key)}`)
+          key.split(',').map((term) => returnedFilter[QUERY_SEARCH_TERMS].push(term))
         } else {
-          if (searching) {
-            logD(mod, fun, `Search term found: ${beautify(key)}`)
-            key.split(',').map((term) => returnedFilter[QUERY_SEARCH_TERMS].push(term))
-          } else {
-            logW(mod, fun, `Key is not a property of ${objectType}: ${beautify(key)}`)
-          }
-          // logW(mod, fun, `Model properties: ${beautify(modelProperties)}`)
+          logW(mod, fun, `Key is not a property of ${objectType}: ${beautify(key)}`)
         }
+        // logW(mod, fun, `Model properties: ${beautify(modelProperties)}`)
       }
     }
     // logD(mod, fun, `filterReturn: ${beautify(filterReturn)}`)

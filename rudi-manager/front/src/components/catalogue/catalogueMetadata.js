@@ -1,16 +1,16 @@
 import axios from 'axios'
 
-import React, { useState, useEffect, useRef } from 'react'
-import PropTypes from 'prop-types'
-import InfiniteScroll from 'react-infinite-scroll-component'
-import { Search } from 'react-bootstrap-icons'
+import React, { useEffect, useRef, useState } from 'react'
 
-import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
-import MetadataCard from './metadataCard'
-import { filterConf } from './conf'
-import ThemeDisplay from '../other/themeDisplay'
-import { EditObjCard } from '../generic/objCard'
+import PropTypes from 'prop-types'
+import { Search } from 'react-bootstrap-icons'
+import InfiniteScroll from 'react-infinite-scroll-component'
+
 import { getApiData } from '../../utils/frontOptions'
+import useDefaultErrorHandler from '../../utils/useDefaultErrorHandler'
+import { EditObjCard } from '../generic/objCard'
+import ThemeDisplay from '../other/themeDisplay'
+import MetadataCard, { displayStatus } from './metadataCard'
 
 const idField = 'global_id'
 
@@ -35,11 +35,11 @@ export default function CatalogueMetadata({ editMode, logout }) {
   const { defaultErrorHandler } = useDefaultErrorHandler()
 
   // console.log('-- Catalogue')
-  const [isEdit, setEdit] = useState(!!editMode)
-  useEffect(() => setEdit(!!editMode), [editMode])
+  const [isEdit, setIsEdit] = useState(!!editMode)
+  useEffect(() => setIsEdit(!!editMode), [editMode])
 
-  const [metadatas, setMetadatas] = useState([])
-  const [countBy, setCountBy] = useState([])
+  const [metadataList, setMetadataList] = useState([])
+  const [allCountByFilters, setAllCountByFilters] = useState([])
   const [currentFilters, setCurrentFilters] = useState([{ sort_by: `-updatedAt` }])
   useEffect(() => refresh(), [currentFilters])
 
@@ -51,9 +51,15 @@ export default function CatalogueMetadata({ editMode, logout }) {
   const isSearchMode = () => searchText?.current?.value?.length > 0
   const searchMode = () => (isSearchMode() ? `/search` : '')
 
+  const metadataDisplay = (filterValue) => (
+    <span className="align-pill-left">{displayStatus(filterValue.metadata_status)}</span>
+  )
+  const themeDisplay = (filterValue, filter) => (
+    <ThemeDisplay value={getFilterLabel(filterValue, filter)}></ThemeDisplay>
+  )
   const refresh = () => {
     setHasMore(true)
-    setMetadatas([])
+    setMetadataList([])
     getInitialData()
     // console.log('-- gotInitialData')
 
@@ -65,14 +71,52 @@ export default function CatalogueMetadata({ editMode, logout }) {
   }
 
   useEffect(() => {
-    if (initialRender.current) {
-      initialRender.current = false
-    } else {
-      if (currentOffset < 0) setCurrentOffset(0)
-      else fetchMoreData()
-    }
+    if (initialRender.current) initialRender.current = false
+    else if (currentOffset < 0) setCurrentOffset(0)
+    else fetchMoreData()
   }, [currentOffset])
 
+  const filterConf = [
+    {
+      name: 'metadata_status',
+      text: 'Statut :',
+      values: [],
+      toFilterParam: (elem) => {
+        return { metadata_status: `"${elem?.metadata_status}"` }
+      },
+      display: metadataDisplay,
+    },
+    {
+      name: 'theme',
+      text: 'Thèmes :',
+      values: [],
+      toFilterParam: (elem) => ({ theme: `"${elem?.theme}"` }),
+      display: themeDisplay,
+    },
+    {
+      name: 'keywords',
+      text: 'Mots-clés :',
+      values: [],
+      toFilterParam: (elem) => ({ keywords: `"${elem?.keywords}"` }),
+    },
+    {
+      name: 'producer',
+      displayName: 'organization_name',
+      text: 'Sources :',
+      values: [],
+      toFilterParam: (elem) => {
+        return { 'producer.organization_name': `"${elem.producer?.organization_name}"` }
+      },
+    },
+    // {
+    //   name: 'resource_languages',
+    //   text: 'Langage :',
+    //   values: [],
+    //   toFilterParam: (elem) => {
+    //     return { resource_languages: `"${elem?.resource_languages}"` };
+    //   },
+    // },
+  ]
   /**
    * crée l'object params pour la requete
    * @param {*} baseParams base des params
@@ -143,15 +187,13 @@ export default function CatalogueMetadata({ editMode, logout }) {
     // should add
     if (indexType === -1) {
       setCurrentFilters(filterList.concat(filterParam))
-    } else {
+    } else if (index > -1) {
       // should replace/remove
-      if (index > -1) {
-        filterList.splice(index, 1)
-        setCurrentFilters(filterList)
-      } else {
-        filterList.splice(indexType, 1)
-        setCurrentFilters(filterList.concat(filterParam))
-      }
+      filterList.splice(index, 1)
+      setCurrentFilters(filterList)
+    } else {
+      filterList.splice(indexType, 1)
+      setCurrentFilters(filterList.concat(filterParam))
     }
   }
 
@@ -187,7 +229,6 @@ export default function CatalogueMetadata({ editMode, logout }) {
         // Simple toggle of the actual reference value for this filter type
         filterList[existingFilterIndex] = { [filterKey]: toggleFilterVal(existingFilterVal) }
       }
-      // console.log('T (toggleFilter) filterList[0]', filterList[0]);
       setCurrentFilters(filterList)
     }
   }
@@ -196,8 +237,6 @@ export default function CatalogueMetadata({ editMode, logout }) {
    * recup la 1er page des métadonnéees et les countBy
    */
   function getInitialData() {
-    // console.log('-- getInitialData');
-
     Promise.all(
       filterConf.map((count) =>
         axios.get(getApiData(`resources${searchMode()}`), {
@@ -206,11 +245,11 @@ export default function CatalogueMetadata({ editMode, logout }) {
       )
     )
       .then((values) => {
-        const countByTemp = filterConf.map((count, i) => {
-          count.values = values[i].data
-          return count
+        const updatedFilter = filterConf.map((filter, i) => {
+          filter.values = values[i].data
+          return filter
         })
-        setCountBy(countByTemp)
+        setAllCountByFilters(updatedFilter)
       })
       .catch((err) => (err.response?.status == 401 ? logout() : defaultErrorHandler(err)))
   }
@@ -224,29 +263,26 @@ export default function CatalogueMetadata({ editMode, logout }) {
         params: createParams({ limit: PAGE_SIZE, offset: currentOffset }),
       })
       .then((res) => {
-        let data
-        if (isSearchMode()) data = res.data.items
-        else data = res.data
-
+        const data = isSearchMode() ? res.data.items : res.data
         if (data.length < PAGE_SIZE) setHasMore(false)
-        setMetadatas((metadatas) => metadatas.concat(data))
+        setMetadataList((metadatas) => metadatas.concat(data))
       })
       .catch((err) => (err.response?.status == 401 ? logout() : defaultErrorHandler(err)))
   }
 
   /**
-   * récupere le label pour un element d'un countBy
-   * @param {*} filterElement element d'un countBy
-   * @param {*} filterConfig configuration du countBy
+   * récupere le label pour un element d'un countByFilter
+   * @param {*} filterValue element d'un countByFilter
+   * @param {*} filterObject configuration du countByFilter
    * @return {String} label de l'élément
    */
-  function getFilterLabel(filterElement, filterConfig) {
+  function getFilterLabel(filterValue, filterObject) {
     try {
-      // console.log(filterElement)
-      // console.log(filterConfig)
-      let result = filterElement[filterConfig?.name] || 'ERR: "name" not found'
-      if (filterConfig?.displayName && result[filterConfig?.displayName]) {
-        result = result[filterConfig.displayName]
+      // console.log('T getFilterLabel.filterValue:', filterValue)
+      // console.log('T getFilterLabel.filterObject:', filterObject)
+      let result = filterValue[filterObject?.name] || 'ERR: "name" not found'
+      if (filterObject?.displayName && result[filterObject?.displayName]) {
+        result = result[filterObject.displayName]
       }
       return result
     } catch (err) {
@@ -349,27 +385,32 @@ export default function CatalogueMetadata({ editMode, logout }) {
             <div className="left-hand-blocks">
               <div className="label-lv1">Filtrer</div>
               <div className="row no-row-margin">
-                {countBy.map((filter) => {
-                  return (
-                    <div className="col border rounded" key={filter.name}>
-                      <div className="label-lv2">{filter.text}</div>
+                {allCountByFilters.map((filterObject, i) => {
+                  // console.log(filter)
+                  return !filterObject.values ? (
+                    'No values'
+                  ) : (
+                    <div
+                      className={i ? 'col border rounded' : 'border rounded'}
+                      key={filterObject.name}
+                    >
+                      <div className="label-lv2">{filterObject.text}</div>
                       <ul className="list-group">
-                        {filter.values.map((filterValue, i) => {
+                        {filterObject.values.map((filterValue, i) => {
+                          const filterLabel = getFilterLabel(filterValue, filterObject)
+                          const key = filterLabel + i
                           return (
                             <li
                               className="filter-items"
-                              key={getFilterLabel(filterValue, filter) + i}
-                              onClick={() => addToFilter(filter.toFilterParam(filterValue))}
+                              key={key}
+                              onClick={() => addToFilter(filterObject.toFilterParam(filterValue))}
                             >
-                              {filter.name === 'theme' && (
-                                <ThemeDisplay
-                                  value={getFilterLabel(filterValue, filter)}
-                                ></ThemeDisplay>
-                              )}
-                              {filter.name !== 'theme' && getFilterLabel(filterValue, filter)}
+                              {filterObject.display
+                                ? filterObject.display(filterValue, filterObject)
+                                : filterLabel}
                               <span
                                 className={`badge rounded-pill text-bg-${
-                                  isSelectedFilter(filter.toFilterParam(filterValue))
+                                  isSelectedFilter(filterObject.toFilterParam(filterValue))
                                     ? 'success'
                                     : 'primary'
                                 }`}
@@ -401,15 +442,13 @@ export default function CatalogueMetadata({ editMode, logout }) {
               ></EditObjCard>
             )}
             <InfiniteScroll
-              dataLength={metadatas.length}
-              next={() => {
-                setCurrentOffset(currentOffset + PAGE_SIZE)
-              }}
+              dataLength={metadataList.length}
+              next={() => setCurrentOffset(currentOffset + PAGE_SIZE)}
               hasMore={hasMore}
               loader={<h4>Loading...</h4>}
               endMessage={<i>Aucune donnée supplémentaire</i>}
             >
-              {metadatas.map((metadata) => {
+              {metadataList.map((metadata) => {
                 return (
                   <MetadataCard
                     editMode={isEdit}

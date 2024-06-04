@@ -2,85 +2,88 @@ const mod = 'metaSch'
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
-import mongoose from 'mongoose'
-
 import _ from 'lodash'
-const { omit } = _
-
+import mongoose from 'mongoose'
 import GeoJSON from 'mongoose-geojson-schema'
-
 import mongooseInt32 from 'mongoose-int32'
-const Int32 = mongooseInt32.loadType(mongoose)
-
 import objectPath from 'object-path'
+const { omit } = _
+const Int32 = mongooseInt32.loadType(mongoose)
 
 // -------------------------------------------------------------------------------------------------
 // Fields
 // -------------------------------------------------------------------------------------------------
-import { DEFAULT_LANG, OBJ_METADATA, URL_PREFIX_PUBLIC } from '../../config/confApi.js'
+import {
+  DEFAULT_LANG,
+  OBJ_METADATA,
+  PORTAL_API_VERSION,
+  URL_PREFIX_PUBLIC,
+} from '../../config/constApi.js'
 
 import {
-  API_DATA_PRODUCER_PROPERTY,
-  API_DATA_CONTACTS_PROPERTY,
   API_ACCESS_CONDITION,
-  API_LICENCE,
-  API_LICENCE_TYPE,
-  API_LICENCE_LABEL,
-  API_LICENCE_CUSTOM_LABEL,
-  API_LICENCE_CUSTOM_URI,
-  API_GEOGRAPHY,
-  API_GEO_BBOX_PROPERTY,
-  API_GEO_PROJECTION_PROPERTY,
-  API_PERIOD_PROPERTY,
-  API_START_DATE_PROPERTY,
-  API_METAINFO_PROPERTY,
-  API_METAINFO_CONTACTS_PROPERTY,
-  API_METAINFO_PROVIDER_PROPERTY,
-  API_METAINFO_DATES,
+  API_COLLECTION_TAG,
+  API_CONFIDENTIALITY,
+  API_DATA_CONTACTS_PROPERTY,
+  API_DATA_DATES_PROPERTY,
+  API_DATA_DESCRIPTION_PROPERTY,
+  API_DATA_DETAILS_PROPERTY,
+  API_DATA_NAME_PROPERTY,
+  API_DATA_PRODUCER_PROPERTY,
   API_DATES_CREATED,
+  API_DATES_DELETED,
   API_DATES_EDITED,
+  API_DATES_EXPIRES,
   API_DATES_PUBLISHED,
   API_DATES_VALIDATED,
-  API_DATES_EXPIRES,
-  API_MEDIA_PROPERTY,
-  FIELDS_TO_SKIP,
-  API_DATA_DATES_PROPERTY,
-  API_THEME_PROPERTY,
+  API_END_DATE_PROPERTY,
+  API_FILE_MIME,
+  API_FILE_STATUS_UPDATE,
+  API_FILE_STORAGE_STATUS,
+  API_GEO_BBOX_EAST,
+  API_GEO_BBOX_NORTH,
+  API_GEO_BBOX_PROPERTY,
+  API_GEO_BBOX_SOUTH,
+  API_GEO_BBOX_WEST,
+  API_GEO_GEOJSON_PROPERTY,
+  API_GEO_PROJECTION_PROPERTY,
+  API_GEOGRAPHY,
+  API_INTEGRATION_ERROR_ID,
   API_KEYWORDS_PROPERTY,
   API_LANGUAGES_PROPERTY,
-  API_COLLECTION_TAG,
-  API_END_DATE_PROPERTY,
-  API_METADATA_ID,
-  API_DATA_NAME_PROPERTY,
-  API_METADATA_LOCAL_ID,
-  DB_CREATED_AT,
-  DB_UPDATED_AT,
-  DB_PUBLISHED_AT,
-  API_DATA_DETAILS_PROPERTY,
-  API_DATA_DESCRIPTION_PROPERTY,
-  API_GEO_BBOX_WEST,
-  API_GEO_BBOX_EAST,
-  API_GEO_BBOX_SOUTH,
-  API_GEO_BBOX_NORTH,
-  API_GEO_GEOJSON_PROPERTY,
-  LicenceTypes,
-  DICT_TEXT,
-  API_MEDIA_TYPE,
-  API_FILE_MIME,
-  API_CONFIDENTIALITY,
-  API_RESTRICTED_ACCESS,
-  API_METAINFO_SOURCE_PROPERTY,
-  API_DATES_DELETED,
-  API_METAINFO_VERSION_PROPERTY,
-  API_STORAGE_STATUS,
+  API_LICENCE,
+  API_LICENCE_CUSTOM_LABEL,
+  API_LICENCE_CUSTOM_URI,
+  API_LICENCE_LABEL,
+  API_LICENCE_TYPE,
   API_MEDIA_ID,
-  API_INTEGRATION_ERROR_ID,
+  API_MEDIA_PROPERTY,
+  API_MEDIA_TYPE,
+  API_METADATA_ID,
+  API_METADATA_LOCAL_ID,
+  API_METAINFO_CONTACTS_PROPERTY,
+  API_METAINFO_DATES,
+  API_METAINFO_PROPERTY,
+  API_METAINFO_PROVIDER_PROPERTY,
+  API_METAINFO_SOURCE_PROPERTY,
+  API_METAINFO_VERSION_PROPERTY,
+  API_PERIOD_PROPERTY,
+  API_RESTRICTED_ACCESS,
+  API_START_DATE_PROPERTY,
   API_STATUS_PROPERTY,
+  API_STORAGE_STATUS,
+  API_THEME_PROPERTY,
+  DB_CREATED_AT,
+  DB_PUBLISHED_AT,
+  DB_UPDATED_AT,
+  DICT_TEXT,
+  FIELDS_TO_SKIP,
+  LicenceTypes,
   MetadataStatus,
 } from '../../db/dbFields.js'
 
-import { get as getFileTypes, MIME_YAML_ALT, MIME_YAML } from '../thesaurus/FileTypes.js'
-import { Longitude, Latitude } from '../schemas/GpsCoordinates.js'
+import { Latitude, Longitude } from '../schemas/GpsCoordinates.js'
+import { get as getFileTypes, MIME_YAML, MIME_YAML_ALT } from '../thesaurus/FileTypes.js'
 
 // -------------------------------------------------------------------------------------------------
 // Validators
@@ -90,48 +93,47 @@ const validArrayNotNull = {
   validator: isNotEmptyArray,
   message: `'{PATH}' property should not be empty`,
 }
-// const validObjectNotEmpty = {
-//   validator: isNotEmptyObject,
-//   message: `'{PATH}' property should not be empty`,
-// }
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 import { beautify, isNotEmptyArray, isNothing, multiSplit } from '../../utils/jsUtils.js'
+
 import { logD, logE, logT, logV } from '../../utils/logging.js'
-import { incorrectVal, incorrectValueForEnum } from '../../utils/msg.js'
-import { NotFoundError, BadRequestError, RudiError } from '../../utils/errors.js'
-import { accessProperty, requireSubProperty } from '../../utils/jsonAccess.js'
+
 import { makeSearchable } from '../../db/dbActions.js'
+import { BadRequestError, NotFoundError, RudiError } from '../../utils/errors.js'
+import { accessProperty, requireSubProperty } from '../../utils/jsonAccess.js'
+import { incorrectVal, incorrectValueForEnum } from '../../utils/msg.js'
 
 // -------------------------------------------------------------------------------------------------
-// Thesaurus definiitons
+// Thesaurus definitions
 // -------------------------------------------------------------------------------------------------
 // logD(mod, 'init', 'Schemas, Models and definitions')
 import Keywords from '../thesaurus/Keywords.js'
 import Themes from '../thesaurus/Themes.js'
 
 import { isValid as isLanguageValid } from '../thesaurus/Languages.js'
+import { get as getLicenceCodes } from '../thesaurus/LicenceCodes.js'
 import { isValid as isProjectionValid } from '../thesaurus/Projections.js'
 import { isValid as isStorageStatusValid, StorageStatus } from '../thesaurus/StorageStatus.js'
-import { get as getLicenceCodes } from '../thesaurus/LicenceCodes.js'
 
 // -------------------------------------------------------------------------------------------------
 // Schema definitions
 // -------------------------------------------------------------------------------------------------
 import { DoiSchema, UuidSchema, UuidV4Schema } from '../schemas/Identifiers.js'
 
+import { AccessConditionSchema } from '../schemas/AccessConditions.js'
 import { DictionaryEntrySchema } from '../schemas/DictionaryEntry.js'
 import { checkDates, ReferenceDatesSchema } from '../schemas/ReferenceDates.js'
-import { AccesConditionSchema } from '../schemas/AccesConditions.js'
 
 // -------------------------------------------------------------------------------------------------
 // Model definitions
 // -------------------------------------------------------------------------------------------------
-import { isMediaMissing, MediaTypes } from './Media.js'
-import { VALID_API_VERSION, VALID_URI } from '../schemaValidators.js'
+import { isPortalConnectionDisabled } from '../../config/confPortal.js'
 import { getApiUrl } from '../../config/confSystem.js'
+import { VALID_API_VERSION, VALID_URI } from '../schemaValidators.js'
+import { isMediaMissing, MediaTypes } from './Media.js'
 
 // -------------------------------------------------------------------------------------------------
 // Fields with specific treatments
@@ -144,10 +146,10 @@ export const METADATA_FIELDS_TO_POPULATE = [
   API_MEDIA_PROPERTY,
 ].join(' ')
 
-const POPULATE_OPTS = {
-  path: METADATA_FIELDS_TO_POPULATE,
-  select: `-${FIELDS_TO_SKIP.concat(API_RESTRICTED_ACCESS).join(' -')}`,
-}
+// const POPULATE_OPTS = {
+//   path: METADATA_FIELDS_TO_POPULATE,
+//   select: `-${FIELDS_TO_SKIP.concat(API_RESTRICTED_ACCESS).join(' -')}`,
+// }
 
 // -------------------------------------------------------------------------------------------------
 // Helper functions
@@ -170,11 +172,9 @@ export const listMissingMedia = (rudiMetadata) => {
 export const isEveryMediaAvailable = (rudiMetadata) => {
   const fun = 'isEveryMediaAvailable'
   try {
-    logT(mod, fun, ``)
-    // console.log('T (isEveryMediaAvailable) metadata:', rudiMetadata)
+    logT(mod, fun)
 
     const metadataMediaList = rudiMetadata[API_MEDIA_PROPERTY]
-    // console.log('T (isEveryMediaAvailable) metadataMediaList:', metadataMediaList)
     let isOneMediaMissing = false
     for (const media of metadataMediaList) {
       if (isMediaMissing(media)) {
@@ -197,10 +197,10 @@ const MetadataSchema = new mongoose.Schema(
     // Resource identifiers
     // ---------------------------
 
-    /** Unique and permanent identifier for the ressource in RUDI system (required) */
+    /** Unique and permanent identifier for the resource in RUDI system (required) */
     [API_METADATA_ID]: UuidV4Schema,
 
-    /** Identifier for the ressource in the producer system (optional) */
+    /** Identifier for the resource in the producer system (optional) */
     [API_METADATA_LOCAL_ID]: {
       type: String,
       trim: true,
@@ -216,7 +216,7 @@ const MetadataSchema = new mongoose.Schema(
       },
     },
 
-    // Digital Object Identifier for the ressource (optional)
+    // Digital Object Identifier for the resource (optional)
     doi: DoiSchema,
 
     // ---------------------------
@@ -374,7 +374,7 @@ const MetadataSchema = new mongoose.Schema(
       /**
        * 'geographic_distribution': Precise geographic distribution of the data
        *
-       * Précisions: GeoJSON uses a geographic coordinate reference system,
+       * Precisions: GeoJSON uses a geographic coordinate reference system,
        * World Geodetic System 1984, and units of decimal degrees.
        * The first two elements are longitude and latitude, or easting and
        * northing, precisely in that order and using decimal numbers.
@@ -434,7 +434,7 @@ const MetadataSchema = new mongoose.Schema(
      * licence, confidentiality, terms of service, habilitation or required rights,
      * economical model. Default is open licence.
      */
-    [API_ACCESS_CONDITION]: AccesConditionSchema,
+    [API_ACCESS_CONDITION]: AccessConditionSchema,
 
     /** 'metadata_info': Metadata on the metadata */
     [API_METAINFO_PROPERTY]: {
@@ -484,6 +484,12 @@ const MetadataSchema = new mongoose.Schema(
       type: Date,
       immutable: true,
     },
+
+    /** Metadata status  */
+    [API_STATUS_PROPERTY]: {
+      type: String,
+      enum: Object.values(MetadataStatus),
+    },
   },
   {
     id: false,
@@ -520,10 +526,14 @@ async function checkMetadataSource(metadata) {
   }
 }
 
+MetadataSchema.virtual(API_RESTRICTED_ACCESS).get(function () {
+  return this[API_ACCESS_CONDITION]?.[API_CONFIDENTIALITY]?.[API_RESTRICTED_ACCESS]
+})
+
 async function checkLicence(metadata) {
   const fun = 'checkLicence'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const accessCondition = accessProperty(metadata, API_ACCESS_CONDITION)
     const licence = requireSubProperty(metadata, API_ACCESS_CONDITION, API_LICENCE)
     const licenceType = requireSubProperty(accessCondition, API_LICENCE, API_LICENCE_TYPE)
@@ -538,7 +548,7 @@ async function checkLicence(metadata) {
           API_LICENCE_TYPE,
           LicenceTypes.Standard
         )
-        const listLicenceCode = await getLicenceCodes()
+        const listLicenceCode = getLicenceCodes()
         // logD(mod, fun, ` [T] licence list: ${beautify(listLicenceCode)}`)
         if (listLicenceCode.indexOf(licenceLabel) === -1) {
           throw new NotFoundError(
@@ -597,7 +607,7 @@ async function checkLicence(metadata) {
 async function checkFileTypes(metadata) {
   const fun = 'checkFileTypes'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const medias = metadata[API_MEDIA_PROPERTY]
     medias.map((media, i) => {
       if (media[API_MEDIA_TYPE] !== MediaTypes.File) return
@@ -624,7 +634,7 @@ async function checkFileTypes(metadata) {
 async function checkThesaurus(metadata) {
   const fun = 'checkThesaurus'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     if (metadata.init) logD(mod, fun, `init`)
     const shouldInit = metadata[API_COLLECTION_TAG] === 'init'
     const dataTheme = metadata[API_THEME_PROPERTY]
@@ -738,35 +748,94 @@ async function checkThesaurus(metadata) {
     throw RudiError.treatError(mod, fun, err)
   }
 }
-/*
-  function checkMedia(metadata) {
-    const fun = 'checkMedia'
-    logD(mod, fun, `metadata: ${beautify(metadata)}`)
-    try {
-      const media = metadata[API_MEDIA_PROPERTY]
-      if (!media) throw new BadRequestError(missingField(API_MEDIA_PROPERTY)+` (metadata ${this[API_METADATA_ID]})`)
-      if (media[API_MEDIA_TYPE_PROPERTY] === MediaTypes.File) {
-        if (!isNotEmptyObject(media[API_FILE_CHECKSUM])) {
-          throw new BadRequestError(missingObjectProperty(this, API_FILE_CHECKSUM)+` (metadata ${this[API_METADATA_ID]})`)
-        }
-      } else {
-        logD(mod, fun, `media: ${beautify(metadata[API_MEDIA_PROPERTY])}`)
-        logD(mod, fun, `type: ${media[API_MEDIA_TYPE_PROPERTY]}`)
-      }
-    } catch (err) {
-          throw RudiError.treatError(mod, fun, err)
 
-    }
+const reckonMetadataStatus = (metadata) => {
+  const fun = 'reckonMetadataStatus'
+  logT(mod, fun)
+  try {
+    if (metadata[API_METAINFO_PROPERTY]?.[API_METAINFO_DATES]?.[API_DATES_DELETED])
+      return MetadataStatus.Deleted
+    if (metadata[API_STORAGE_STATUS] === StorageStatus.Pending) return MetadataStatus.Incomplete
+    if (metadata[API_COLLECTION_TAG] || isPortalConnectionDisabled()) return MetadataStatus.Local
+    if (metadata[API_INTEGRATION_ERROR_ID]) return MetadataStatus.Refused
+    if (metadata[DB_PUBLISHED_AT]) return MetadataStatus.Published
+    if (!isPortalConnectionDisabled()) return MetadataStatus.Sent
+    return MetadataStatus.Unset
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
   }
-*/
+}
 
+const updateMetadataStatus = (metadata) => {
+  metadata[API_STATUS_PROPERTY] = reckonMetadataStatus(metadata)
+}
+
+export const toRudiPortalJSON = (metadata) => {
+  const fun = 'toRudiPortalJSON'
+  try {
+    const portalReadyMetadata = metadata.toJSON()
+
+    //--- Latest API version
+    portalReadyMetadata[API_METAINFO_PROPERTY][API_METAINFO_VERSION_PROPERTY] = PORTAL_API_VERSION
+
+    //--- Removing media fields that are node specific
+    portalReadyMetadata[API_MEDIA_PROPERTY].forEach((media) => {
+      delete media[API_FILE_STORAGE_STATUS]
+      delete media[API_FILE_STATUS_UPDATE]
+
+      // delete media[API_MEDIA_THUMBNAIL]
+      // delete media[API_MEDIA_SATELLITES]
+    })
+
+    //--- Removing metadata fields that are node specific (e.g. virtual properties)
+    delete portalReadyMetadata[API_INTEGRATION_ERROR_ID]
+    delete portalReadyMetadata[API_STATUS_PROPERTY]
+    delete portalReadyMetadata[API_METAINFO_PROPERTY][API_METAINFO_SOURCE_PROPERTY]
+
+    return portalReadyMetadata
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
+
+export const setMetadataStatusToSent = (metadata) => {
+  const fun = 'setMetadataStatusToSent'
+  try {
+    metadata[DB_PUBLISHED_AT] = null // `delete mongooseDocument.field` doesn't work!!!!
+    metadata[API_INTEGRATION_ERROR_ID] = null
+    metadata[API_STATUS_PROPERTY] = MetadataStatus.Sent
+    return MetadataStatus.Sent
+  } catch (err) {
+    throw RudiError.treatError(mod, fun, err)
+  }
+}
 // -------------------------------------------------------------------------------------------------
 // Schema refinements
 // -------------------------------------------------------------------------------------------------
 
-// ----- toJSON cleanup
+/**
+ * toJSON cleanup
+ * @returns the metadata information as a JSON object
+ */
 MetadataSchema.methods.toJSON = function () {
+  logT(mod, 'MetadataSchema.toJSON')
   return omit(this.toObject(), FIELDS_TO_SKIP)
+}
+
+/**
+ * @returns a RUDI portal compatible metadata as a JSON
+ */
+MetadataSchema.methods.toRudiPortalJSON = function () {
+  logT(mod, 'MetadataSchema.toRudiPortalJSON')
+  return toRudiPortalJSON(this)
+}
+
+/**
+ *
+ */
+MetadataSchema.methods.setStatusToSent = function () {
+  logT(mod, 'MetadataSchema.setStatusToSent')
+  return setMetadataStatusToSent(this)
 }
 
 // ----- Virtuals
@@ -785,25 +854,6 @@ MetadataSchema.virtual(`${API_METAINFO_PROPERTY}.${API_METAINFO_DATES}.${API_DAT
     return this[DB_PUBLISHED_AT]
   }
 )
-MetadataSchema.virtual(API_STATUS_PROPERTY).get(function () {
-  return
-  this[API_COLLECTION_TAG]
-    ? MetadataStatus.Local
-    : this[API_STORAGE_STATUS] === StorageStatus.Pending
-    ? MetadataStatus.Incomplete
-    : this[API_INTEGRATION_ERROR_ID]
-    ? MetadataStatus.Refused
-    : this[DB_PUBLISHED_AT]
-    ? MetadataStatus.Published
-    : objectPath.get(this, API_METAINFO_PROPERTY, API_METAINFO_DATES, API_DATES_DELETED)
-    ? MetadataStatus.Deleted
-    : MetadataStatus.Unset
-})
-
-MetadataSchema.virtual(API_RESTRICTED_ACCESS).get(function () {
-  objectPath.get(this, [API_ACCESS_CONDITION, API_CONFIDENTIALITY, API_RESTRICTED_ACCESS])
-})
-
 MetadataSchema.virtual(API_RESTRICTED_ACCESS).set(function (isRestricted) {
   objectPath.set(
     this,
@@ -819,13 +869,13 @@ MetadataSchema.pre('save', async function (next) {
   const fun = 'pre save hook'
 
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const metadata = this
     // logD(mod, fun, metadata[API_GEOGRAPHY])
     // If 'geography' field is defined, the field 'geography.bbox' is required
     if (requireSubProperty(metadata, API_GEOGRAPHY, API_GEO_BBOX_PROPERTY)) {
       if (isNothing(metadata[API_GEOGRAPHY][API_GEO_PROJECTION_PROPERTY])) {
-        // If 'geography' field is defined, but 'geography.projection' is not, it is initialized to the defaul value.
+        // If 'geography' field is defined, but 'geography.projection' is not, it is initialized to the default value.
         metadata[API_GEOGRAPHY][API_GEO_PROJECTION_PROPERTY] = 'WGS 84 (EPSG:4326)'
       }
     }
@@ -877,6 +927,9 @@ MetadataSchema.pre('save', async function (next) {
 
     // await checkMetadataSource(metadata)
     // await checkMedia(metadata)
+
+    updateMetadataStatus(metadata)
+
     logT(mod, fun, `pre save checks OK`)
   } catch (err) {
     logV(mod, fun, `pre save checks KO: ${err}`)
@@ -887,36 +940,37 @@ MetadataSchema.pre('save', async function (next) {
   // next()
 })
 
-MetadataSchema.post('save', async function (doc, next) {
-  const fun = 'post save hook'
-  logT(mod, fun, ``)
+// MetadataSchema.post('save', async function (metadata, next) {
+//   const fun = 'post save hook'
+//   logT(mod, fun)
 
-  try {
-    await this.populate(POPULATE_OPTS) //.execPopulate()
-    next()
-  } catch (err) {
-    // next(err)
-    throw RudiError.treatError(mod, fun, err)
-  }
-  // next()
-})
+//   try {
+//     // logI(mod, fun, metadata)
+//     // await metadata.populate(POPULATE_OPTS) //.execPopulate()
+//     logV(mod, fun, metadata.producer)
+//     next()
+//   } catch (err) {
+//     // next(err)
+//     throw RudiError.treatError(mod, fun, err)
+//   }
+//   // next()
+// })
 
-/*
-MetadataSchema.post('find', async function (docs, next) {
-  const fun = 'post find hook'
-  logT(mod, fun, ``)
+// MetadataSchema.post('find', async function (metadata_list, next) {
+//   const fun = 'post find hook'
+//   // logT(mod, fun)
 
-  try {
-    for (let doc of docs) {
-      // if (doc.isPublic)
-      await doc.populate(POPULATE_OPTS) //.execPopulate()
-    }
-  } catch (err) {
-    next(err)
-  }
-  next()
-})
- */
+//   for (const metadata of metadata_list) {
+//     if (!metadata[API_STATUS_PROPERTY]) {
+//       // updateMetadataStatus(metadata) // Done in metadata.save()
+//       metadata.save().catch((err) => {
+//         logE(mod, `${fun}.updateMetadataStatus`, beautify(err))
+//         next(err)
+//       })
+//     }
+//   }
+//   next()
+// })
 
 // -------------------------------------------------------------------------------------------------
 // Models definition
@@ -942,4 +996,20 @@ Metadata.initialize = async () => {
   } catch (err) {
     throw RudiError.treatError(mod, fun, err)
   }
+}
+
+/**
+ * @returns a RUDI portal compatible metadata as a JSON
+ */
+Metadata.toRudiPortalJSON = function () {
+  logT(mod, 'Metadata.toRudiPortalJSON')
+  return toRudiPortalJSON(this)
+}
+
+/**
+ *
+ */
+Metadata.setStatusToSent = function () {
+  logT(mod, 'Metadata.setStatusToSent')
+  return setMetadataStatusToSent(this)
 }

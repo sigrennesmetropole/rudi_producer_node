@@ -1,21 +1,21 @@
 'use strict'
 
-const {
-  URL_JWT,
-  URL_SUFFIX_FORGE,
-  URL_SUFFIX_CHECK,
-  URL_REDIRECT,
+import {
   SUFFIX_REDIRECT,
+  URL_JWT,
   URL_LOGS,
-} = require('../config/confApi')
-const { URL_PREFIX } = require('../config/confApi')
-const { forgeToken, checkToken } = require('../handlers/jwtController')
-const { getLogs, clearLogs } = require('../handlers/logController')
-const { redirectReq } = require('../handlers/redirectController')
+  URL_REDIRECT,
+  URL_SUFFIX_CHECK,
+  URL_SUFFIX_FORGE,
+} from '../config/confApi.js'
+import { checkJwt, forgeJwt } from '../handlers/jwtController.js'
+// import { checkToken, forgeToken } from '../handlers/jwtController'
+import { clearLogs, getLogs } from '../handlers/logController.js'
+import { redirectReq } from '../handlers/redirectController.js'
 
 const mod = 'routes'
 
-exports.privateRoutes = [
+export const privateRoutes = [
   // -----------------------------------------------------------------------------
   // JWT routes
   // -----------------------------------------------------------------------------
@@ -26,7 +26,7 @@ exports.privateRoutes = [
     method: 'POST',
     url: `${URL_JWT}/${URL_SUFFIX_FORGE}`,
     // preHandler: logRequest,
-    handler: forgeToken,
+    handler: forgeJwt,
   },
   /**
    * Simply test the JWT in the header
@@ -35,13 +35,13 @@ exports.privateRoutes = [
     method: 'GET',
     url: `${URL_JWT}/${URL_SUFFIX_CHECK}`,
     // preHandler: logRequest,
-    handler: checkToken,
+    handler: checkJwt,
   },
   {
     method: 'POST',
     url: `${URL_JWT}/${URL_SUFFIX_CHECK}`,
     // preHandler: logRequest,
-    handler: checkToken,
+    handler: checkJwt,
   },
   // -----------------------------------------------------------------------------
   // Redirections

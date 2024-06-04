@@ -1,7 +1,7 @@
 const mod = 'http'
 
 // -------------------------------------------------------------------------------------------------
-// External dependecies
+// External dependencies
 // -------------------------------------------------------------------------------------------------
 import axios from 'axios'
 
@@ -13,14 +13,14 @@ import axios from 'axios'
 //   AxiosCurlirize(axios)
 // }
 // -------------------------------------------------------------------------------------------------
-// Internal dependecies
+// Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { USER_AGENT } from '../config/confApi.js'
+import { USER_AGENT } from '../config/constApi.js'
 // import { ENV_LOCAL } from '../config/appOptions.js'
-import { beautify } from './jsUtils.js'
+import { beautify, isNotEmptyArray } from './jsUtils.js'
 // import { getEnvironment } from '../controllers/sysController.js'
-import { logD, logHttpAnswer, logT } from './logging.js'
-import { RudiError, BadRequestError } from './errors.js'
+import { BadRequestError, RudiError } from './errors.js'
+import { logD, logT } from './logging.js'
 
 // -------------------------------------------------------------------------------------------------
 // Functions: header treatments
@@ -36,7 +36,7 @@ export const getHeaderRedirectUrls = (req) => {
 export const getUrlParameters = (reqUrl) => {
   const fun = 'getUrlParameters'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const splitUrl = reqUrl.split('?')
     if ((splitUrl.length = 1 || !splitUrl[1])) return // No parameters found
     if (splitUrl.length > 2)
@@ -63,7 +63,7 @@ export const getUrlParameters = (reqUrl) => {
 
 export const httpGet = async (destUrl, authorizationToken) => {
   const fun = 'httpGet'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   try {
     const reqOpts = {
       headers: {
@@ -84,7 +84,7 @@ export const httpGet = async (destUrl, authorizationToken) => {
 export const httpDelete = async (destUrl, authorizationToken) => {
   const fun = 'httpDelete'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     const reqOpts = {
       headers: {
@@ -104,7 +104,7 @@ export const httpDelete = async (destUrl, authorizationToken) => {
 
 export const getWithOpts = async (options, authorizationToken) => {
   const fun = 'getWithOpts'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   try {
     const destUrl = `${options.protocol}://${options.hostname}/${options.path}`
     const answer = await httpGet(destUrl, authorizationToken)
@@ -117,7 +117,7 @@ export const getWithOpts = async (options, authorizationToken) => {
 export const httpPost = async (destUrl, dataToSend, authorizationToken) => {
   const fun = 'httpPost'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const reqOpts = {
       headers: {
         'User-Agent': USER_AGENT,
@@ -138,7 +138,7 @@ export const httpPost = async (destUrl, dataToSend, authorizationToken) => {
 export const httpPut = async (destUrl, dataToSend, authorizationToken) => {
   const fun = 'httpPut'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const reqOpts = {
       headers: {
         'User-Agent': USER_AGENT,
@@ -156,27 +156,14 @@ export const httpPut = async (destUrl, dataToSend, authorizationToken) => {
   }
 }
 
-// AxiosCurlirize(axios, (result, err) => {
-//   const fun = 'AxiosCurlirize'
-//   const { command } = result
-//   if (err) {
-//     logE(mod, fun, err)
-//     throw RudiError.treatCommunicationError(mod, fun, err)
-//   } else {
-//     logT(mod, fun, command)
-//     return result
-//     // use your logger here
-//   }
-// })
-
 export const directGet = async (destUrl, reqOpts) => {
   const fun = 'directGet'
   try {
-    logT(mod, fun, ``)
+    logT(mod, fun)
 
     const answer = await axios.get(destUrl, reqOpts)
 
-    logHttpAnswer(mod, fun, answer)
+    // logHttpAnswer(mod, fun, answer)
     return answer
   } catch (err) {
     throw RudiError.treatCommunicationError(mod, fun, err)
@@ -185,11 +172,11 @@ export const directGet = async (destUrl, reqOpts) => {
 
 export const directPost = async (destUrl, dataToSend, reqOpts) => {
   const fun = 'directPost'
-  logT(mod, fun, ``)
+  logT(mod, fun)
 
   try {
     const answer = await axios.post(destUrl, dataToSend, reqOpts)
-    logHttpAnswer(mod, fun, answer)
+    // logHttpAnswer(mod, fun, answer)
     return answer
   } catch (err) {
     // logW(mod, fun, beautify(err) || err)
@@ -199,10 +186,10 @@ export const directPost = async (destUrl, dataToSend, reqOpts) => {
 
 export const directPut = async (destUrl, dataToSend, reqOpts) => {
   const fun = 'directPut'
-  logT(mod, fun, ``)
+  logT(mod, fun)
   try {
     const answer = await axios.put(destUrl, dataToSend, reqOpts)
-    logHttpAnswer(mod, fun, answer)
+    // logHttpAnswer(mod, fun, answer)
     return answer
   } catch (err) {
     // logW(mod, fun, beautify(err) || err)
@@ -210,47 +197,30 @@ export const directPut = async (destUrl, dataToSend, reqOpts) => {
   }
 }
 
-/* function doHttpRequest(options, protocol, data) {
-  const fun = 'doHttpRequest'
-  // logT(mod, fun, ``)
+// -------------------------------------------------------------------------------------------------
+// IP Redirections display
+// -------------------------------------------------------------------------------------------------
 
-  const httpProtocol = protocol === PROTOCOL.HTTP ? http : https
-  // options.agent = new httpProtocol.Agent({rejectUnauthorized: false})
-  logD(mod, fun, `options: ${beautify(options)}`)
-
-  return new Promise((resolve, reject) => {
-    const req = httpProtocol.request(options, (res) => {
-      logD(mod, fun, `statusCode: ${res.statusCode}`)
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        return reject(new Error(`statusCode: ${res.statusCode}`))
-      }
-      // res.setEncoding('utf8')
-      let body = []
-
-      res.on('data', (chunk) => {
-        // logD(mod, fun, `chunk: ${beautify(chunk)}`)
-        body.push(chunk)
-      })
-
-      res.on('end', () => {
-        try {
-          body = JSON.parse(Buffer.concat(body).toString())
-        } catch (e) {
-          logW(mod, fun, e)
-          // reject(e)
-        }
-        resolve(body)
-      })
-    })
-
-    req.on('error', (err) => {
-      logW(mod, fun, `${err.stack} - ${beautify(err)}`)
-      reject(err)
-    })
-
-    if (data) req.write(data)
-
-    req.end()
-  })
+export const extractIpRedirections = (req) => {
+  const headers = req.headers
+  const redirections = headers['x-forwarded-for'] || headers['X-Forwarded-For']
+  if (!redirections) return
+  if (Array.isArray(redirections)) return redirections
+  if (typeof redirections === 'string') return redirections.split(',')
+  logD(mod, 'extractIpRedirections', `redirections: ${beautify(redirections)}`)
 }
- */
+
+export const extractIpAndRedirections = (req) => {
+  const ip = req.ip
+  const redirections = extractIpRedirections(req)
+  return redirections && isNotEmptyArray(redirections) ? [ip, ...redirections] : [ip]
+}
+
+export const createIpRedirectionsMsg = (req) => {
+  const headers = req?.headers
+  if (!headers) return ''
+  const redirections = extractIpRedirections(req)
+  return redirections && isNotEmptyArray(redirections) ? ` <- ${redirections.join(' <- ')} ` : ''
+}
+
+export const createIpsMsg = (req) => `${req?.ip}${createIpRedirectionsMsg(req)}`

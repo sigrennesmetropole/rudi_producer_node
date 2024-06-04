@@ -40,7 +40,7 @@ const CONFIG_FILENAME_ENV = 'RUDI_LOGGER_CONFIG';
 /**
  * A default and global variable pointing to the first logger created.
  */
-var g_logger: RudiLogger|undefined  = undefined;
+let g_logger: RudiLogger|undefined;
 
 /*
   PRIVATE ENTERPRISE NUMBERS (last updated 2021-11-11)
@@ -123,8 +123,8 @@ export interface LoggerOperationContext  {
  * This type refers to all the conventional log context types currently supported.
  */
 export interface LoggerContext  {
-    operation?: LoggerOperationContext | undefined,
-    auth?: LoggerAuthContext | undefined,
+    operation?: LoggerOperationContext,
+    auth?: LoggerAuthContext,
 }
 
 /* - Core Interface - */
@@ -167,13 +167,13 @@ export class RudiLogger {
     constructor(domain: string, version?: string, config?: any) {
         if (domain.length < 3) { throw new RudiLoggerException("Invalid domain (too short)"); }
         this.domain = ROOT_DOMAIN + '/' + domain;
-        this.version = version ? version : '0.1';
+        this.version = version ?? '0.1';
         this.local = null;
         this.config = this._readConfiguration(config);
 
         const udom = domain.toUpperCase();
         this.messageIndex = 0;
-        this.msgidPrefix = 'RP' + udom[0] + udom[1] + udom[2] + uuid4().substr(0,8)+'.';
+        this.msgidPrefix = 'RP' + udom[0] + udom[1] + udom[2] + uuid4().substring(0,8)+'.';
         this.slclient = this._openSyslog();
         // Set a globally defined logger.
         if (g_logger === undefined) g_logger = this;
@@ -185,9 +185,9 @@ export class RudiLogger {
      * @returns {object}        - A dictionnary with the full configuration
      */
     private _openConfiguration(): any {
-        var u_config = {};
+        let u_config = {};
         try {
-            var configFile : string = CONFIG_FILENAME;
+            let configFile : string = CONFIG_FILENAME;
             const envConfigFile = process.env[CONFIG_FILENAME_ENV];
             if (typeof envConfigFile !== 'undefined') configFile = envConfigFile;
             const configData = fs_readFileSync(configFile, 'utf-8');
@@ -203,14 +203,14 @@ export class RudiLogger {
         else if ((typeof inlevel) == 'string') {
             let strlevel = inlevel.toLowerCase();
             switch (strlevel) {
-            case 'emergency':      level = Severity.Emergency;     /**/ break;
-            case 'alert':          level = Severity.Alert;         /**/ break;
-            case 'critical':       level = Severity.Critical;      /**/ break;
-            case 'error':          level = Severity.Error;         /**/ break;
-            case 'warning':        level = Severity.Warning;       /**/ break;
-            case 'notice':         level = Severity.Notice;        /**/ break;
-            case 'informational':  level = Severity.Informational; /**/ break;
-            case 'debug': default: level = Severity.Debug;         /**/ break;
+                case 'emergency':      level = Severity.Emergency;     /**/ break;
+                case 'alert':          level = Severity.Alert;         /**/ break;
+                case 'critical':       level = Severity.Critical;      /**/ break;
+                case 'error':          level = Severity.Error;         /**/ break;
+                case 'warning':        level = Severity.Warning;       /**/ break;
+                case 'notice':         level = Severity.Notice;        /**/ break;
+                case 'informational':  level = Severity.Informational; /**/ break;
+                case 'debug': default: level = Severity.Debug;         /**/ break;
             }
         }
         return level;
@@ -233,16 +233,16 @@ export class RudiLogger {
             rfc3164: false,
             level: Severity.Debug
         };
-        var u_config = (config === undefined) ? this._openConfiguration() : config;
+        const u_config = (config === undefined) ? this._openConfiguration() : config;
         if ((typeof u_config.log_server) !== 'undefined') {
             const cfg = u_config.log_server;
-            if ((typeof cfg.path) == 'string')      this.config.path = cfg.path;
-            if ((typeof cfg.port) == 'number')      this.config.port = cfg.port;
-            if ((typeof cfg.transport) == 'number') this.config.transport = cfg.transport;
-            if ((typeof cfg.facility) == 'number')  this.config.facility = cfg.facility;
-            if ((typeof cfg.tcpTimeout) == 'number')  this.config.tcpTimeout = cfg.tcpTimeout;
+            if ((typeof cfg.path) == 'string')          this.config.path = cfg.path;
+            if ((typeof cfg.port) == 'number')          this.config.port = cfg.port;
+            if ((typeof cfg.transport) == 'number')     this.config.transport = cfg.transport;
+            if ((typeof cfg.facility) == 'number')      this.config.facility = cfg.facility;
+            if ((typeof cfg.tcpTimeout) == 'number')    this.config.tcpTimeout = cfg.tcpTimeout;
             if ((typeof cfg.retryTimeout) == 'number')  this.config.retryTimeout = cfg.retryTimeout;
-            if ((typeof cfg.rfc3164) == 'boolean')  this.config.rfc3164 = cfg.rfc3164;
+            if ((typeof cfg.rfc3164) == 'boolean')      this.config.rfc3164 = cfg.rfc3164;
             this.config.level = this._convertSeverityLevel(cfg.level);
         }
         if ((typeof u_config.log_local) !== 'undefined') {
@@ -260,7 +260,7 @@ export class RudiLogger {
      * @returns {syslog_Client}        - The syslog backend.
      */
     private _openSyslog(): syslog_Client {
-        var ipList: [string?] = [];
+        const ipList: [string?] = [];
         findInterfaces(ipList);
         const data: syslog_SData = { 'origin': {
             'ip': ipList,
@@ -291,10 +291,7 @@ export class RudiLogger {
         console.log('RudiLogger: '+this.domain +': error: '+ error);
     }
     private _sysClose(): void {
-        var c = this;
-        setTimeout(()=>{
-            c.notice('RudiLog closed', 'syslog');
-        }, 10000);
+        setTimeout(() => this.notice('RudiLog closed', 'syslog'), 10000);
     }
 
     /**
@@ -307,7 +304,7 @@ export class RudiLogger {
      */
     private _buildId(cid?: string) : string {
         this.messageIndex++;
-        var r = this.msgidPrefix + this.messageIndex;
+        let r = this.msgidPrefix + this.messageIndex;
         if (cid === undefined) r += Number(new Date());
         else                   r += cid; 
         return r;
@@ -319,8 +316,8 @@ export class RudiLogger {
      * @returns {object}      - A syslog context.
      */
     private _getContext(context?: LoggerContext, raw?: any): any {
-        var auth : LoggerAuthContext | undefined = undefined;
-        var operation : LoggerOperationContext | undefined = undefined;
+        let auth : LoggerAuthContext | undefined;
+        let operation : LoggerOperationContext | undefined;
         if (context !== undefined && context !== null) {
             if (context.auth !== undefined) {
                 auth = {
@@ -337,9 +334,8 @@ export class RudiLogger {
                 };
             }
         }
-        var content = raw;
-        //if (typeof raw !== 'object') content = JSON.stringify(raw);
-        return { auth: auth,  operation: operation, content: content };
+        const content = raw;
+        return { auth, operation, content };
     }
 
     /**
@@ -399,7 +395,7 @@ export class RudiLogger {
      * @param {number} ncount - The minimum number of ping to send.
      */
     ping(ncount: number): void {
-        var count = 0;
+        let count = 0;
         const c = this;
         const logf = function(count: number, ncount: number) {
             count += 1;

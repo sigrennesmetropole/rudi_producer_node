@@ -8,24 +8,25 @@ import { nanoid } from 'nanoid'
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
-import { isNotEmptyArray, beautify, dateEpochMsToIso } from '../../utils/jsUtils.js'
-import { logD, logI, logT, logV, logW, sysInfo, sysOnError } from '../../utils/logging.js'
 import { RudiError } from '../../utils/errors.js'
+import { beautify, dateEpochMsToIso } from '../../utils/jsUtils.js'
+import { logD, logI, logT, logV, logW, sysInfo, sysOnError } from '../../utils/logging.js'
 
 // -------------------------------------------------------------------------------------------------
 // External constants
 // -------------------------------------------------------------------------------------------------
 import {
-  ROUTE_NAME,
-  OBJ_METADATA,
-  OBJ_ORGANIZATIONS,
   OBJ_CONTACTS,
   OBJ_MEDIA,
+  OBJ_METADATA,
+  OBJ_ORGANIZATIONS,
   OBJ_REPORTS,
-  TRACE_MOD,
+  ROUTE_NAME,
   TRACE_FUN,
-} from '../../config/confApi.js'
-import { protectHeaderAuth, protectHeaderUrl, protectHeaderMethod } from '../../utils/protection.js'
+  TRACE_MOD,
+} from '../../config/constApi.js'
+import { extractIpAndRedirections } from '../../utils/httpReq.js'
+import { protectHeaderAuth, protectHeaderMethod, protectHeaderUrl } from '../../utils/protection.js'
 // -------------------------------------------------------------------------------------------------
 // Internal constants
 // -------------------------------------------------------------------------------------------------
@@ -37,13 +38,13 @@ const ACTIVATE_LOG = true
  * the RudiLogger structure (see https://gitlab.aqmo.org/rudidev/rudilogger)
  * and more specifically like this:
  * {
- *    [AUTH]: {JS object} identification informations
+ *    [AUTH]: {JS object} identification information
  *    {
  *        [REQ_IPS]: {array} list of IP redirections, in inverse chronological order
  *        [REQ_APP]: {string} identifier of the app/module that sends the request
  *        [REQ_USR]: {string} identified user that launches the request
  *    },
- *    [OP]: {JS object} operations informations
+ *    [OP]: {JS object} operations information
  *    {
  *        [OP_TYPE]: {string} identifies the operation corresponding to the request
  *        [STATUS_CODE]: {int} HTTP status code of the reply
@@ -121,7 +122,7 @@ export const CallContext = class CallContext {
 
   setIpsFromRequest(req) {
     if (ACTIVATE_LOG) logT(mod, 'setIpsFromRequest', ``)
-    this.ips = CallContext.extractIpAndRedirections(req)
+    this.ips = extractIpAndRedirections(req)
   }
 
   set clientApp(clientApp) {
@@ -148,7 +149,7 @@ export const CallContext = class CallContext {
   }
 
   addObjId(type, id) {
-    if (!this[OP] || !this[OP][OP_ID]) this[OP][OP_ID] = []
+    if (!this[OP]?.[OP_ID]) this[OP][OP_ID] = []
     this[OP][OP_ID].push(`${type}:${id}`)
   }
 
@@ -166,10 +167,10 @@ export const CallContext = class CallContext {
     this[OP][OP_TYPE] = routeName
   }
   get routeName() {
-    return this[OP][OP_TYPE]
+    return this[OP]?.[OP_TYPE]
   }
   set routeName(route) {
-    return (this[OP][OP_TYPE] = route)
+    this[OP][OP_TYPE] = route
   }
   get reqMethod() {
     return this[DETAILS][REQ][REQ_MTD]
@@ -178,9 +179,10 @@ export const CallContext = class CallContext {
     return this[DETAILS][REQ][REQ_URL]
   }
 
-  addDetails(key, val) {
+  addDetails = (key, val) => {
     this[DETAILS][key] = val
   }
+
   getDetails = () => this[DETAILS]
   get details() {
     return this.getDetails()
@@ -191,19 +193,17 @@ export const CallContext = class CallContext {
     return this.getDetailsStr()
   }
 
-  getReqDetails() {
+  getReqDetails = () => {
     if (!this[DETAILS][REQ]) this[DETAILS][REQ] = {}
     return this[DETAILS][REQ]
   }
 
-  formatReqDetails = () => {
-    // const reqDetails = this.getReqDetails()
-    return `${dateEpochMsToIso(this.timestamp)} [${this.id}] ${this.reqMethod} ${this.reqUrl}`
-  }
+  formatReqDetails = () =>
+    `${dateEpochMsToIso(this.timestamp)} [${this.id}] ${this.reqMethod} ${this.reqUrl}`
 
   get apiCallMsg() {
     const fun = 'apiCallMsg'
-    if (ACTIVATE_LOG) logT(mod, fun, ``)
+    if (ACTIVATE_LOG) logT(mod, fun)
     try {
       return (
         this.reqDetailsMsg +
@@ -218,7 +218,7 @@ export const CallContext = class CallContext {
 
   get reqDetailsMsg() {
     const fun = 'reqDetailsMsg'
-    if (ACTIVATE_LOG) logT(mod, fun, ``)
+    if (ACTIVATE_LOG) logT(mod, fun)
     try {
       return `${this.reqMethod} ${this.reqUrl} (${this.routeName})`
     } catch (err) {
@@ -255,10 +255,10 @@ export const CallContext = class CallContext {
   addError = (ctxMod, ctxFun, error) => {
     const fun = 'addError'
     try {
-      logT(mod, fun, ``)
+      logT(mod, fun)
       if (RudiError.isRudiError(error)) {
         if (ACTIVATE_LOG) logT(mod, fun, `rudi error`)
-        if (ACTIVATE_LOG) logT(mod, fun, `this[DETAILS]: ${beautify(this[DETAILS])}`)
+        // if (ACTIVATE_LOG) logT(mod, fun, `this[DETAILS]: ${beautify(this[DETAILS])}`)
         if (!this[DETAILS][ERROR]) this[DETAILS][ERROR] = error
         else {
           logW(mod, fun, `Error already added: ${beautify(this[DETAILS][ERROR])}`)
@@ -283,7 +283,7 @@ export const CallContext = class CallContext {
 
   logErr = (ctxMod, ctxFun, err) => {
     const fun = 'logErr'
-    logT(mod, fun, ``)
+    logT(mod, fun)
     try {
       if (!err && !this.getError()) throw new RudiError('No error found in current context')
 
@@ -306,7 +306,7 @@ export const CallContext = class CallContext {
 
   get errorLocation() {
     const fun = 'getErrorLocation'
-    logT(mod, fun, ``)
+    logT(mod, fun)
     const err = this.getError()
     logD(mod, fun, `${beautify(err)}`)
     if (err) {
@@ -339,7 +339,7 @@ export const CallContext = class CallContext {
   static getCallContextFromReq(req) {
     const fun = 'getCallContextFromReq'
     try {
-      if (ACTIVATE_LOG) logT(mod, fun, ``)
+      if (ACTIVATE_LOG) logT(mod, fun)
       const reqContext = CallContext.getReqContext(req)
       if (!reqContext) return undefined
 
@@ -362,7 +362,7 @@ export const CallContext = class CallContext {
     const fun = 'setAsReqContext'
 
     try {
-      if (ACTIVATE_LOG) logT(mod, fun, ``)
+      if (ACTIVATE_LOG) logT(mod, fun)
       if (req[CALL_CONTEXT]) throw new Error('Call context already set')
       req[CALL_CONTEXT] = callContext
       // {[AUTH]: callContext[AUTH],[OP]: callContext[OP],[DETAILS]: callContext[DETAILS],}
@@ -375,7 +375,7 @@ export const CallContext = class CallContext {
   static preventCodeInjection(req) {
     const fun = 'preventCodeInjection'
     try {
-      if (ACTIVATE_LOG) logT(mod, fun, ``)
+      if (ACTIVATE_LOG) logT(mod, fun)
       protectHeaderMethod(req)
       protectHeaderUrl(req)
       protectHeaderAuth(req)
@@ -393,7 +393,7 @@ export const CallContext = class CallContext {
     const fun = 'getReqContext'
 
     try {
-      if (ACTIVATE_LOG) logT(mod, fun, ``)
+      if (ACTIVATE_LOG) logT(mod, fun)
       const context = req[CALL_CONTEXT]
       if (!context) return undefined
       return context
@@ -406,45 +406,14 @@ export const CallContext = class CallContext {
   // -------------------------------------------------------------------------------------------------
   // IP Redirections display
   // -------------------------------------------------------------------------------------------------
-
-  static extractIpRedirections(req) {
-    const headers = req.headers
-    const redirections = headers['x-forwarded-for'] || headers['X-Forwarded-For']
-    if (!redirections) return
-    if (Array.isArray(redirections)) return redirections
-    if (typeof redirections === 'string') return redirections.split(',')
-    logD(mod, 'extractIpRedirections', `redirections: ${beautify(redirections)}`)
-  }
-
-  static extractIpAndRedirections(req) {
-    const ip = req.ip
-    const redirections = CallContext.extractIpRedirections(req)
-    return redirections && isNotEmptyArray(redirections) ? [ip, ...redirections] : [ip]
-  }
-
-  static createIpRedirectionsMsg(req) {
-    const headers = req.headers
-    if (!headers) return ''
-    const redirections = CallContext.extractIpRedirections(req)
-    return redirections && isNotEmptyArray(redirections) ? ` <- ${redirections.join(' <- ')} ` : ''
-  }
-
-  static createIpsMsg(req) {
-    const ip = req.ip
-    return `${ip}${CallContext.createIpRedirectionsMsg(req)}`
-  }
-
   static createApiCallMsg(req) {
     const fun = 'createApiCallMsg'
     try {
-      if (ACTIVATE_LOG) logT(mod, fun, ``)
+      if (ACTIVATE_LOG) logT(mod, fun)
       const context = CallContext.getCallContextFromReq(req)
       if (!context) {
         if (ACTIVATE_LOG) logT(mod, fun, 'No context set yet')
-        return (
-          `${req.method} ${req.url} (${req.routeConfig[ROUTE_NAME]})` +
-          ` <- ${CallContext.createIpsMsg(req)}`
-        )
+        return `${req.method} ${req.url} (${req.routeOptions.config[ROUTE_NAME]})`
       } else {
         if (ACTIVATE_LOG) logT(mod, fun, 'A context was found')
         return context.apiCallMsg

@@ -1,10 +1,27 @@
+# generated
 node_modules
 package-lock.json
+yarn.lock
+.yarn
+.pnp*
+
+# logs
 logs
 _logs
-.env
-.gitconfig
+
+
+# tests
 coverage
 junit.xml
+
+# build
+built
+
+# db
 *.db
+*.sql
+
+# dev
 env
+.env
+.gitconfig

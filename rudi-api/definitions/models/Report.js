@@ -2,16 +2,15 @@ const mod = 'reportSch'
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
-import mongoose from 'mongoose'
-
 import _ from 'lodash'
+import mongoose from 'mongoose'
 const { omit } = _
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
 // -------------------------------------------------------------------------------------------------
 
-import { HTTP_METHODS } from '../../config/confApi.js'
+import { HTTP_METHODS } from '../../config/constApi.js'
 import { UuidSchema, UuidV4Schema } from '../schemas/Identifiers.js'
 
 import { makeSearchable } from '../../db/dbActions.js'
@@ -21,24 +20,24 @@ import { RudiError } from '../../utils/errors.js'
 // Constants
 // -------------------------------------------------------------------------------------------------
 import {
-  FIELDS_TO_SKIP,
   API_COLLECTION_TAG,
-  API_REPORT_RESOURCE_ID,
-  API_REPORT_ID,
   API_DATA_NAME_PROPERTY,
+  API_REPORT_COMMENT,
+  API_REPORT_ERRORS,
+  API_REPORT_ERROR_CODE,
+  API_REPORT_ERROR_MSG,
+  API_REPORT_FIELD,
+  API_REPORT_ID,
+  API_REPORT_METHOD,
+  API_REPORT_RESOURCE_ID,
+  API_REPORT_STATUS,
   API_REPORT_SUBMISSION_DATE,
   API_REPORT_TREATMENT_DATE,
   API_REPORT_VERSION,
-  API_REPORT_STATUS,
-  API_REPORT_ERRORS,
-  LOCAL_REPORT_ERROR_MSG,
+  FIELDS_TO_SKIP,
   LOCAL_REPORT_ERROR,
+  LOCAL_REPORT_ERROR_MSG,
   LOCAL_REPORT_ERROR_TYPE,
-  API_REPORT_FIELD,
-  API_REPORT_ERROR_MSG,
-  API_REPORT_METHOD,
-  API_REPORT_COMMENT,
-  API_REPORT_ERROR_CODE,
 } from '../../db/dbFields.js'
 export const IntegrationStatus = {
   OK: 'OK',

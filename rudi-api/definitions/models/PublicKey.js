@@ -1,9 +1,8 @@
 // -------------------------------------------------------------------------------------------------
 // External dependencies
 // -------------------------------------------------------------------------------------------------
-import mongoose from 'mongoose'
-
 import _ from 'lodash'
+import mongoose from 'mongoose'
 const { omit } = _
 
 // -------------------------------------------------------------------------------------------------
@@ -13,17 +12,19 @@ const { omit } = _
 // -------------------------------------------------------------------------------------------------
 // Constants
 // -------------------------------------------------------------------------------------------------
-import { VALID_URI, VALID_WORD } from '../schemaValidators.js'
 import {
-  FIELDS_TO_SKIP,
-  API_PUB_PEM,
-  API_PUB_URL,
-  API_PUB_NAME,
-  API_PUB_TYPE,
   API_COLLECTION_TAG,
-  API_PUB_PROP,
   API_PUB_KEY,
-} from '../../db/dbFields.js' // -------------------------------------------------------------------------------------------------
+  API_PUB_NAME,
+  API_PUB_PEM,
+  API_PUB_PROP,
+  API_PUB_TYPE,
+  API_PUB_URL,
+  FIELDS_TO_SKIP,
+} from '../../db/dbFields.js'
+import { VALID_URI, VALID_WORD } from '../schemaValidators.js'
+
+// -------------------------------------------------------------------------------------------------
 // Custom schema definition
 // -------------------------------------------------------------------------------------------------
 const PublicKeySchema = new mongoose.Schema(

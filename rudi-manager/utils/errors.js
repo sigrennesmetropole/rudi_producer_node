@@ -31,7 +31,6 @@ class RudiError extends Error {
 
   static createRudiHttpError(code, message, ctxMod, ctxFun) {
     try {
-      // console.log('T (createRudiHttpError)', `Error ${code}: ${message}`);
       switch (parseInt(code)) {
         case 400:
           return new BadRequestError(message, ctxMod, ctxFun)
@@ -138,9 +137,20 @@ class NotImplementedError extends RudiError {
   }
 }
 
-exports.statusOK = (message) => {
-  return { status: 'OK', message }
+class ConnectionError extends RudiError {
+  constructor(errMessage, ctxMod, ctxFun) {
+    super(
+      errMessage,
+      503,
+      'Connection Failed',
+      'Connection failed, target server is unreachable. Contact the RUDI admin ',
+      ctxMod,
+      ctxFun
+    )
+  }
 }
+
+exports.statusOK = (message) => ({ status: 'OK', message })
 
 exports.BadRequestError = BadRequestError
 exports.UnauthorizedError = UnauthorizedError
@@ -149,5 +159,6 @@ exports.NotFoundError = NotFoundError
 exports.MethodNotAllowedError = MethodNotAllowedError
 exports.NotAcceptableError = NotAcceptableError
 exports.InternalServerError = InternalServerError
+exports.ConnectionError = ConnectionError
 exports.RudiError = RudiError
 exports.STATUS_CODE = STATUS_CODE

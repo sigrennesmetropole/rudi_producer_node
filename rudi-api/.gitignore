@@ -2,7 +2,10 @@
 **/custom.ini
 **/*custom.ini
 
-# Libs
+# Generated
+*-lock.json
+*-lock.y*ml
+*.lock
 **/node_modules
 
 # Logs
@@ -10,6 +13,7 @@
 
 # Tests
 **/actions
+./data
 
 # Zip
 **/*.zip
@@ -19,9 +23,15 @@
 **/*.xls*
 
 # Keys
-**/*.pub
+**/*.pem
 **/*.prv
+**/*.pub
 
 # Idz
 features
 notes
+z_notes
+
+# Dev
+bak
+.vscode

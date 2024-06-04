@@ -1,4 +1,4 @@
-const mod = 'fTypThes'
+const mod = 'fileTypeThes'
 
 // -------------------------------------------------------------------------------------------------
 // Internal dependencies
@@ -85,7 +85,7 @@ export const FileTypes = [
 ]
 
 const FileTypesAndEncrypted = FileTypes
-FileTypes.map((mime) => FileTypesAndEncrypted.push(`${mime}+crypt`))
+FileTypes.forEach((mime) => FileTypesAndEncrypted.push(`${mime}+crypt`))
 
 export const Extensions = {
   '3gp': 'video/3gpp',
